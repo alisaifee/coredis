@@ -19,7 +19,7 @@ from anyio import (
 from anyio.abc import TaskStatus
 from deprecated.sphinx import versionadded, versionchanged
 
-from coredis._utils import b, hash_slot, nativestr
+from coredis._utils import b, hash_slot, logger, nativestr
 from coredis.commands.constants import CommandName
 from coredis.connection import BaseConnection, ClusterConnection, TCPLocation
 from coredis.constants.pubsub import (
@@ -123,14 +123,14 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             math.inf
         )
         self._subscribed = Event()
-        # TODO: there might be some benefit with regards to cleanup
-        #  to extend the same functionality to unsubscribe but the
-        #  it's not currently obvious why.
-        self._subscription_waiters: dict[StringT, list[Event]] = defaultdict(list)
         self._subscription_timeout: float = subscription_timeout
+        self._subscription_waiters: dict[StringT, list[Event]] = defaultdict(list)
+        self._unsubscription_timeout: float = 1
+        self._unsubscription_waiters: dict[StringT, list[Event]] = defaultdict(list)
 
         self._last_checkin: float = 0
         self._max_idle_seconds = max_idle_seconds
+
         self.channels = {}
         self.patterns = {}
 
@@ -168,14 +168,12 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             if self._initial_pattern_subscriptions:
                 await self.psubscribe(**self._initial_pattern_subscriptions)
             yield self
-            # TODO: evaluate whether a call to reset is necessary
-            #  at the moment this is only working as a side effect
-            #  of only supporting RESP3
             await self.unsubscribe()
             await self.punsubscribe()
             self.channels.clear()
             self.patterns.clear()
             self._subscription_waiters.clear()
+            self._unsubscription_waiters.clear()
             self._current_scope.cancel()
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
@@ -239,7 +237,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             self._subscription_waiters[pattern].append(event)
 
         await self._execute_command(CommandName.PSUBSCRIBE, *new_patterns.keys())
-        await self._ensure_subscriptions(waiters)
+        await self._ensure_subscribed(waiters)
         # update the patterns dict AFTER we send the command. we don't want to
         # subscribe twice to these patterns, once for the command and again
         # for the reconnection.
@@ -250,7 +248,13 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         Unsubscribes from the supplied patterns. If empty, unsubscribe from
         all patterns.
         """
+        waiters: dict[StringT, Event] = {
+            self._encode(pattern): Event() for pattern in (patterns or self.patterns)
+        }
+        for pattern, event in waiters.items():
+            self._unsubscription_waiters[pattern].append(event)
         await self._execute_command(CommandName.PUNSUBSCRIBE, *patterns)
+        await self._ensure_unsubscribed(waiters)
 
     async def subscribe(
         self,
@@ -278,7 +282,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         await self._execute_command(CommandName.SUBSCRIBE, *new_channels.keys())
 
-        await self._ensure_subscriptions(waiters)
+        await self._ensure_subscribed(waiters)
         self.channels.update(new_channels)
 
     async def unsubscribe(self, *channels: StringT) -> None:
@@ -287,7 +291,13 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         all channels
         """
 
+        waiters: dict[StringT, Event] = {
+            self._encode(channel): Event() for channel in (channels or self.channels)
+        }
+        for channel, event in waiters.items():
+            self._unsubscription_waiters[channel].append(event)
         await self._execute_command(CommandName.UNSUBSCRIBE, *channels)
+        await self._ensure_unsubscribed(waiters)
 
     async def get_message(
         self,
@@ -358,6 +368,9 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             if message_type in SUBSCRIBE_MESSAGE_TYPES:
                 if waiters := self._subscription_waiters.get(target, []):
                     waiters.pop(-1).set()
+            if message_type in UNSUBSCRIBE_MESSAGE_TYPES:
+                if waiters := self._unsubscription_waiters.get(target, []):
+                    waiters.pop(-1).set()
 
         elif message_type in PUBLISH_MESSAGE_TYPES:
             if message_type == PubSubMessageTypes.PMESSAGE:
@@ -415,14 +428,28 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             return None
         return message
 
-    async def _ensure_subscriptions(self, waiters: dict[StringT, Event]) -> None:
+    async def _ensure_subscribed(self, waiters: dict[StringT, Event]) -> None:
         with move_on_after(self._subscription_timeout) as cancel_scope:
             for target, event in waiters.items():
                 await event.wait()
         if cancel_scope.cancelled_caught:
-            raise TimeoutError(f"Subscription timed out after {self._subscription_timeout} seconds")
+            raise TimeoutError(
+                f"Failed to receive acknowledgement of subscription within {self._subscription_timeout} seconds"
+            )
 
         self._subscribed.set()
+
+    async def _ensure_unsubscribed(self, waiters: dict[StringT, Event]) -> bool:
+        with move_on_after(self._unsubscription_timeout) as cancel_scope:
+            for _, event in waiters.items():
+                await event.wait()
+        if cancel_scope.cancelled_caught:
+            logger.warning(
+                f"Failed to receive acknowledgement of unsubscription within {self._unsubscription_timeout} seconds"
+            )
+            # TODO: not sure what to do with this response.
+            return False
+        return True
 
 
 @versionchanged(
@@ -610,7 +637,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             self._subscription_waiters[channel].append(event)
         for channel in new_channels:
             await self._execute_command(CommandName.SSUBSCRIBE, channel)
-        await self._ensure_subscriptions(waiters)
+        await self._ensure_subscribed(waiters)
         self.channels.update(new_channels)
 
     async def unsubscribe(self, *channels: StringT) -> None:
@@ -620,8 +647,15 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
          previously subscribed to.
         """
 
+        waiters: dict[StringT, Event] = {
+            self._encode(channel): Event() for channel in (channels or self.channels)
+        }
+
+        for channel, event in waiters.items():
+            self._unsubscription_waiters[channel].append(event)
         for channel in channels or list(self.channels.keys()):
             await self._execute_command(CommandName.SUNSUBSCRIBE, channel)
+        await self._ensure_unsubscribed(waiters)
 
     async def psubscribe(
         self,
@@ -720,4 +754,5 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         self.patterns = {}
         self.initialized = False
         self._subscription_waiters.clear()
+        self._unsubscription_waiters.clear()
         self._subscribed = Event()
