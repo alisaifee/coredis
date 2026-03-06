@@ -10,37 +10,37 @@ Commands routed to all nodes in the cluster
 
 Server commands
   :meth:`coredis.RedisCluster.acl_deluser`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
   :meth:`coredis.RedisCluster.acl_load`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
   :meth:`coredis.RedisCluster.acl_save`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
   :meth:`coredis.RedisCluster.acl_setuser`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
   :meth:`coredis.RedisCluster.config_resetstat`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
   :meth:`coredis.RedisCluster.config_set`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
   :meth:`coredis.RedisCluster.memory_purge`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
   :meth:`coredis.RedisCluster.module_load`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
   :meth:`coredis.RedisCluster.module_loadex`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
   :meth:`coredis.RedisCluster.module_unload`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
   :meth:`coredis.RedisCluster.save`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
 
 
 Cluster commands
   :meth:`coredis.RedisCluster.cluster_saveconfig`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
 
 
 Connection commands
   :meth:`coredis.RedisCluster.echo`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
 
 
 Pubsub commands
@@ -56,9 +56,9 @@ Pubsub commands
 
 Scripting commands
   :meth:`coredis.RedisCluster.script_flush`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
   :meth:`coredis.RedisCluster.script_load`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
 
 
 
@@ -70,22 +70,22 @@ Commands routed to all primaries in the cluster
 
 Server commands
   :meth:`coredis.RedisCluster.flushall`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
   :meth:`coredis.RedisCluster.flushdb`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
 
 
 Scripting commands
   :meth:`coredis.RedisCluster.function_delete`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
   :meth:`coredis.RedisCluster.function_flush`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
   :meth:`coredis.RedisCluster.function_kill`
       The result is the first response that is not an error
   :meth:`coredis.RedisCluster.function_load`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
   :meth:`coredis.RedisCluster.function_restore`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
   :meth:`coredis.RedisCluster.script_exists`
       The result is the logical AND of all responses
   :meth:`coredis.RedisCluster.script_kill`
@@ -99,12 +99,12 @@ Generic commands
 
 Connection commands
   :meth:`coredis.RedisCluster.ping`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
 
 
 Search commands
   :meth:`coredis.modules.Search.config_set`
-      The result is the response from any node if all responses are consistent
+      The result is the first response if all responses are consistent
   :meth:`coredis.modules.Search.list`
       The result is the union of the results
 
@@ -142,18 +142,14 @@ String commands
   :meth:`coredis.RedisCluster.mget`
       The result is the concatenations of the results
   :meth:`coredis.RedisCluster.mset`
-      The result is ``True`` if all nodes responded ``True``
-  :meth:`coredis.RedisCluster.msetex`
-      The result is ``True`` if all nodes responded ``True``
-  :meth:`coredis.RedisCluster.msetnx`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
 
 
 Json commands
   :meth:`coredis.modules.Json.mget`
       The result is the concatenations of the results
   :meth:`coredis.modules.Json.mset`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
 
 
 
@@ -254,9 +250,9 @@ Cluster commands
   :meth:`coredis.RedisCluster.cluster_countkeysinslot`
       The result is the response from the node
   :meth:`coredis.RedisCluster.cluster_delslots`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
   :meth:`coredis.RedisCluster.cluster_delslotsrange`
-      The result is ``True`` if all nodes responded ``True``
+      The result is ``True`` if all responses are ``True``
   :meth:`coredis.RedisCluster.cluster_getkeysinslot`
       The result is the response from the node
 
