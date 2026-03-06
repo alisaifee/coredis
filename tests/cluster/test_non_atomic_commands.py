@@ -53,15 +53,6 @@ class TestCommandSplit:
         assert await client.mset(dict(zip(existing_keys, existing_keys)))
         assert existing_keys == await client.mget(existing_keys)
 
-    @pytest.mark.min_server_version("8.4.0")
-    async def test_msetex(self, client, existing_keys, _s):
-        assert await client.msetex(dict(zip(existing_keys, existing_keys)))
-        assert tuple(_s(k) for k in existing_keys) == await client.mget(existing_keys)
-
-    async def test_msetnx(self, client, existing_keys, missing_keys, _s):
-        assert not await client.msetnx(dict(zip(existing_keys, existing_keys)))
-        assert await client.msetnx(dict(zip(missing_keys, missing_keys)))
-
     @pytest.mark.min_module_version("ReJSON", "2.6.0")
     async def test_json_mset(self, client, missing_keys, _s):
         assert await client.json.mset([(key, ".", {key: i}) for i, key in enumerate(missing_keys)])
@@ -97,8 +88,3 @@ class TestCommandSplitDisabled:
             assert await client.mset(dict(zip(existing_keys, existing_keys)))
         with pytest.raises(RedisClusterError):
             assert existing_keys == await client.mget(existing_keys)
-
-    @pytest.mark.min_server_version("8.4.0")
-    async def test_msetex(self, client, missing_keys, client_arguments):
-        with pytest.raises(RedisClusterError):
-            await client.msetex(dict(zip(missing_keys, missing_keys)))

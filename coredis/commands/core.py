@@ -509,9 +509,6 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.MSETNX,
         group=CommandGroup.STRING,
-        cluster=ClusterCommandConfig(
-            routing_strategy=PairStrategy(NodeFlag.PRIMARIES, ClusterBoolCombine())
-        ),
     )
     def msetnx(self, key_values: Mapping[KeyT, ValueT]) -> CommandRequest[bool]:
         """
@@ -530,14 +527,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.MSETEX,
         group=CommandGroup.STRING,
         version_introduced="8.4.0",
-        cluster=ClusterCommandConfig(
-            routing_strategy=PairStrategy(
-                NodeFlag.PRIMARIES,
-                ClusterBoolCombine(),
-                key_step=2,
-                add_count=True,
-            )
-        ),
     )
     def msetex(
         self,
