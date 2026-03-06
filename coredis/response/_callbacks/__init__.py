@@ -55,9 +55,6 @@ class ResponseCallback(ABC, Generic[RESP3, R]):
     def transform(self, response: RESP3) -> R:
         pass
 
-    def handle_exception(self, exc: BaseException) -> R | None:
-        return exc  # type: ignore
-
 
 class NoopCallback(ResponseCallback[R, R]):
     def transform(self, response: R) -> R:
