@@ -1,0 +1,7 @@
+* Bug Fix
+
+  * Clean up connection pool task group when ``__aenter__``
+    fails during initialization
+
+    Failure to do so would leave the connection pool unusable as the counter
+    would be stuck at 1 and would not trigger a reinitialization.
