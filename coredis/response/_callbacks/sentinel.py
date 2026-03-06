@@ -7,52 +7,11 @@ from coredis.typing import (
     AnyStr,
     ResponsePrimitive,
     ResponseType,
+    StringT,
 )
 
-SENTINEL_STATE_INT_FIELDS = {
-    "can-failover-its-master",
-    "config-epoch",
-    "down-after-milliseconds",
-    "failover-timeout",
-    "info-refresh",
-    "last-hello-message",
-    "last-ok-ping-reply",
-    "last-ping-reply",
-    "last-ping-sent",
-    "master-link-down-time",
-    "master-port",
-    "num-other-sentinels",
-    "num-slaves",
-    "o-down-time",
-    "pending-commands",
-    "parallel-syncs",
-    "port",
-    "quorum",
-    "role-reported-time",
-    "s-down-time",
-    "slave-priority",
-    "slave-repl-offset",
-    "voted-leader-epoch",
-}
 
-
-def sentinel_state_typed(
-    response: list[str],
-) -> EncodingInsensitiveDict[str, str | int | bool]:
-    it = iter(response)
-    result: EncodingInsensitiveDict[str, str | int | bool] = EncodingInsensitiveDict()
-
-    for key, value in zip(it, it):
-        if key in SENTINEL_STATE_INT_FIELDS:
-            value = int(value)
-        result[key] = value
-
-    return result
-
-
-def add_flags(
-    result: EncodingInsensitiveDict[str, int | str | bool],
-) -> EncodingInsensitiveDict[str, int | str | bool]:
+def add_flags(result: EncodingInsensitiveDict) -> EncodingInsensitiveDict:
     flags = set(nativestr(result["flags"]).split(","))
     for name, flag in (
         ("is_master", "master"),
@@ -67,17 +26,9 @@ def add_flags(
     return result
 
 
-def parse_sentinel_state(
-    item: list[ResponsePrimitive],
-) -> EncodingInsensitiveDict[str, int | str | bool]:
-    result = sentinel_state_typed([nativestr(k) for k in item])
-    result = add_flags(result)
-    return result
-
-
 class PrimaryCallback(
     ResponseCallback[
-        ResponseType,
+        dict[ResponsePrimitive, ResponsePrimitive],
         dict[str, ResponsePrimitive],
     ]
 ):
@@ -90,30 +41,30 @@ class PrimaryCallback(
 
 class PrimariesCallback(
     ResponseCallback[
-        list[ResponseType],
+        list[dict[StringT, StringT]],
         dict[str, dict[str, ResponsePrimitive]],
     ]
 ):
     def transform(
         self,
-        response: list[ResponseType],
+        response: list[dict[StringT, StringT]],
     ) -> dict[str, dict[str, ResponsePrimitive]]:
         states: dict[str, dict[str, ResponsePrimitive]] = {}
         for state in response:
-            state = add_flags(EncodingInsensitiveDict(state)).stringify_keys()
-            states[nativestr(state["name"])] = state
+            decoded_state = add_flags(EncodingInsensitiveDict(state)).stringify_keys()
+            states[nativestr(decoded_state["name"])] = decoded_state
         return states
 
 
 class SentinelsStateCallback(
     ResponseCallback[
-        list[ResponseType],
+        list[dict[AnyStr, AnyStr]],
         tuple[dict[str, ResponsePrimitive], ...],
     ]
 ):
     def transform(
         self,
-        response: list[ResponseType],
+        response: list[dict[AnyStr, AnyStr]],
     ) -> tuple[dict[str, ResponsePrimitive], ...]:
         return tuple(
             add_flags(EncodingInsensitiveDict(state)).stringify_keys() for state in response
@@ -122,13 +73,13 @@ class SentinelsStateCallback(
 
 class GetPrimaryCallback(
     ResponseCallback[
-        list[ResponsePrimitive] | None,
+        list[AnyStr] | None,
         tuple[str, int] | None,
     ]
 ):
     def transform(
         self,
-        response: list[ResponsePrimitive] | None,
+        response: list[AnyStr] | None,
     ) -> tuple[str, int] | None:
         if response:
             return nativestr(response[0]), int(response[1])
@@ -145,4 +96,5 @@ class SentinelInfoCallback(
         self,
         response: list[ResponseType],
     ) -> dict[AnyStr, dict[int, dict[str, ResponsePrimitive]]]:
-        return {response[0]: {r[0]: InfoCallback()(r[1]) for r in response[1]}}
+        # TODO: giving up for now
+        return {response[0]: {r[0]: InfoCallback()(r[1]) for r in response[1]}}  # type: ignore

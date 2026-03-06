@@ -447,15 +447,7 @@ class Search(ModuleGroup[AnyStr]):
         return self.client.create_request(
             CommandName.FT_INFO,
             index,
-            callback=DictCallback[AnyStr, ResponseType](
-                recursive=[
-                    "attributes",
-                    "index_definition",
-                    "gc_stats",
-                    "cursor_stats",
-                    "dialect_stats",
-                ]
-            ),
+            callback=DictCallback[AnyStr, ResponseType](),
         )
 
     @module_command(
@@ -1261,7 +1253,7 @@ class Search(ModuleGroup[AnyStr]):
         return self.client.create_request(
             CommandName.FT_HYBRID,
             *command_arguments,
-            callback=HybridSearchCallback(),
+            callback=HybridSearchCallback[AnyStr](),
         )
 
     @module_command(

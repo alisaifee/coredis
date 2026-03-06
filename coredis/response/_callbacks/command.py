@@ -1,36 +1,44 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 from coredis._utils import nativestr
 from coredis.response._callbacks import ResponseCallback
 from coredis.response.types import Command
 from coredis.typing import (
     AnyStr,
+    Hashable,
     ResponsePrimitive,
     ResponseType,
+    StringT,
 )
 
 
-class CommandCallback(ResponseCallback[list[ResponseType], dict[str, Command]]):
+class CommandCallback(
+    ResponseCallback[
+        list[list[ResponsePrimitive | dict[Hashable, ResponseType] | set[Hashable]]],
+        dict[str, Command],
+    ]
+):
     def transform(
         self,
-        response: list[ResponseType],
+        response: list[list[ResponsePrimitive | dict[Hashable, ResponseType] | set[Hashable]]],
     ) -> dict[str, Command]:
         commands: dict[str, Command] = {}
 
         for command in response:
-            assert isinstance(command, list)
-
             if command:
-                name = nativestr(command[0])
+                detail = cast(list[Any], command)
+                name = nativestr(detail[0])
 
                 if len(command) >= 6:
                     commands[name] = {
-                        "name": command[0],
-                        "arity": command[1],
-                        "flags": command[2],
-                        "first-key": command[3],
-                        "last-key": command[4],
-                        "step": command[5],
+                        "name": detail[0],
+                        "arity": detail[1],
+                        "flags": detail[2],
+                        "first-key": detail[3],
+                        "last-key": detail[4],
+                        "step": detail[5],
                         "acl-categories": None,
                         "tips": None,
                         "key-specifications": None,
@@ -38,32 +46,21 @@ class CommandCallback(ResponseCallback[list[ResponseType], dict[str, Command]]):
                     }
 
                 if len(command) >= 7:
-                    commands[name]["acl-categories"] = command[6]
+                    commands[name]["acl-categories"] = detail[6]
 
                 if len(command) >= 8:
-                    commands[name]["tips"] = command[7]
-                    commands[name]["key-specifications"] = command[8]
-                    commands[name]["sub-commands"] = command[9]
+                    commands[name]["tips"] = detail[7]
+                    commands[name]["key-specifications"] = detail[8]
+                    commands[name]["sub-commands"] = detail[9]
 
         return commands
 
 
-class CommandKeyFlagCallback(ResponseCallback[list[ResponseType], dict[AnyStr, set[AnyStr]]]):
-    def transform(
-        self,
-        response: list[ResponseType],
-    ) -> dict[AnyStr, set[AnyStr]]:
-        return {k[0]: set(k[1]) for k in response}
-
-
-class CommandDocCallback(
-    ResponseCallback[
-        dict[ResponsePrimitive, ResponseType],
-        dict[AnyStr, dict[AnyStr, ResponseType]],
-    ]
+class CommandKeyFlagCallback(
+    ResponseCallback[list[list[StringT | set[StringT]]], dict[AnyStr, set[AnyStr]]]
 ):
     def transform(
         self,
-        response: dict[ResponsePrimitive, ResponseType],
-    ) -> dict[AnyStr, dict[AnyStr, ResponseType]]:
-        return response  # noqa
+        response: list[list[StringT | set[StringT]]],
+    ) -> dict[AnyStr, set[AnyStr]]:
+        return {cast(AnyStr, k[0]): set(cast(set[AnyStr], k[1])) for k in response}

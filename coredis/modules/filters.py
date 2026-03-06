@@ -261,16 +261,14 @@ class BloomFilter(ModuleGroup[AnyStr]):
     def info(
         self,
         key: KeyT,
-        single_value: None
-        | (
-            Literal[
-                PureToken.CAPACITY,
-                PureToken.EXPANSION,
-                PureToken.FILTERS,
-                PureToken.ITEMS,
-                PureToken.SIZE,
-            ]
-        ) = None,
+        single_value: Literal[
+            PureToken.CAPACITY,
+            PureToken.EXPANSION,
+            PureToken.FILTERS,
+            PureToken.ITEMS,
+            PureToken.SIZE,
+        ]
+        | None = None,
     ) -> CommandRequest[int] | CommandRequest[dict[AnyStr, int]]:
         """
         Returns information about a Bloom Filter
@@ -286,7 +284,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
                 CommandName.BF_INFO,
                 key,
                 single_value,
-                callback=FirstValueCallback[int](),
+                callback=FirstValueCallback[AnyStr, int](),
             )
         else:
             return self.client.create_request(

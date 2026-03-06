@@ -78,11 +78,9 @@ from coredis.response._callbacks.cluster import (
 )
 from coredis.response._callbacks.command import (
     CommandCallback,
-    CommandDocCallback,
     CommandKeyFlagCallback,
 )
-from coredis.response._callbacks.connection import ClientTrackingInfoCallback
-from coredis.response._callbacks.geo import GeoCoordinatessCallback, GeoSearchCallback
+from coredis.response._callbacks.geo import GeoCoordinatesCallback, GeoSearchCallback
 from coredis.response._callbacks.hash import (
     HGetAllCallback,
     HRandFieldCallback,
@@ -100,7 +98,6 @@ from coredis.response._callbacks.server import (
     DebugCallback,
     InfoCallback,
     LatencyCallback,
-    LatencyHistogramCallback,
     RoleCallback,
     SlowlogCallback,
     TimeCallback,
@@ -111,7 +108,6 @@ from coredis.response._callbacks.sorted_set import (
     ZAddCallback,
     ZMembersOrScoredMembers,
     ZMPopCallback,
-    ZMScoreCallback,
     ZRandMemberCallback,
     ZRankCallback,
     ZScanCallback,
@@ -124,7 +120,6 @@ from coredis.response._callbacks.streams import (
     PendingCallback,
     StreamInfoCallback,
     StreamRangeCallback,
-    XInfoCallback,
 )
 from coredis.response._callbacks.strings import LCSCallback, StringSetCallback
 from coredis.response._callbacks.vector_sets import (
@@ -1653,7 +1648,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.GEOPOS, key, *members, callback=GeoCoordinatessCallback()
+            CommandName.GEOPOS, key, *members, callback=GeoCoordinatesCallback()
         )
 
     @overload
@@ -4970,7 +4965,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         if not members:
             raise DataError("ZMSCORE members must be a non-empty list")
 
-        return self.create_request(CommandName.ZMSCORE, key, *members, callback=ZMScoreCallback())
+        return self.create_request(
+            CommandName.ZMSCORE, key, *members, callback=TupleCallback[float | None]()
+        )
 
     @redis_command(
         CommandName.ZPOPMAX,
@@ -6202,7 +6199,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def xinfo_consumers(
         self, key: KeyT, groupname: StringT
-    ) -> CommandRequest[tuple[dict[AnyStr, AnyStr], ...]]:
+    ) -> CommandRequest[tuple[dict[AnyStr, AnyStr | int | None], ...]]:
         """
         Return all consumers in a consumer group for the stream.
 
@@ -6214,7 +6211,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.XINFO_CONSUMERS,
             key,
             groupname,
-            callback=XInfoCallback[AnyStr](),
+            callback=TupleCallback[dict[AnyStr, AnyStr | int | None]](),
         )
 
     @redis_command(
@@ -6222,14 +6219,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.STREAM,
         flags={CommandFlag.READONLY},
     )
-    def xinfo_groups(self, key: KeyT) -> CommandRequest[tuple[dict[AnyStr, AnyStr], ...]]:
+    def xinfo_groups(
+        self, key: KeyT
+    ) -> CommandRequest[tuple[dict[AnyStr, AnyStr | int | None], ...]]:
         """
         Return all consumer groups for the stream.
 
         :param key: The stream key.
         :return: Tuple of group info dicts (name, consumers, pending, last-delivered-id, etc.).
         """
-        return self.create_request(CommandName.XINFO_GROUPS, key, callback=XInfoCallback[AnyStr]())
+        return self.create_request(
+            CommandName.XINFO_GROUPS,
+            key,
+            callback=TupleCallback[dict[AnyStr, AnyStr | int | None]](),
+        )
 
     @mutually_inclusive_parameters("count", leaders=["full"])
     @redis_command(
@@ -7745,7 +7748,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.CLIENT_TRACKINGINFO,
-            callback=ClientTrackingInfoCallback[AnyStr](),
+            callback=DictCallback[AnyStr, AnyStr | _Set[AnyStr] | list[AnyStr]](),
         )
 
     @versionadded(version="3.2.0")
@@ -7973,7 +7976,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def latency_histogram(
         self, *commands: StringT
-    ) -> CommandRequest[dict[AnyStr, dict[AnyStr, RedisValueT]]]:
+    ) -> CommandRequest[dict[AnyStr, dict[AnyStr, RedisValueT | dict[AnyStr, RedisValueT]]]]:
         """
         Return the cumulative distribution of latencies for the given or all commands.
 
@@ -7983,7 +7986,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.LATENCY_HISTOGRAM,
             *commands,
-            callback=LatencyHistogramCallback[AnyStr](),
+            callback=DictCallback[AnyStr, dict[AnyStr, RedisValueT | dict[AnyStr, RedisValueT]]](),
         )
 
     @versionadded(version="3.0.0")
@@ -8653,7 +8656,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.COMMAND_DOCS,
             *command_names,
-            callback=CommandDocCallback[AnyStr](),
+            callback=DictCallback[AnyStr, dict[AnyStr, ResponseType]](),
         )
 
     @versionadded(version="3.0.0")

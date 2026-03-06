@@ -5,11 +5,17 @@ import pytest
 from coredis import Redis
 from coredis._concurrency import gather
 from coredis.exceptions import ResponseError
+from coredis.tokens import PureToken
 from tests.conftest import module_targets
 
 
 @module_targets()
 class TestBloomFilter:
+    async def test_info(self, client: Redis, _s):
+        assert await client.bf.reserve("filter", 0.1, 10, nonscaling=True)
+        assert 10 == await client.bf.info("filter", PureToken.CAPACITY)
+        assert 0 == await client.bf.info("filter", PureToken.ITEMS)
+
     async def test_reserve(self, client: Redis, _s):
         assert await client.bf.reserve("filter", 0.1, 1000)
         with pytest.raises(ResponseError):

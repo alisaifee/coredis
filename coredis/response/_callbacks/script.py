@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from coredis._utils import EncodingInsensitiveDict
 from coredis.response._callbacks import ResponseCallback
@@ -9,6 +9,7 @@ from coredis.response.types import LibraryDefinition
 from coredis.typing import (
     AnyStr,
     Mapping,
+    MutableMapping,
     RedisValueT,
     ResponsePrimitive,
     ResponseType,
@@ -36,11 +37,14 @@ class FunctionListCallback(
                 functions[function_definition["name"]]["flags"] = set(function_definition["flags"])
             library["functions"] = functions
             transformed[lib_name] = EncodingInsensitiveDict(
-                LibraryDefinition(
-                    name=library["library_name"],
-                    engine=library["engine"],
-                    functions=library["functions"],
-                    library_code=library.get("library_code", None),
+                cast(
+                    MutableMapping[str, Any],
+                    LibraryDefinition(
+                        name=library["library_name"],
+                        engine=library["engine"],
+                        functions=library["functions"],
+                        library_code=library.get("library_code", None),
+                    ),
                 )
             )
         return transformed

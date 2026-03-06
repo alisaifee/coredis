@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import cast
 
 from coredis._utils import EncodingInsensitiveDict
 from coredis.response._callbacks import ResponseCallback
@@ -19,98 +19,115 @@ from coredis.typing import (
 )
 
 
-class StreamRangeCallback(ResponseCallback[ResponseType, tuple[StreamEntry, ...]]):
+class StreamRangeCallback(
+    ResponseCallback[list[list[StringT | list[StringT]]], tuple[StreamEntry, ...]]
+):
     def transform(
         self,
-        response: ResponseType,
+        response: list[list[StringT | list[StringT]]],
     ) -> tuple[StreamEntry, ...]:
-        return tuple(StreamEntry(r[0], flat_pairs_to_ordered_dict(r[1])) for r in response)
+        return tuple(
+            StreamEntry(cast(StringT, r[0]), flat_pairs_to_ordered_dict(cast(list[StringT], r[1])))
+            for r in response
+        )
 
 
-class ClaimCallback(ResponseCallback[ResponseType, tuple[AnyStr, ...] | tuple[StreamEntry, ...]]):
+class ClaimCallback(
+    ResponseCallback[
+        list[StringT | list[StringT | list[StringT]]], tuple[AnyStr, ...] | tuple[StreamEntry, ...]
+    ]
+):
     def transform(
         self,
-        response: ResponseType,
+        response: list[StringT | list[StringT | list[StringT]]],
     ) -> tuple[AnyStr, ...] | tuple[StreamEntry, ...]:
         if self.options.get("justid") is not None:
-            return tuple(response)
+            return tuple(cast(list[AnyStr], response))
         else:
-            return StreamRangeCallback()(response)
+            return StreamRangeCallback()(cast(list[list[StringT | list[StringT]]], response))
 
 
 class AutoClaimCallback(
     ResponseCallback[
-        ResponseType,
+        list[StringT | list[StringT | list[StringT | list[StringT]]]],
         tuple[AnyStr, tuple[AnyStr, ...]]
         | tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]],
     ]
 ):
     def transform(
-        self,
-        response: ResponseType,
+        self, response: list[StringT | list[StringT | list[StringT | list[StringT]]]]
     ) -> (
         tuple[AnyStr, tuple[AnyStr, ...]]
         | tuple[AnyStr, tuple[StreamEntry, ...], tuple[AnyStr, ...]]
     ):
         if self.options.get("justid") is not None:
-            return response[0], tuple(response[1])
+            return cast(AnyStr, response[0]), tuple(cast(list[AnyStr], response[1]))
         else:
             return (
-                response[0],
-                StreamRangeCallback()(response[1]),
-                tuple(response[2]) if len(response) > 2 else (),
+                cast(AnyStr, response[0]),
+                StreamRangeCallback()(cast(list[list[StringT | list[StringT]]], response[1])),
+                tuple(cast(list[AnyStr], response[2])) if len(response) > 2 else (),
             )
 
 
 class MultiStreamRangeCallback(
-    ResponseCallback[ResponseType, dict[AnyStr, tuple[StreamEntry, ...]] | None]
+    ResponseCallback[
+        dict[StringT, list[list[list[StringT] | StringT]]] | None,
+        dict[AnyStr, tuple[StreamEntry, ...]] | None,
+    ]
 ):
     def transform(
         self,
-        response: ResponseType,
+        response: dict[StringT, list[list[list[StringT] | StringT]]] | None,
     ) -> dict[AnyStr, tuple[StreamEntry, ...]] | None:
         if response:
             mapping: dict[AnyStr, tuple[StreamEntry, ...]] = {}
 
             for stream_id, entries in response.items():
-                mapping[stream_id] = tuple(
-                    StreamEntry(r[0], flat_pairs_to_ordered_dict(r[1])) for r in entries
+                mapping[cast(AnyStr, stream_id)] = tuple(
+                    StreamEntry(
+                        cast(StringT, r[0]), flat_pairs_to_ordered_dict(cast(list[StringT], r[1]))
+                    )
+                    for r in entries
                 )
 
             return mapping
         return None
 
 
-class PendingCallback(ResponseCallback[ResponseType, StreamPending | tuple[StreamPendingExt, ...]]):
+class PendingCallback(
+    ResponseCallback[
+        list[StringT | int | list[StringT | int | list[StringT]] | None],
+        StreamPending | tuple[StreamPendingExt, ...],
+    ]
+):
     def transform(
         self,
-        response: ResponseType,
+        response: list[StringT | int | list[StringT | int | list[StringT]] | None],
     ) -> StreamPending | tuple[StreamPendingExt, ...]:
         if not self.options.get("count"):
+            consumers = [
+                (cast(StringT, r[0]), int(r[1])) for r in cast(list[StringT], response[3] or [])
+            ]
             return StreamPending(
-                response[0],
-                response[1],
-                response[2],
-                OrderedDict((r[0], int(r[1])) for r in response[3] or []),
+                cast(int, response[0]),
+                cast(StringT, response[1]),
+                cast(StringT, response[2]),
+                OrderedDict(consumers),
             )
         else:
-            return tuple(StreamPendingExt(sub[0], sub[1], sub[2], sub[3]) for sub in response)
+            return tuple(
+                StreamPendingExt(*(cast(tuple[StringT, StringT, int, int], tuple(sub[:4]))))
+                for sub in cast(list[list[StringT | int]], response)
+            )
 
 
-class XInfoCallback(ResponseCallback[ResponseType, tuple[dict[AnyStr, AnyStr], ...]]):
+class StreamInfoCallback(ResponseCallback[dict[StringT, ResponseType], StreamInfo]):
     def transform(
         self,
-        response: ResponseType,
-    ) -> tuple[dict[AnyStr, AnyStr], ...]:
-        return tuple(flat_pairs_to_dict(row) for row in response)
-
-
-class StreamInfoCallback(ResponseCallback[ResponseType, StreamInfo]):
-    def transform(
-        self,
-        response: ResponseType,
+        response: dict[StringT, ResponseType],
     ) -> StreamInfo:
-        res: dict[StringT, Any] = EncodingInsensitiveDict(flat_pairs_to_dict(response))
+        res = EncodingInsensitiveDict(response)
         if not self.options.get("full"):
             k1 = "first-entry"
             kn = "last-entry"
