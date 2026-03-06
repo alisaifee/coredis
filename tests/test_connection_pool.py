@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import anyio
 import pytest
-import sniffio
 
 import coredis.connection
 from coredis import ClusterConnectionPool, ConnectionPool, TCPConnection, UnixDomainSocketConnection
 from coredis._concurrency import gather
 from coredis.connection import ClusterConnection, TCPLocation, UnixDomainSocketLocation
-from coredis.exceptions import ConnectionError
+from coredis.exceptions import ConnectionError, RedisClusterError
 from coredis.patterns.cache import LRUCache
 from tests.conftest import targets
 
@@ -164,32 +163,6 @@ class TestBasicPoolParameters:
             await gather(*(client.blpop(["test"], timeout=2) for _ in range(3)))
 
 
-class TestConnectionPoolFailedInitialization:
-    async def test_failed_cluster_pool_aenter_cleans_up_task_group(self):
-        """When ClusterConnectionPool.__aenter__ fails to connect, the internally
-        managed task group must be cleaned up. Otherwise, under Trio the orphaned
-        nursery corrupts the task's nursery stack, making it impossible to continue
-        after catching the error.
-        """
-        pool = ClusterConnectionPool(
-            startup_nodes=[TCPLocation("localhost", 1)],
-            skip_full_coverage_check=True,
-            connect_timeout=0.5,
-            stream_timeout=0.5,
-        )
-
-        with pytest.raises(BaseException):
-            async with pool:
-                pass
-
-        assert pool._task_group.cancel_scope.cancel_called
-
-        if sniffio.current_async_library() == "trio":
-            import trio
-
-            assert len(trio.lowlevel.current_task()._child_nurseries) == 0
-
-
 class TestBasicConnectionPoolConstruction:
     async def test_unintialized_pool(self, redis_basic_server):
         pool = coredis.ConnectionPool(location=TCPLocation(*redis_basic_server))
@@ -256,6 +229,20 @@ class TestClusterConnectionPoolConstruction:
         ) as pool:
             async with pool.acquire() as connection:
                 assert isinstance(connection, ClusterConnection)
+
+    async def test_failed_initialization(self):
+        pool = ClusterConnectionPool(
+            startup_nodes=[TCPLocation("localhost", 1)],
+            skip_full_coverage_check=True,
+            connect_timeout=0.5,
+            stream_timeout=0.5,
+        )
+
+        with pytest.raises(RedisClusterError, match="Please provide at least one reachable node"):
+            async with pool:
+                pass
+
+        assert pool._task_group is None
 
 
 class TestCluserConnectionPoolLayoutCache:

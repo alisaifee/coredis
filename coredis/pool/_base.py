@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextvars
-import functools
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from typing import Any
@@ -26,7 +25,6 @@ from coredis.typing import (
     AsyncGenerator,
     Callable,
     ClassVar,
-    Concatenate,
     Generic,
     NotRequired,
     ParamSpec,
@@ -74,23 +72,6 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
         "notouch": query_param_to_bool,
         "db": int,
     }
-    _task_group: TaskGroup
-
-    @staticmethod
-    def _ensure_usable(
-        function: Callable[Concatenate[ConnectionPoolT, P], R],
-    ) -> Callable[Concatenate[ConnectionPoolT, P], R]:
-        @functools.wraps(function)
-        def _task_group_ensured(slf: ConnectionPoolT, /, *args: P.args, **kwargs: P.kwargs) -> R:
-            if hasattr(slf, "_task_group"):
-                return function(slf, *args, **kwargs)
-            raise RuntimeError(
-                "Connection pool is not initialized. "
-                "Make sure it's async context manager is entered before accessing it. "
-                "(For more details see https://coredis.readthedocs.org/handbook/connections.html#connection pools)"
-            )
-
-        return _task_group_ensured
 
     def __init__(
         self,
@@ -125,11 +106,7 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
         self._anchor_active = contextvars.ContextVar("parent_active", default=False)
         self._anchor_reset_token: contextvars.Token[bool] | None = None
         self._initialization_lock = Lock()
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        super().__init_subclass__(**kwargs)
-        for method in {"get_connection", "acquire"}:
-            setattr(cls, method, cls._ensure_usable(getattr(cls, method)))
+        self._task_group: TaskGroup | None = None
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.location}>"
@@ -161,11 +138,13 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
     async def __aexit__(self, *args: Any) -> None:
         self._counter -= 1
         if self._counter == 0:
-            self._task_group.cancel_scope.cancel()
+            assert self._task_group
+            tg, self._task_group = self._task_group, None
+            tg.cancel_scope.cancel()
             self._reset()
             if self._anchor_reset_token:
                 self._anchor_active.reset(self._anchor_reset_token)
-            await self._task_group.__aexit__(*args)
+            await tg.__aexit__(*args)
 
     @abstractmethod
     async def _initialize(self) -> None:
@@ -190,6 +169,16 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
         Gets or create a connection from the pool.
         """
         ...
+
+    @property
+    def task_group(self) -> TaskGroup:
+        if self._task_group is None:
+            raise RuntimeError(
+                "Connection pool is not initialized or has exited. "
+                "Make sure you are accessing it after entering the pool's async context manager. "
+                "(For more details see https://coredis.readthedocs.org/handbook/connections.html#connection pools)"
+            )
+        return self._task_group
 
     @asynccontextmanager
     async def acquire(self, **_: Any) -> AsyncGenerator[ConnectionT]:

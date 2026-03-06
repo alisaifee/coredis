@@ -217,12 +217,12 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
                 f"{total_nodes - self.max_connections} connections."
             )
             self.max_connections = total_nodes
-        await self._task_group.start(self.cluster_layout.monitor)
-        await self._task_group.start(self._cleanup)
+        await self.task_group.start(self.cluster_layout.monitor)
+        await self.task_group.start(self._cleanup)
         if self.cache:
             # TODO: handle cache failure so that the pool doesn't die
             #  if the cache fails.
-            await self._task_group.start(self.cache.run)
+            await self.task_group.start(self.cache.run)
 
     async def get_connection(
         self, node: ClusterNodeLocation | None = None, primary: bool = True, **options: Any
@@ -310,7 +310,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             read_from_replicas=self.read_from_replicas and node.server_type == "replica",
             **self.connection_kwargs,
         )
-        if err := await self._task_group.start(self._wrap_connection, connection):
+        if err := await self.task_group.start(self._wrap_connection, connection):
             raise err
         self._online_connections.add(connection)
         return connection

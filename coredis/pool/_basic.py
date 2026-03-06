@@ -233,7 +233,7 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
         if self.cache:
             # TODO: handle cache failure so that the pool doesn't die
             #  if the cache fails.
-            await self._task_group.start(self.cache.run)
+            await self.task_group.start(self.cache.run)
 
     async def get_connection(self, **_: Any) -> ConnectionT:
         """
@@ -249,7 +249,7 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
                 if connection:
                     connection.invalidate()
                 connection = await self._construct_connection()
-                if err := await self._task_group.start(self.__wrap_connection, connection):
+                if err := await self.task_group.start(self.__wrap_connection, connection):
                     self._available_connections.append_nowait(None)
                     raise err
                 self._online_connections.add(connection)
