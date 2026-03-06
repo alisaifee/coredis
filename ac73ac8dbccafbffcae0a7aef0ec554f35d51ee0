@@ -1,0 +1,23 @@
+* Chore
+
+  * Extract command splitting from cluster layout
+
+    Added RoutingStrategy to extract the logic of routing/splitting commands
+    that affect either no keys or keys on more than one slot out of
+    ClusterLayout & RedisCluster. Routing logic is now collapsed into a
+    single "route_strategy" in the command decorators that specifies:
+
+       - where to distribute
+       - how to split
+       - how to merge
+
+* Feature
+
+  * Add cross slot implementation for:
+
+     - ``MSET``
+     - ``MSETNX``
+     - ``MSETEX``
+     - ``MGET``
+     - ``JSON.MGET``
+     - ``JSON.MSET``
