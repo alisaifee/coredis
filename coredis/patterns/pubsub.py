@@ -522,27 +522,6 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     """
 
-    async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
-        started = False
-
-        async def _run() -> None:
-            nonlocal started
-            async with self.connection_pool.acquire() as self._connection:
-                async with create_task_group() as tg:
-                    self._current_scope = tg.cancel_scope
-                    tg.start_soon(self._consumer)
-                    tg.start_soon(self._keepalive)
-                    if not started:
-                        task_status.started()
-                        started = True
-                    else:  # resubscribe
-                        if self.channels:
-                            await self.subscribe(*self.channels.keys())
-                        if self.patterns:
-                            await self.psubscribe(*self.patterns.keys())
-
-        await self._retry_policy.call_with_retries(_run)
-
 
 @versionchanged(
     version="6.0.0",
