@@ -74,7 +74,7 @@ class ClusterMultiNodeCallback(ABC, Generic[R]):
         key_positions: list[tuple[int, ...]],
         responses: list[R | ResponseError | TimeoutError],
     ) -> R:
-        if self.check_errors(responses):
+        if self.successful(responses):
             return self.combine(key_positions, responses)
         else:
             return self.handle_error(key_positions, responses)
@@ -99,11 +99,11 @@ class ClusterMultiNodeCallback(ABC, Generic[R]):
         for response in responses:
             if isinstance(response, (ResponseError, TimeoutError)):
                 raise response
-        return self.combine(key_positions, cast(list[R], responses))
+        assert False
 
-    def check_errors(self, values: list[R | ResponseError | TimeoutError]) -> TypeGuard[list[R]]:
+    def successful(self, values: list[R | ResponseError | TimeoutError]) -> TypeGuard[list[R]]:
         for value in values:
-            if isinstance(value, BaseException):
+            if isinstance(value, (ResponseError, TimeoutError)):
                 return False
         return True
 
