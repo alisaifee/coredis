@@ -98,6 +98,7 @@ dev = [
   "mypy==1.19.1; implementation_name != 'pypy'",
   "ruff",
   "types-deprecated",
+  "ipython",
   {include-group = "test"},
 ]
 
