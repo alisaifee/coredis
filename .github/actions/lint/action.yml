@@ -1,5 +1,5 @@
 name: Lint
-description: Setup test environment, run tests and upload coverage
+description: Run linters
 inputs:
   python-version:
     required: true
