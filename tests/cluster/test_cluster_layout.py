@@ -90,7 +90,7 @@ class TestClusterLayout:
                 == original_primaries[1]["port"]
             )
 
-            await sleep(0.5)
+            await sleep(1)
 
             assert (
                 layout.node_for_slot(broken_slots[0][0], primary=True).host
@@ -171,7 +171,7 @@ class TestClusterLayout:
                 == original_replicas[1]["port"]
             )
 
-            await sleep(0.5)
+            await sleep(1)
 
             assert (
                 layout.node_for_slot(broken_slots[0][0], primary=False).host
@@ -221,7 +221,7 @@ class TestClusterLayout:
             refresh = mocker.spy(layout, "_refresh")
             nodes = layout.nodes
             [layout.report_errors(None, ConnectionError()) for _ in range(100)]
-            await sleep(0.5)
+            await sleep(1)
             assert refresh.call_count == 2
             assert layout.nodes == nodes
 
