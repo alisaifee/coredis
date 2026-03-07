@@ -40,7 +40,7 @@ runs:
     - name: Compile with mypyc
       if: ${{ inputs.compiled == 'true' }}
       shell: bash
-      run: uv run mypyc coredis/constants/ coredis/parser.py coredis/_packer.py coredis/_utils.py
+      run: uv run mypyc coredis/response/_callbacks coredis/modules/response/_callbacks coredis/constants/ coredis/parser.py coredis/_packer.py coredis/_utils.py
     - name: Tests
       env:
         COREDIS_UVLOOP: ${{ inputs.uvloop == 'true' && 'True' || 'False' }}

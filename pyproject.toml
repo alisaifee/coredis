@@ -167,6 +167,8 @@ include = [
   "coredis/parser.py",
   "coredis/_packer.py",
   "coredis/_utils.py",
+  "coredis/response/_callbacks/",
+  "coredis/modules/response/_callbacks/",
 ]
 mypy-args = [
   "--ignore-missing-imports",
