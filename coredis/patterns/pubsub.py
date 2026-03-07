@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, cast
 from anyio import (
     TASK_STATUS_IGNORED,
     AsyncContextManagerMixin,
+    CancelScope,
     Event,
     create_memory_object_stream,
     create_task_group,
@@ -168,12 +169,6 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             if self._initial_pattern_subscriptions:
                 await self.psubscribe(**self._initial_pattern_subscriptions)
             yield self
-            await self.unsubscribe()
-            await self.punsubscribe()
-            self.channels.clear()
-            self.patterns.clear()
-            self._subscription_waiters.clear()
-            self._unsubscription_waiters.clear()
             self._current_scope.cancel()
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
@@ -182,37 +177,25 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         async def _run() -> None:
             nonlocal started
             async with self.connection_pool.acquire() as self._connection:
-                async with create_task_group() as tg:
-                    self._current_scope = tg.cancel_scope
-                    tg.start_soon(self._consumer)
-                    tg.start_soon(self._keepalive)
-                    if not started:
-                        task_status.started()
-                        started = True
-                    else:  # resubscribe
-                        if self.channels:
-                            await self.subscribe(*self.channels.keys())
-                        if self.patterns:
-                            await self.psubscribe(*self.patterns.keys())
+                try:
+                    async with create_task_group() as tg:
+                        self._current_scope = tg.cancel_scope
+                        tg.start_soon(self._consume_push_messages)
+                        tg.start_soon(self._keepalive)
+                        if not started:
+                            task_status.started()
+                            started = True
+                        else:  # resubscribe
+                            if self.channels:
+                                await self.subscribe(*self.channels.keys())
+                            if self.patterns:
+                                await self.psubscribe(*self.patterns.keys())
+                finally:
+                    if self._current_scope.cancel_called:
+                        with CancelScope(shield=True):
+                            await self._cleanup()
 
         await self._retry_policy.call_with_retries(_run)
-
-    async def _keepalive(self) -> None:
-        while True:
-            if (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds:
-                if self._connection and await self._connection.create_request(CommandName.PING) in {
-                    b"PONG",
-                    "PONG",
-                }:
-                    self._last_checkin = time.monotonic()
-            await sleep(max(1, self._max_idle_seconds - idle))
-
-    async def _consumer(self) -> None:
-        while True:
-            async for response in self.connection.push_messages:
-                self._last_checkin = time.monotonic()
-                msg = await self._handle_message(response)
-                self._send_stream.send_nowait(msg)
 
     async def psubscribe(
         self,
@@ -236,7 +219,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         for pattern, event in waiters.items():
             self._subscription_waiters[pattern].append(event)
 
-        await self._execute_command(CommandName.PSUBSCRIBE, *new_patterns.keys())
+        self._execute_command(CommandName.PSUBSCRIBE, *new_patterns.keys())
         await self._ensure_subscribed(waiters)
         # update the patterns dict AFTER we send the command. we don't want to
         # subscribe twice to these patterns, once for the command and again
@@ -253,7 +236,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         }
         for pattern, event in waiters.items():
             self._unsubscription_waiters[pattern].append(event)
-        await self._execute_command(CommandName.PUNSUBSCRIBE, *patterns)
+        self._punsubscribe(*patterns)
         await self._ensure_unsubscribed(waiters)
 
     async def subscribe(
@@ -280,7 +263,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         for channel, event in waiters.items():
             self._subscription_waiters[channel].append(event)
 
-        await self._execute_command(CommandName.SUBSCRIBE, *new_channels.keys())
+        self._execute_command(CommandName.SUBSCRIBE, *new_channels.keys())
 
         await self._ensure_subscribed(waiters)
         self.channels.update(new_channels)
@@ -296,7 +279,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         }
         for channel, event in waiters.items():
             self._unsubscription_waiters[channel].append(event)
-        await self._execute_command(CommandName.UNSUBSCRIBE, *channels)
+        self._execute_command(CommandName.UNSUBSCRIBE, *channels)
         await self._ensure_unsubscribed(waiters)
 
     async def get_message(
@@ -319,6 +302,28 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             )
         return None
 
+    def _unsubscribe(self, *channels: StringT) -> None:
+        self._execute_command(CommandName.UNSUBSCRIBE, *channels)
+
+    def _punsubscribe(self, *patterns: StringT) -> None:
+        self._execute_command(CommandName.PUNSUBSCRIBE, *patterns)
+
+    async def _keepalive(self) -> None:
+        while True:
+            if (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds:
+                if self._connection and await self._connection.create_request(CommandName.PING) in {
+                    b"PONG",
+                    "PONG",
+                }:
+                    self._last_checkin = time.monotonic()
+            await sleep(max(1, self._max_idle_seconds - idle))
+
+    async def _consume_push_messages(self) -> None:
+        async for response in self.connection.push_messages:
+            self._last_checkin = time.monotonic()
+            msg = await self._handle_message(response)
+            self._send_stream.send_nowait(msg)
+
     def _encode(self, value: StringT) -> StringT:
         """
         Encodes the value so that it's identical to what we'll read off the
@@ -334,7 +339,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         return value
 
-    async def _execute_command(self, command: bytes, *args: RedisValueT) -> None:
+    def _execute_command(self, command: bytes, *args: RedisValueT) -> None:
         """
         Executes a publish/subscribe command
 
@@ -450,6 +455,20 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
             # TODO: not sure what to do with this response.
             return False
         return True
+
+    async def _cleanup(self) -> None:
+        if self.subscribed:
+            try:
+                self._unsubscribe()
+                self._punsubscribe()
+                with move_on_after(self._unsubscription_timeout, shield=True):
+                    await self._consume_push_messages()
+            except ConnectionError:
+                return
+            finally:
+                self._subscription_waiters.clear()
+                self._unsubscription_waiters.clear()
+                self._subscribed = Event()
 
 
 @versionchanged(
@@ -577,7 +596,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
          `PING``.
         """
         self.shard_connections: dict[str, BaseConnection] = {}
-        self.node_channel_mapping: dict[str, list[StringT]] = {}
+        self._node_channel_mapping: dict[str, list[StringT]] = {}
         self.read_from_replicas = read_from_replicas
         self._last_checkins: dict[TCPLocation, float] = defaultdict(lambda: 0)
         super().__init__(
@@ -615,7 +634,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         for channel, event in waiters.items():
             self._subscription_waiters[channel].append(event)
         for channel in new_channels:
-            await self._execute_command(CommandName.SSUBSCRIBE, channel)
+            self._execute_command(CommandName.SSUBSCRIBE, channel)
         await self._ensure_subscribed(waiters)
         self.channels.update(new_channels)
 
@@ -632,8 +651,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
         for channel, event in waiters.items():
             self._unsubscription_waiters[channel].append(event)
-        for channel in channels or list(self.channels.keys()):
-            await self._execute_command(CommandName.SUNSUBSCRIBE, channel)
+        self._unsubscribe(*(channels or list(self.channels.keys())))
         await self._ensure_unsubscribed(waiters)
 
     async def psubscribe(
@@ -656,17 +674,6 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         """
         raise NotImplementedError("Sharded PubSub does not support subscription by pattern")
 
-    async def _execute_command(self, command: bytes, *args: RedisValueT) -> None:
-        assert isinstance(args[0], (bytes, str))
-        channel = nativestr(args[0])
-        slot = hash_slot(b(channel))
-        node = self.connection_pool.cluster_layout.node_for_slot(slot)
-        if node and node.node_id:
-            key = node.node_id
-            self.shard_connections[key].send_command(command, *args)
-            return
-        raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
-
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with self._send_stream, self._receive_stream, create_task_group() as tg:
@@ -675,10 +682,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             if self._initial_channel_subscriptions:
                 await self.subscribe(**self._initial_channel_subscriptions)
             yield self
-            await self.unsubscribe()
-            self.channels.clear()
             self._current_scope.cancel()
-            self._reset()
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         started = False
@@ -693,25 +697,45 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                 for node in self.connection_pool.cluster_layout.primaries
                 if node.node_id
             }
-            async with create_task_group() as tg:
-                self._current_scope = tg.cancel_scope
-                [
-                    tg.start_soon(self._shard_consumer, connection)
-                    for connection in self.shard_connections.values()
-                ]
-                [
-                    tg.start_soon(self._shard_keepalive, connection)
-                    for connection in self.shard_connections.values()
-                ]
-                if not started:
-                    task_status.started()
-                    started = True
-                elif self.channels:  # resubscribe
-                    await self.subscribe(*self.channels.keys())
+            try:
+                async with create_task_group() as tg:
+                    self._current_scope = tg.cancel_scope
+                    [
+                        tg.start_soon(self._consume_shard_push_messages, connection)
+                        for connection in self.shard_connections.values()
+                    ]
+                    [
+                        tg.start_soon(self._shard_keepalive, connection)
+                        for connection in self.shard_connections.values()
+                    ]
+                    if not started:
+                        task_status.started()
+                        started = True
+                    elif self.channels:  # resubscribe
+                        await self.subscribe(*self.channels.keys())
+            finally:
+                if self._current_scope.cancel_called:
+                    with CancelScope(shield=True):
+                        await self._cleanup()
 
         await self._retry_policy.call_with_retries(_run)
 
-    async def _shard_consumer(self, connection: BaseConnection) -> None:
+    def _unsubscribe(self, *channels: StringT) -> None:
+        for channel in channels or list(self.channels.keys()):
+            self._execute_command(CommandName.SUNSUBSCRIBE, channel)
+
+    def _execute_command(self, command: bytes, *args: RedisValueT) -> None:
+        assert isinstance(args[0], (bytes, str))
+        channel = nativestr(args[0])
+        slot = hash_slot(b(channel))
+        node = self.connection_pool.cluster_layout.node_for_slot(slot)
+        if node and node.node_id:
+            key = node.node_id
+            self.shard_connections[key].send_command(command, *args)
+            return
+        raise PubSubError(f"Unable to determine shard for channel {args[0]!r}")
+
+    async def _consume_shard_push_messages(self, connection: BaseConnection) -> None:
         assert isinstance(connection, ClusterConnection)
         async for message in connection.push_messages:
             self._last_checkins[connection.location] = time.monotonic()
@@ -727,11 +751,17 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
                     self._last_checkins[connection.location] = time.monotonic()
             await sleep(max(1, self._max_idle_seconds - idle))
 
-    def _reset(self) -> None:
-        self.shard_connections.clear()
-        self.channels = {}
-        self.patterns = {}
-        self.initialized = False
-        self._subscription_waiters.clear()
-        self._unsubscription_waiters.clear()
-        self._subscribed = Event()
+    async def _cleanup(self) -> None:
+        if self.subscribed:
+            try:
+                self._unsubscribe()
+                with move_on_after(self._unsubscription_timeout):
+                    async with create_task_group() as tg:
+                        for connection in self.shard_connections.values():
+                            tg.start_soon(self._consume_shard_push_messages, connection)
+            except ConnectionError:
+                return
+            finally:
+                self._subscription_waiters.clear()
+                self._unsubscription_waiters.clear()
+                self._subscribed = Event()
