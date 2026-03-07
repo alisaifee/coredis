@@ -15,7 +15,7 @@ from packaging import version
 from pytest_lazy_fixtures import lf
 
 import coredis
-from coredis._utils import EncodingInsensitiveDict, b, hash_slot, nativestr
+from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.client.basic import Redis
 from coredis.credentials import UserPassCredentialProvider
 from coredis.patterns.cache import LRUCache
@@ -220,45 +220,6 @@ def get_client_test_args(request) -> dict[str, int]:
     if "client_arguments" in request.fixturenames:
         defaults.update(request.getfixturevalue("client_arguments"))
     return defaults
-
-
-def get_remapped_slots(request):
-    if "cluster_remap_keyslots" in request.fixturenames:
-        return request.getfixturevalue("cluster_remap_keyslots")
-
-    return []
-
-
-@contextlib.asynccontextmanager
-async def remapped_slots(client, request):
-    keys = get_remapped_slots(request)
-    slots = {hash_slot(b(key)) for key in keys}
-    sources = {}
-    destinations = {}
-    originals = {}
-    moves = {}
-
-    for slot in slots:
-        sources[slot] = client.connection_pool.cluster_layout.node_for_slot(slot)
-        destinations[slot] = [
-            k for k in client.connection_pool.cluster_layout.primaries if k != sources[slot]
-        ][0]
-        originals[slot] = sources[slot].node_id
-        moves[slot] = destinations[slot].node_id
-    try:
-        for slot in moves.keys():
-            for p in client.primaries:
-                async with p:
-                    await p.cluster_setslot(slot, node=moves[slot])
-        yield
-    finally:
-        if originals:
-            await client.flushall()
-
-            for slot in originals.keys():
-                for p in client.primaries:
-                    async with p:
-                        await p.cluster_setslot(slot, node=originals[slot])
 
 
 def check_redis_cluster_ready(host, port):
@@ -639,8 +600,7 @@ async def redis_cluster(redis_cluster_server, request):
             async with primary:
                 await set_default_test_config(primary)
 
-        async with remapped_slots(cluster, request):
-            yield cluster
+        yield cluster
 
 
 @pytest.fixture
@@ -661,8 +621,7 @@ async def redis_cluster_auth(redis_cluster_auth_server, request):
             async with primary:
                 await set_default_test_config(primary)
 
-        async with remapped_slots(cluster, request):
-            yield cluster
+        yield cluster
 
 
 @pytest.fixture
@@ -683,8 +642,7 @@ async def redis_cluster_auth_cred_provider(redis_cluster_auth_server, request):
             async with primary:
                 await set_default_test_config(primary)
 
-        async with remapped_slots(cluster, request):
-            yield cluster
+        yield cluster
 
 
 @pytest.fixture
@@ -704,8 +662,7 @@ async def redis_cluster_noreplica(redis_cluster_noreplica_server, request):
             async with primary:
                 await set_default_test_config(primary)
 
-        async with remapped_slots(cluster, request):
-            yield cluster
+        yield cluster
 
 
 @pytest.fixture
@@ -786,8 +743,7 @@ async def redis_stack_cluster(redis_stack_cluster_server, request):
             async with primary:
                 await set_default_test_config(primary)
 
-        async with remapped_slots(cluster, request):
-            yield cluster
+        yield cluster
 
 
 @pytest.fixture

@@ -4,7 +4,9 @@ from decimal import Decimal
 
 import pytest
 
+import coredis
 from coredis._concurrency import gather
+from coredis._utils import hash_slot
 from coredis.exceptions import (
     AuthorizationError,
     ClusterCrossSlotError,
@@ -212,13 +214,30 @@ class TestPipeline:
 
         assert str(ex.value).startswith("Command # 2 (ZREM b) of pipeline caused error: ")
 
-    @pytest.mark.parametrize("cluster_remap_keyslots", [("a{fu}", "b{fu}", "c{bar}", "d{bar}")])
-    async def test_moved_error_retried(self, client, cluster_remap_keyslots, _s):
-        async with client.pipeline() as pipe:
-            a = pipe.set("a{fu}", 1)
-            b = pipe.get("a{fu}")
+    async def test_moved_error_retried(self, client, cloner, mocker, _s):
+        cluster_slots = coredis.Redis.cluster_slots
+        clone = await cloner(client)
+        slot = hash_slot(b"a{fu}")
+
+        async def move_slot(self, *args, **kwargs):
+            values = await cluster_slots(self, *args, **kwargs)
+            for slot_range, nodes in values.items():
+                if slot in range(*slot_range):
+                    # swap primary / replica
+                    nodes[0]["port"], nodes[1]["port"] = nodes[1]["port"], nodes[0]["port"]
+
+            return values
+
+        report_errors = mocker.spy(clone.connection_pool.cluster_layout, "report_errors")
+        mocker.patch.object(coredis.Redis, "cluster_slots", new=move_slot)
+
+        async with clone:
+            async with clone.pipeline() as pipe:
+                a = pipe.set("a{fu}", 1)
+                b = pipe.get("a{fu}")
 
         assert (True, _s("1")) == await gather(a, b)
+        assert report_errors.call_count == 2
 
     @pytest.mark.parametrize(
         "function, args, kwargs",
