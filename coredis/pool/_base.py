@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextvars
 from abc import ABC, abstractmethod
-from contextlib import asynccontextmanager
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -22,7 +21,7 @@ from coredis.connection._base import (
 from coredis.connection._tcp import TCPLocation
 from coredis.connection._uds import UnixDomainSocketLocation
 from coredis.typing import (
-    AsyncGenerator,
+    AsyncContextManager,
     Callable,
     ClassVar,
     Generic,
@@ -147,6 +146,16 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
                 self._anchor_active.reset(self._anchor_reset_token)
             await tg.__aexit__(*args)
 
+    @property
+    def task_group(self) -> TaskGroup:
+        if self._task_group is None:
+            raise RuntimeError(
+                "Connection pool is not initialized or has exited. "
+                "Make sure you are accessing it after entering the pool's async context manager. "
+                "(For more details see https://coredis.readthedocs.org/handbook/connections.html#connection pools)"
+            )
+        return self._task_group
+
     @abstractmethod
     async def _initialize(self) -> None:
         """
@@ -171,27 +180,12 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
         """
         ...
 
-    @property
-    def task_group(self) -> TaskGroup:
-        if self._task_group is None:
-            raise RuntimeError(
-                "Connection pool is not initialized or has exited. "
-                "Make sure you are accessing it after entering the pool's async context manager. "
-                "(For more details see https://coredis.readthedocs.org/handbook/connections.html#connection pools)"
-            )
-        return self._task_group
-
-    @asynccontextmanager
-    async def acquire(self, **_: Any) -> AsyncGenerator[ConnectionT]:
+    @abstractmethod
+    def acquire(self, **_: Any) -> AsyncContextManager[ConnectionT]:
         """
         Yields a connection from the pool and releases it back.
-
-        .. caution:: Do not explicitly release connections acquired
-           using this context manager.
         """
-        connection = await self.get_connection()
-        yield connection
-        self.release(connection)
+        ...
 
     @abstractmethod
     def release(self, connection: ConnectionT) -> None:

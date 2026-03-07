@@ -27,6 +27,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     AnyStr,
+    AsyncContextManager,
     ClassVar,
     Concatenate,
     Final,
@@ -573,6 +574,7 @@ else:
 __all__ = [
     "Serializable",
     "AnyStr",
+    "AsyncContextManager",
     "AsyncIterator",
     "AsyncGenerator",
     "Awaitable",
