@@ -7,6 +7,7 @@ from anyio import (
     TASK_STATUS_IGNORED,
     CapacityLimiter,
     fail_after,
+    move_on_after,
 )
 from anyio.abc import TaskStatus
 
@@ -18,7 +19,7 @@ from coredis.connection._base import (
 )
 from coredis.connection._tcp import TCPConnection, TCPLocation
 from coredis.connection._uds import UnixDomainSocketConnection, UnixDomainSocketLocation
-from coredis.exceptions import RedisError
+from coredis.exceptions import ConnectionError, RedisError
 from coredis.patterns.cache import AbstractCache, NodeTrackingCache, TrackingCache
 from coredis.typing import (
     AsyncGenerator,
@@ -231,9 +232,12 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
 
     async def _initialize(self) -> None:
         if self.cache:
-            # TODO: handle cache failure so that the pool doesn't die
-            #  if the cache fails.
-            await self.task_group.start(self.cache.run)
+            with move_on_after(self.connect_timeout) as cancel_scope:
+                await self.task_group.start(self.cache.run)
+            if cancel_scope.cancelled_caught:
+                raise ConnectionError(
+                    f"Unable to initialize cache within {self.connect_timeout} seconds"
+                )
 
     async def get_connection(self, **_: Any) -> ConnectionT:
         """

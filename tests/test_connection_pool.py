@@ -192,6 +192,17 @@ class TestBasicConnectionPoolConstruction:
             async with pool.acquire() as connection:
                 assert isinstance(connection, UnixDomainSocketConnection)
 
+    async def test_failed_cache_initialization(self):
+        pool = ConnectionPool(
+            location=TCPLocation("localhost", 1),
+            _cache=LRUCache(),
+        )
+        with pytest.raises(ConnectionError, match="Unable to initialize cache"):
+            async with pool:
+                pass
+
+        assert not pool.cache.healthy
+
 
 @targets("redis_cluster")
 class TestClusterPoolParameters:

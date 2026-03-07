@@ -99,6 +99,7 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
         self.timeout = timeout
         self.decode_responses = bool(self.connection_kwargs.get("decode_responses", False))
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
+        self.connect_timeout = self.connection_kwargs.get("connect_timeout", 1)
         self.location = location
         # reference count for context manager to support this pool being re-entered.
         self._counter = 0
