@@ -84,6 +84,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         subscription_timeout: float = 1,
+        unsubscription_timeout: float = 0.1,
         max_idle_seconds: float = 15,
     ):
         """
@@ -104,6 +105,8 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
          on channel matching the pattern.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
+        :param unsubscription_timeout: Maximum amount of time in seconds to wait for
+         acknowledgement of unsubscriptions.
         :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
          messages from the server before performing a keepalive check with a
          ``PING``.
@@ -126,7 +129,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         self._subscribed = Event()
         self._subscription_timeout: float = subscription_timeout
         self._subscription_waiters: dict[StringT, list[Event]] = defaultdict(list)
-        self._unsubscription_timeout: float = 1
+        self._unsubscription_timeout: float = unsubscription_timeout
         self._unsubscription_waiters: dict[StringT, list[Event]] = defaultdict(list)
 
         self._last_checkin: float = 0
@@ -576,6 +579,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         channels: Parameters[StringT] | None = None,
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         subscription_timeout: float = 1,
+        unsubscription_timeout: float = 0.1,
         max_idle_seconds: float = 15,
     ):
         """
@@ -591,6 +595,8 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
          on the specific channel.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
+        :param unsubscription_timeout: Maximum amount of time in seconds to wait for
+         acknowledgement of unsubscriptions.
         :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
          messages from the cluster before performing a keepalive check with a
          `PING``.
@@ -606,6 +612,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             channels=channels,
             channel_handlers=channel_handlers,
             subscription_timeout=subscription_timeout,
+            unsubscription_timeout=unsubscription_timeout,
             max_idle_seconds=max_idle_seconds,
         )
 
