@@ -3,6 +3,146 @@
 Changelog
 =========
 
+v6.2.0
+------
+Release Date: 2026-03-07
+
+* Features
+
+  * Add cross slot implementation for:
+
+    * :rediscommand:`MSET`
+    * :rediscommand:`MGET`
+    * :rediscommand:`JSON.MGET`
+    * :rediscommand:`JSON.MSET`
+
+* Compatibility
+
+  * Add ``GEOSHAPE`` index type for search
+
+* Bug Fixes
+
+  * Clean up connection pool task group when ``__aenter__``
+    fails during initialization
+
+    Failure to do so would leave the connection pool unusable as the counter
+    would be stuck at 1 and would not trigger a reinitialization.
+
+  * Fix failure to recover from errors during cluster discovery
+
+  * Handle pool depletion (and therefore a subsequent stall on getting a
+    connection from the pool) in case of repeated connection establishment
+    errors.
+
+  * Ensure connections are reusable before returning them from the pool
+    as a connection used for pubsub which still has messages being
+    received could be used for a new pubsub consumer resulting in
+    stale messages being consumed by the new consumer.
+
+  * Fix initialization races and add early failure for unsafe concurrent sharing
+
+    * Add initialization lock preventing a race
+      where a herd of concurrent tasks could try to use the pool before
+      it was fully initialized
+
+    * Since AnyIO strictly requires that a cancel scope (in this case the task group
+      of the connection pool) be exited by the exact same task that created it, there
+      was a very easily reproducable scenario where an uninitialized pool
+      shared by concurrent tasks would be initialized (counter=1) by a short lived task
+      which would exit before the other tasks sharing the pool do. This
+      would result in the last task (the task that decrements counter to 0)
+      to try and cancel the task group and fail.
+
+      The pool now fails early with a better error.
+  * Fix stalled initialization when a client is initialized with a cache is pointing
+    to an unreachable redis server.
+
+* Usability
+
+  * Improve cluster exception heirarchy
+
+    - Rename ``RedisClusterException`` to :exc:`coredis.exceptions.RedisClusterError`
+      for consistency. (Alias is maintained for backward compatibility)
+    - Ensure all cluster exceptions do derive from the base
+      :exc:`coredis.exceptions.RedisClusterError`
+
+  * Fix inconsistent wrapping of non single key cluster methods
+    in coroutines instead of returning an awaitable.
+    These commands would therefore not have been
+    usable in a consistent manner as the basic redis client.
+
+
+* Reliability & Performance
+
+  * Improve resiliency of sentinel primary
+
+    Using the ``SENTINEL_MASTERS`` is not the recommended
+    approach in the redis sentinel client implementation guide
+    (https://redis.io/docs/latest/develop/reference/sentinel-clients/#step-2-ask-for-the-master-address)
+    and it has been recommended to use ``GET_MASTER_ADDR-BY-NAME``.
+
+    Testing under repeated failovers it appears that the ``SENTINEL MASTERS``
+    command would often return a stale primary that had been demoted to a
+    replica which would result in ReadOnlyError in previous versions (thus
+    leaving the client broken since the ReadOnlyError would not result in a
+    disconnection). The ``GET_MASTER_ADDR_BY_NAME`` command appears to have a
+    more consistent response - however it is still possible that a stale
+    primary is returned. In this case a :exc:`~coredis.exceptions.StalePrimaryError`
+    will now be raised on a new connection (failover should result in all active connections
+    being closed by the server, as noted in: https://redis.io/docs/latest/develop/reference/sentinel-clients/#sentinel-failover-disconnection)
+
+    Automatically recovering from stale primary errors can easily be
+    done by using a to a retry policy for the :exc:`~coredis.exceptions.StalePrimaryError` error
+
+  * Remove runtime validation of iterable parameters for redis commands
+    as there is already sufficient static type validation along with
+    opt in runtime validation with beartype.
+
+  * Add explicit verification of unsubscription requests in pubsub to ensure
+    that the connection's push message buffer is fully consumed before releasing
+    the connection back to the pool.
+
+* Typing
+
+  * Fix typing errors caused by invariant list type
+  * Add fallback type overloads for client constructors
+
+* Chores
+
+  * Improve generic structure of connection pools and connection types
+    to provide a clearer separation of which parameters are acceptable
+    for initializing which connection / connection pool type.
+    ConnectionPools are now generic around the connection type they
+    pool (invariant)
+
+  * Standardize server location types across the code base to use
+    ``coredis.connection.Location``
+
+  * Clearly separate sentinel connection pool, connection and client
+    and move them to appropriate sub packages (coredis.connection &
+    coredis.pool)
+
+  * Replace ``NodeManager`` with a ``ClusterLayout`` that owns both the live
+    topology view and a background monitor task to keep the local cluster
+    layout cache refreshed. ``DiscoveryService`` becomes a pure query object.
+
+
+  * Extract command splitting from cluster layout
+
+    Added ``RoutingStrategy`` to extract the logic of routing/splitting commands
+    that affect either no keys or keys on more than one slot out of
+    ClusterLayout & RedisCluster. Routing logic is now collapsed into a
+    single "route_strategy" in the command decorators that specifies:
+
+    - where to distribute
+    - how to split
+    - how to merge
+
+  * Updated all redis command methods to have consistent docstrings for parameters
+    & return types
+
+  * Enable type checking for all response callback related private submodules
+
 v6.1.0
 ------
 Release Date: 2026-02-12
