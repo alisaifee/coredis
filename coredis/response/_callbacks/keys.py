@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import cast
 
 from coredis.exceptions import DataError, NoKeyError, RedisError
 from coredis.response._callbacks import DateTimeCallback, ResponseCallback
 from coredis.typing import (
     AnyStr,
-    ResponseType,
     StringT,
-    TypeGuard,
 )
 
 
@@ -27,17 +26,13 @@ class SortCallback(
         return response
 
 
-class ScanCallback(ResponseCallback[list[ResponseType], tuple[int, tuple[AnyStr, ...]]]):
-    def guard(self, response: list[ResponseType]) -> TypeGuard[tuple[StringT, list[AnyStr]]]:
-        return isinstance(response[0], (str, bytes)) and isinstance(response[1], list)
-
+class ScanCallback(ResponseCallback[list[StringT | list[StringT]], tuple[int, tuple[AnyStr, ...]]]):
     def transform(
         self,
-        response: list[ResponseType],
+        response: list[StringT | list[StringT]],
     ) -> tuple[int, tuple[AnyStr, ...]]:
-        assert self.guard(response)
-        cursor, r = response
-        return int(cursor), tuple(r)
+        cursor, r = tuple(response)
+        return int(cast(StringT, cursor)), tuple(cast(list[AnyStr], r))
 
 
 class ExpiryCallback(DateTimeCallback):
