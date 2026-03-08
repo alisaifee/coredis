@@ -6,11 +6,11 @@ from typing import Any, cast
 from anyio import AsyncContextManagerMixin
 from deprecated.sphinx import versionchanged
 
-from coredis._utils import b, hash_slot, nativestr
+from coredis._utils import nativestr
 from coredis.client import Client, RedisCluster
 from coredis.cluster._node import ClusterNodeLocation
 from coredis.commands import CommandRequest, CommandResponseT
-from coredis.commands._key_spec import KeySpec
+from coredis.commands._routing import ExplicitSlotStrategy, RandomStrategy
 from coredis.commands.constants import CommandName
 from coredis.commands.script import Script
 from coredis.connection._base import BaseConnection, CommandInvocation
@@ -33,7 +33,7 @@ from coredis.pool import ClusterConnectionPool
 from coredis.response._callbacks import (
     AnyStrCallback,
     BoolsCallback,
-    NoopCallback,
+    SimpleStringCallback,
 )
 from coredis.retry import ConstantRetryPolicy, retryable
 from coredis.typing import (
@@ -46,14 +46,11 @@ from coredis.typing import (
     Iterable,
     KeyT,
     ParamSpec,
-    RedisCommand,
-    RedisCommandP,
     RedisValueT,
     ResponseType,
     Self,
     T_co,
     TypeVar,
-    Unpack,
     ValueT,
 )
 
@@ -71,7 +68,7 @@ UNWATCH_COMMANDS = {CommandName.DISCARD, CommandName.EXEC, CommandName.UNWATCH}
 
 
 class PipelineResult(Awaitable[T]):
-    __slots__ = "_result"
+    __slots__ = ("_result",)
 
     def __init__(self, result: T) -> None:
         self._result = result
@@ -95,6 +92,7 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
     Command request returned by a pipeline command
     """
 
+    __slots__ = ()
     client: Pipeline[Any]
 
     def __init__(
@@ -103,7 +101,7 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
         name: bytes,
         *arguments: ValueT,
         callback: Callable[..., CommandResponseT],
-        execution_parameters: ExecutionParameters | None = None,
+        execution_parameters: ExecutionParameters,
     ) -> None:
         super().__init__(
             client, name, *arguments, callback=callback, execution_parameters=execution_parameters
@@ -121,6 +119,8 @@ class ClusterPipelineCommandRequest(CommandRequest[CommandResponseT]):
     Command request for cluster pipelines, tracks position and result for cluster routing.
     """
 
+    __slots__ = ("position", "result", "asking")
+
     client: ClusterPipeline[Any]
 
     def __init__(
@@ -129,7 +129,7 @@ class ClusterPipelineCommandRequest(CommandRequest[CommandResponseT]):
         name: bytes,
         *arguments: ValueT,
         callback: Callable[..., CommandResponseT],
-        execution_parameters: ExecutionParameters | None = None,
+        execution_parameters: ExecutionParameters,
     ) -> None:
         super().__init__(
             client, name, *arguments, callback=callback, execution_parameters=execution_parameters
@@ -327,7 +327,11 @@ class Pipeline(Client[AnyStr]):
         :meta private:
         """
         return PipelineCommandRequest(
-            self, name, *arguments, callback=callback, execution_parameters=execution_parameters
+            self,
+            name,
+            *arguments,
+            callback=callback,
+            execution_parameters=execution_parameters or {},
         )
 
     @asynccontextmanager
@@ -343,7 +347,9 @@ class Pipeline(Client[AnyStr]):
             self._connection = await self.client.connection_pool.get_connection()
         self.watches.extend(keys)
         await self._immediate_execute_command(
-            RedisCommand(CommandName.WATCH, arguments=tuple(self.watches))
+            self.client.create_request(
+                CommandName.WATCH, *self.watches, callback=SimpleStringCallback()
+            )
         )
         self.explicit_transaction = True
         yield
@@ -361,9 +367,7 @@ class Pipeline(Client[AnyStr]):
 
     def execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **options: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> Awaitable[R]:
         raise NotImplementedError
 
@@ -381,9 +385,7 @@ class Pipeline(Client[AnyStr]):
 
     async def _immediate_execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **kwargs: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> R:
         """
         Executes a command immediately, but don't auto-retry on a
@@ -395,9 +397,9 @@ class Pipeline(Client[AnyStr]):
         """
         assert self._connection
         request = self._connection.create_request(
-            command.name, *command.arguments, decode=kwargs.get("decode")
+            command.name, *command.arguments, decode=command.execution_parameters.get("decode")
         )
-        return callback(await request)
+        return command.callback(await request)
 
     def _pipeline_execute_command(
         self,
@@ -552,15 +554,18 @@ class Pipeline(Client[AnyStr]):
         scripts = list(self.scripts)
         shas = [s.sha for s in scripts]
         exists = await self._immediate_execute_command(
-            RedisCommand(CommandName.SCRIPT_EXISTS, tuple(shas)), callback=BoolsCallback()
+            self.client.create_request(CommandName.SCRIPT_EXISTS, *shas, callback=BoolsCallback())
         )
 
         if not all(exists):
             for s, exist in zip(scripts, exists):
                 if not exist:
                     s.sha = await self._immediate_execute_command(
-                        RedisCommand(CommandName.SCRIPT_LOAD, (s.script,)),
-                        callback=AnyStrCallback[AnyStr](),
+                        self.client.create_request(
+                            CommandName.SCRIPT_LOAD,
+                            s.script,
+                            callback=AnyStrCallback[AnyStr](),
+                        )
                     )
 
     async def _execute(self) -> None:
@@ -655,7 +660,11 @@ class ClusterPipeline(Client[AnyStr]):
         :meta private:
         """
         return ClusterPipelineCommandRequest(
-            self, name, *arguments, callback=callback, execution_parameters=execution_parameters
+            self,
+            name,
+            *arguments,
+            callback=callback,
+            execution_parameters=execution_parameters or {},
         )
 
     @asynccontextmanager
@@ -690,9 +699,7 @@ class ClusterPipeline(Client[AnyStr]):
 
     def execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **options: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> Awaitable[R]:
         raise NotImplementedError
 
@@ -750,14 +757,22 @@ class ClusterPipeline(Client[AnyStr]):
         finally:
             await self._clear()
 
-    def _get_slot_for_command(self, command: ClusterPipelineCommandRequest[Any]) -> int:
-        if command.by is not None:
-            if isinstance(command.by, str | bytes):
-                return hash_slot(b(command.by))
-            return command.by
-        return self._determine_slot(
-            command.name, *command.arguments, **command.execution_parameters
-        )
+    def _get_slot_for_command(self, command: ClusterPipelineCommandRequest[Any]) -> int | None:
+        affected_slots = command.affected_slots
+        if len(affected_slots) == 1:
+            return affected_slots[0]
+
+        match command.routing_strategy:
+            case ExplicitSlotStrategy():
+                return command.routing_strategy.slot
+            case RandomStrategy():
+                return None
+        if not affected_slots:
+            raise RedisClusterError(
+                f"No way to dispatch {nativestr(command.name)} to Redis Cluster. Missing key"
+            )
+        else:
+            raise ClusterCrossSlotError(command=command.name, keys=command.keys)
 
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), retries=3, delay=0.1))
     async def _send_cluster_transaction(self, raise_on_error: bool = True) -> None:
@@ -767,9 +782,10 @@ class ClusterPipeline(Client[AnyStr]):
         attempt = sorted(self.command_stack, key=lambda x: x.position)
         slots: set[int] = set()
         for c in attempt:
-            slots.add(self._get_slot_for_command(c))
-            if len(slots) > 1:
-                raise ClusterTransactionError("Multiple slots involved in transaction")
+            if (slot := self._get_slot_for_command(c)) is not None:
+                slots.add(slot)
+        if len(slots) > 1:
+            raise ClusterTransactionError("Multiple slots involved in transaction")
         if not slots:
             raise ClusterTransactionError("No slots found for transaction")
         node = self.connection_pool.cluster_layout.node_for_slot(slots.pop())
@@ -821,9 +837,10 @@ class ClusterPipeline(Client[AnyStr]):
         # Group commands by node for efficient network usage.
         nodes: dict[str, NodeCommands] = {}
         for c in sorted(self.command_stack, key=lambda x: x.position):
-            slot = self._get_slot_for_command(c)
-            node = self.connection_pool.cluster_layout.node_for_slot(slot)
-
+            if (slot := self._get_slot_for_command(c)) is not None:
+                node = self.connection_pool.cluster_layout.node_for_slot(slot)
+            else:
+                node = node or self.connection_pool.cluster_layout.random_node()
             if node.name not in nodes:
                 nodes[node.name] = NodeCommands(
                     self.client,
@@ -852,9 +869,7 @@ class ClusterPipeline(Client[AnyStr]):
             for c, node in attempt.items():
                 self.connection_pool.cluster_layout.report_errors(node, c.result)
                 try:
-                    c.result = await self.client.execute_command(
-                        RedisCommand(c.name, c.arguments), **c.execution_parameters
-                    )
+                    c.result = await self.client.execute_command(c.raw())
                 except (RedisError, TimeoutError) as e:
                     c.result = e
 
@@ -870,37 +885,11 @@ class ClusterPipeline(Client[AnyStr]):
         if raise_on_error:
             self._raise_first_error()
 
-    def _determine_slot(
-        self, command: bytes, *args: RedisValueT, **options: Unpack[ExecutionParameters]
-    ) -> int:
-        """
-        Determine the hash slot for the given command and arguments.
-        """
-        keys: tuple[RedisValueT, ...] = (
-            cast(tuple[RedisValueT, ...], options.get("keys"))
-            or KeySpec.extract_keys(command, *args)[0]
-        )
-
-        if not keys:
-            raise RedisClusterError(
-                f"No way to dispatch {nativestr(command)} to Redis Cluster. Missing key"
-            )
-        slots = KeySpec.affected_slots(command, *args)
-
-        if len(slots) != 1:
-            raise ClusterCrossSlotError(command=command, keys=keys)
-        return slots.pop()
-
     async def _load_scripts(self) -> None:
         shas = [s.sha for s in self.scripts]
-        exists = await self.client.execute_command(
-            RedisCommand(CommandName.SCRIPT_EXISTS, tuple(shas)), callback=BoolsCallback()
-        )
+        exists = await self.client.script_exists(shas)
 
         if not all(exists):
             for s, exist in zip(self.scripts, exists):
                 if not exist:
-                    s.sha = await self.client.execute_command(
-                        RedisCommand(CommandName.SCRIPT_LOAD, (s.script,)),
-                        callback=AnyStrCallback[AnyStr](),
-                    )
+                    s.sha = await self.client.script_load(s.script)

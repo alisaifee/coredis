@@ -98,12 +98,7 @@ def redis_command(
 
     if cluster.routing_strategy:
         ROUTING_STRATEGIES[command_name] = cluster.routing_strategy
-    # elif cluster.route == NodeFlag.SLOT_ID:
-    #    ROUTING_STRATEGIES[command_name] = SlotRangeStrategy(cluster.combine)
-    # elif cluster.combine and cluster.route:
-    #    ROUTING_STRATEGIES[command_name] = FanoutStrategy(cluster.route, cluster.combine)
-    # elif cluster.route == NodeFlag.RANDOM:
-    #    ROUTING_STRATEGIES[command_name] = RandomStrategy()
+
     command_details = CommandDetails(
         command_name,
         group,

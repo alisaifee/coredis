@@ -2,22 +2,30 @@ from __future__ import annotations
 
 import copy
 import functools
+from functools import cache
 from types import GenericAlias
 from typing import Any, cast, get_origin
 
 from coredis._protocols import AbstractExecutor
+from coredis.globals import COMMAND_FLAGS, ROUTING_STRATEGIES
+from coredis.response._callbacks import NoopCallback
 from coredis.retry import RetryPolicy
 from coredis.typing import (
     Awaitable,
     Callable,
     ExecutionParameters,
     Generator,
+    RedisValueT,
+    ResponseType,
     Serializable,
     TypeAdapter,
     TypeIs,
     TypeVar,
     ValueT,
 )
+
+from ._key_spec import KeySpec
+from .constants import CommandFlag
 
 #: Covariant type used for generalizing :class:`~coredis.command.CommandRequest`
 CommandResponseT = TypeVar("CommandResponseT", covariant=True)
@@ -35,6 +43,18 @@ def is_type_like(obj: object) -> TypeIs[type[Any]]:
 
 
 class CommandRequest(Awaitable[CommandResponseT]):
+    __slots__ = (
+        "client",
+        "name",
+        "arguments",
+        "execution_parameters",
+        "callback",
+        "blocking",
+        "noreply",
+        "routing_strategy",
+        "kwargs",
+        "_response",
+    )
     _response: Awaitable[CommandResponseT]
 
     def __init__(
@@ -42,8 +62,8 @@ class CommandRequest(Awaitable[CommandResponseT]):
         client: AbstractExecutor,
         name: bytes,
         *arguments: ValueT,
-        callback: Callable[..., CommandResponseT],
-        execution_parameters: ExecutionParameters | None = None,
+        callback: Callable[..., CommandResponseT] = NoopCallback(),
+        execution_parameters: ExecutionParameters,
         **kwargs: Any,
     ) -> None:
         """
@@ -65,14 +85,34 @@ class CommandRequest(Awaitable[CommandResponseT]):
         self.arguments = tuple(
             self.type_adapter.serialize(k) if isinstance(k, Serializable) else k for k in arguments
         )
+        self.blocking = CommandFlag.BLOCKING in COMMAND_FLAGS[name]
+        self.noreply = execution_parameters.get("noreply", False)
+        self.routing_strategy = ROUTING_STRATEGIES.get(name)
         self.kwargs = kwargs
-        self.by: bytes | str | int | None = None
+
+    @property
+    @cache
+    def keys(self) -> tuple[RedisValueT, ...]:
+        return KeySpec.extract_keys(self.name, *self.arguments)[0]
+
+    @property
+    @cache
+    def affected_slots(self) -> tuple[int, ...]:
+        return tuple(KeySpec.affected_slots(self.name, *self.arguments))
+
+    @property
+    @cache
+    def type_adapter(self) -> TypeAdapter:
+        from coredis.client import Client
+
+        if isinstance(self.client, Client):
+            return self.client.type_adapter
+
+        return empty_adapter
 
     def run(self) -> Awaitable[CommandResponseT]:
         if not hasattr(self, "_response"):
-            self._response = self.client.execute_command(
-                self, self.callback, **self.execution_parameters
-            )
+            self._response = self.client.execute_command(self)
 
         return self._response
 
@@ -114,11 +154,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
 
         """
         return RetryableCommandRequest(
-            self.client,
-            self.name,
-            *self.arguments,
-            callback=self.callback,
-            execution_parameters=self.execution_parameters,
+            self,
             policy=policy,
             failure_hook=failure_hook,
         )
@@ -155,14 +191,33 @@ class CommandRequest(Awaitable[CommandResponseT]):
             transformer=transformer,
         )
 
-    @property
-    def type_adapter(self) -> TypeAdapter:
-        from coredis.client import Client
+    def raw(self, decode_response: bool | None = None) -> CommandRequest[ResponseType]:
+        """
+        :param decode_resonse: Whether to decode any bulk strings from the server.
+         If ``None`` the setting the client was configured with will be used.
 
-        if isinstance(self.client, Client):
-            return self.client.type_adapter
+        :return: a command request object that when awaited will return the
+         original response from the server without any callback applied to transform
+         the response
 
-        return empty_adapter
+         For example when used with a redis command::
+
+           client = coredis.Redis(....)
+           async with client:
+               assert True == await client.set("fubar", 1)
+               assert b"OK" == await client.set("fubar", 1).raw(decode_response=False)
+               assert "OK" == await client.set("fubar", 1).raw(decode_response=True)
+        """
+        return CommandRequest(
+            self.client,
+            self.name,
+            *self.arguments,
+            execution_parameters=(
+                self.execution_parameters
+                if decode_response is None
+                else {**self.execution_parameters, **{"decode": decode_response}}
+            ),
+        )
 
     def route(self, by: bytes | str | int) -> CommandRequest[CommandResponseT]:
         """
@@ -170,7 +225,9 @@ class CommandRequest(Awaitable[CommandResponseT]):
 
         :param by: either a key to hash by or a slot
         """
-        self.by = by
+        from coredis.commands._routing import ExplicitSlotStrategy
+
+        self.routing_strategy = ExplicitSlotStrategy(by)
         return self
 
     def __await__(self) -> Generator[Any, Any, CommandResponseT]:
@@ -195,9 +252,15 @@ class TransformedCommandRequest(CommandRequest[TransformedResponse]):
          or a callable that takes a single argument (the original response)
          and returns the transformed response.
         """
-        self.transformer = transformer
+        super().__init__(
+            parent.client,
+            parent.name,
+            *parent.arguments,
+            execution_parameters=parent.execution_parameters,
+        )
+
         self.parent = parent
-        self.client = parent.client
+        self.transformer = transformer
         self.transform_func = cast(
             Callable[..., TransformedResponse],
             (
@@ -218,11 +281,7 @@ class TransformedCommandRequest(CommandRequest[TransformedResponse]):
 class RetryableCommandRequest(CommandRequest[CommandResponseT]):
     def __init__(
         self,
-        client: AbstractExecutor,
-        name: bytes,
-        *arguments: ValueT,
-        callback: Callable[..., CommandResponseT],
-        execution_parameters: ExecutionParameters | None = None,
+        request: CommandRequest[CommandResponseT],
         policy: RetryPolicy,
         failure_hook: Callable[..., Awaitable[Any]]
         | dict[type[BaseException], Callable[..., Awaitable[None]]]
@@ -232,13 +291,7 @@ class RetryableCommandRequest(CommandRequest[CommandResponseT]):
         """
         A retryable command request object.
 
-        :param client: The instance of the :class:`coredis.Redis` that
-        will be used to call :meth:`~coredis.Redis.execute_command`
-        :param name:  The name of the command
-        :param arguments:  All arguments (in redis format) to be passed to the command
-        :param callback: The callback to be used to transform the RESP response
-        :param execution_parameters:  Any additional parameters to be passed to
-        :meth:`coredis.Redis.execute_command`
+        :param request: The original request to retry
         :param policy: The retry policy to use when executing the command
         :param failure_hook: if provided and is a callable it will be
          called everytime a retryable exception is encountered. If it is a mapping
@@ -248,11 +301,11 @@ class RetryableCommandRequest(CommandRequest[CommandResponseT]):
         self.policy = policy
         self.failure_hook = failure_hook
         super().__init__(
-            client,
-            name,
-            *arguments,
-            callback=callback,
-            execution_parameters=execution_parameters,
+            request.client,
+            request.name,
+            *request.arguments,
+            callback=request.callback,
+            execution_parameters=request.execution_parameters,
             policy=self.policy,
             failure_hook=self.failure_hook,
             **kwargs,

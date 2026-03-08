@@ -314,16 +314,33 @@ class TestPipeline:
             for _ in range(20):
                 pipeline.hgetall("hash")
 
-    async def test_explicit_routing_pipeline(self, client):
-        async with client.pipeline(transaction=False) as pipe:
+    @pytest.mark.parametrize(
+        "transaction",
+        (True, False),
+    )
+    async def test_implicit_random_node_selection(self, client, transaction):
+        async with client.pipeline(transaction=transaction) as pipe:
             pipe.get("{1}")
-            pipe.publish("channel", "message").route("{1}")
-            pipe.keys("{1}*").route("{1}")
-        assert pipe.results == (None, 0, set())
+            pipe.publish("channel", "message")
+        assert pipe.results == (None, 0)
 
-    async def test_explicit_routing_transaction(self, client):
-        async with client.pipeline(transaction=True) as pipe:
+    @pytest.mark.parametrize(
+        "transaction",
+        (True, False),
+    )
+    async def test_explicit_routing(self, client, transaction, _s):
+        async with client.pipeline(transaction=transaction) as pipe:
+            pipe.set("{1}", 1)
             pipe.get("{1}")
             pipe.publish("channel", "message").route("{1}")
             pipe.keys("{1}*").route("{1}")
-        assert pipe.results == (None, 0, set())
+            pipe.scan(0).route("{1}")
+        assert pipe.results == (
+            True,
+            _s("1"),
+            0,
+            {
+                _s("{1}"),
+            },
+            (0, (_s("{1}"),)),
+        )

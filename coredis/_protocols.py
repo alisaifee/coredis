@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     TYPE_CHECKING,
     Awaitable,
@@ -8,9 +7,7 @@ from coredis.typing import (
     ExecutionParameters,
     Protocol,
     R,
-    RedisCommandP,
     TypeVar,
-    Unpack,
     ValueT,
 )
 
@@ -24,9 +21,7 @@ if TYPE_CHECKING:
 class AbstractExecutor(Protocol):
     def execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **options: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> Awaitable[R]: ...
 
     def create_request(
