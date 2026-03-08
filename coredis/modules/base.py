@@ -72,10 +72,6 @@ def module_command(
 
         if cluster.routing_strategy:
             ROUTING_STRATEGIES[command_name] = cluster.routing_strategy
-        # elif cluster.combine and cluster.route:
-        #    ROUTING_STRATEGIES[command_name] = FanoutStrategy(cluster.route, cluster.combine)
-        # elif cluster.route == NodeFlag.RANDOM:
-        #    ROUTING_STRATEGIES[command_name] = RandomStrategy()
 
         @functools.wraps(func)
         def wrapped(*args: P.args, **kwargs: P.kwargs) -> CommandRequest[R]:

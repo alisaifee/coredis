@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import dataclasses
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from coredis._utils import b, hash_slot, nativestr
+from coredis.commands.request import CommandRequest, CommandResponseT
 from coredis.exceptions import ResponseError
 from coredis.response._callbacks import ClusterMultiNodeCallback, ClusterNoMerge
 from coredis.typing import (
@@ -11,7 +12,7 @@ from coredis.typing import (
     ExecutionParameters,
     Generic,
     RedisValueT,
-    TypeVar,
+    StringT,
 )
 
 from ._key_spec import KeySpec
@@ -21,29 +22,39 @@ if TYPE_CHECKING:
     from coredis.cluster._layout import ClusterLayout
     from coredis.cluster._node import ClusterNodeLocation
 
-R = TypeVar("R")
+
+class NodeExecution(CommandRequest[CommandResponseT]):
+    _result: CommandResponseT | ResponseError | TimeoutError
+
+    def __init__(
+        self,
+        node: ClusterNodeLocation,
+        original_request: CommandRequest[CommandResponseT],
+        node_arguments: tuple[RedisValueT, ...],
+        key_positions: tuple[int, ...],
+    ) -> None:
+        super().__init__(
+            original_request.client,
+            original_request.name,
+            *node_arguments,
+            callback=original_request.callback,
+            execution_parameters=original_request.execution_parameters,
+        )
+        self.node = node
+        self.key_positions = key_positions
+
+    @property
+    def result(self) -> CommandResponseT | ResponseError | TimeoutError:
+        if not hasattr(self, "_result"):
+            raise ValueError("result for node execution has not been set yet")
+        return self._result
+
+    @result.setter
+    def result(self, value: CommandResponseT | ResponseError | TimeoutError) -> None:
+        self._result = value
 
 
-@dataclasses.dataclass(unsafe_hash=True)
-class NodeExecution(Generic[R]):
-    #: name of the command
-    command: bytes
-    #: partial arguments derived from the original command
-    arguments: tuple[RedisValueT, ...]
-    #: Target node
-    node: ClusterNodeLocation
-    #: The slots the execution affects
-    slots: tuple[int, ...] = dataclasses.field(default_factory=tuple)
-    #: original indices where the keys of the command were found.
-    #: these can be used to reconstruct an ordered response from
-    #: multiple nodes
-    key_positions: tuple[int, ...] = dataclasses.field(default_factory=tuple, hash=False)
-    #: The result for this node execution
-    #: (to be populated externally by the executor
-    result: R | ResponseError | TimeoutError = dataclasses.field(init=False, hash=False)
-
-
-class RoutingStrategy(ABC, Generic[R]):
+class RoutingStrategy(ABC, Generic[CommandResponseT]):
     """
     Base routing strategy that decides how to take a
     request that is not tied to a single slot and
@@ -58,7 +69,7 @@ class RoutingStrategy(ABC, Generic[R]):
     def __init__(
         self,
         route: NodeFlag | None,
-        merge_callback: ClusterMultiNodeCallback[R],
+        merge_callback: ClusterMultiNodeCallback[CommandResponseT],
     ) -> None:
         """
         :param route: a hint to which nodes to route to
@@ -70,8 +81,8 @@ class RoutingStrategy(ABC, Generic[R]):
 
     def combine(
         self,
-        node_executions: list[NodeExecution[R]],
-    ) -> R:
+        node_executions: list[NodeExecution[CommandResponseT]],
+    ) -> CommandResponseT:
         return self.merge_callback(
             key_positions=[e.key_positions for e in node_executions],
             responses=[e.result for e in node_executions],
@@ -91,18 +102,16 @@ class RoutingStrategy(ABC, Generic[R]):
     def distribute(
         self,
         cluster_layout: ClusterLayout,
-        command: bytes,
-        arguments: tuple[RedisValueT, ...],
+        command: CommandRequest[CommandResponseT],
         readonly: bool,
-        execution_parameters: ExecutionParameters,
-    ) -> list[NodeExecution[R]]:
+    ) -> list[NodeExecution[CommandResponseT]]:
         """
         Split up the original command into the appropriate sub executions
         """
         ...
 
 
-class RandomStrategy(RoutingStrategy[R]):
+class RandomStrategy(RoutingStrategy[CommandResponseT]):
     cross_slot: ClassVar[bool] = False
 
     def __init__(self) -> None:
@@ -111,14 +120,15 @@ class RandomStrategy(RoutingStrategy[R]):
     def distribute(
         self,
         cluster_layout: ClusterLayout,
-        command: bytes,
-        arguments: tuple[RedisValueT, ...],
+        command: CommandRequest[CommandResponseT],
         readonly: bool,
-        execution_parameters: ExecutionParameters,
-    ) -> list[NodeExecution[R]]:
+    ) -> list[NodeExecution[CommandResponseT]]:
         return [
             NodeExecution(
-                node=cluster_layout.random_node(not readonly), command=command, arguments=arguments
+                node=cluster_layout.random_node(not readonly),
+                original_request=command,
+                node_arguments=command.arguments,
+                key_positions=(),
             )
         ]
 
@@ -127,14 +137,14 @@ class RandomStrategy(RoutingStrategy[R]):
         return NodeFlag.RANDOM.value
 
 
-class FanoutStrategy(RoutingStrategy[R]):
+class FanoutStrategy(RoutingStrategy[CommandResponseT]):
     cross_slot: ClassVar[bool] = False
     fanout: NodeFlag
 
     def __init__(
         self,
         route: NodeFlag,
-        merge_callback: ClusterMultiNodeCallback[R],
+        merge_callback: ClusterMultiNodeCallback[CommandResponseT],
     ):
         super().__init__(route, merge_callback)
         self.fanout = route
@@ -157,13 +167,16 @@ class FanoutStrategy(RoutingStrategy[R]):
     def distribute(
         self,
         cluster_layout: ClusterLayout,
-        command: bytes,
-        arguments: tuple[RedisValueT, ...],
+        command: CommandRequest[CommandResponseT],
         readonly: bool,
-        execution_parameters: ExecutionParameters,
-    ) -> list[NodeExecution[R]]:
+    ) -> list[NodeExecution[CommandResponseT]]:
         return [
-            NodeExecution(node=node, command=command, arguments=arguments)
+            NodeExecution(
+                node=node,
+                original_request=command,
+                node_arguments=command.arguments,
+                key_positions=(),
+            )
             for node in self.nodes(cluster_layout, not readonly)
         ]
 
@@ -172,7 +185,7 @@ class FanoutStrategy(RoutingStrategy[R]):
         return self.fanout.value
 
 
-class SlotRangeStrategy(RoutingStrategy[R]):
+class SlotRangeStrategy(RoutingStrategy[CommandResponseT]):
     """
     Only for cluster commands that deal with managing slots.
     Commands are routed to appropriate nodes by distributing slot ids in arguments
@@ -181,21 +194,19 @@ class SlotRangeStrategy(RoutingStrategy[R]):
 
     def __init__(
         self,
-        merge_callback: ClusterMultiNodeCallback[R] = ClusterNoMerge(),
+        merge_callback: ClusterMultiNodeCallback[CommandResponseT] = ClusterNoMerge(),
     ):
         super().__init__(NodeFlag.SLOT_ID, merge_callback)
 
     def distribute(
         self,
         cluster_layout: ClusterLayout,
-        command: bytes,
-        arguments: tuple[RedisValueT, ...],
+        command: CommandRequest[CommandResponseT],
         readonly: bool,
-        execution_parameters: ExecutionParameters,
-    ) -> list[NodeExecution[R]]:
-        if slot_arguments_range := execution_parameters.get("slot_arguments_range", None):
+    ) -> list[NodeExecution[CommandResponseT]]:
+        if slot_arguments_range := command.execution_parameters.get("slot_arguments_range", None):
             slot_start, slot_end = slot_arguments_range
-            arg_slots = arguments[slot_start : slot_end + 1]
+            arg_slots = command.arguments[slot_start : slot_end + 1]
             all_slots = list(int(k) for k in arg_slots)
             affected_nodes = cluster_layout.nodes_for_slots(*all_slots)
             node_slots: dict[ClusterNodeLocation, list[int]] = {node: [] for node in affected_nodes}
@@ -204,11 +215,15 @@ class SlotRangeStrategy(RoutingStrategy[R]):
                     if slot in slots:
                         node_slots[node].append(slot)
             return [
-                NodeExecution[R](
-                    slots=tuple(slots),
+                NodeExecution[CommandResponseT](
                     node=node,
-                    command=command,
-                    arguments=arguments[:slot_start] + tuple(slots) + arguments[slot_end + 1 :],
+                    original_request=command,
+                    node_arguments=(
+                        command.arguments[:slot_start]
+                        + tuple(slots)
+                        + command.arguments[slot_end + 1 :]
+                    ),
+                    key_positions=(),
                 )
                 for node, slots in node_slots.items()
             ]
@@ -219,7 +234,7 @@ class SlotRangeStrategy(RoutingStrategy[R]):
         return NodeFlag.SLOT_ID.value
 
 
-class KeyRangeStrategy(RoutingStrategy[R]):
+class KeyRangeStrategy(RoutingStrategy[CommandResponseT]):
     """
     For MGET where responses must be reassembled in the original key order.
     """
@@ -227,15 +242,17 @@ class KeyRangeStrategy(RoutingStrategy[R]):
     def distribute(
         self,
         cluster_layout: ClusterLayout,
-        command: bytes,
-        arguments: tuple[RedisValueT, ...],
+        command: CommandRequest[CommandResponseT],
         readonly: bool,
-        execution_parameters: ExecutionParameters,
-    ) -> list[NodeExecution[R]]:
-        _, key_range = KeySpec.extract_keys(command, *arguments, readonly_command=readonly)
-        pre_arguments = arguments[: key_range[0]]
-        post_arguments = arguments[key_range[1] + 1 :]
-        slots_to_keys = KeySpec.slots_to_keys(command, *arguments, readonly_command=readonly)
+    ) -> list[NodeExecution[CommandResponseT]]:
+        _, key_range = KeySpec.extract_keys(
+            command.name, *command.arguments, readonly_command=readonly
+        )
+        pre_arguments = command.arguments[: key_range[0]]
+        post_arguments = command.arguments[key_range[1] + 1 :]
+        slots_to_keys = KeySpec.slots_to_keys(
+            command.name, *command.arguments, readonly_command=readonly
+        )
         # Track which original positions each node is responsible for
         node_keys: dict[tuple[int, ClusterNodeLocation], list[RedisValueT]] = {}
         node_key_positions: dict[tuple[int, ClusterNodeLocation], list[int]] = {}
@@ -246,10 +263,9 @@ class KeyRangeStrategy(RoutingStrategy[R]):
                 node_key_positions.setdefault((slot, node), []).append(idx)
         return [
             NodeExecution(
-                slots=(slot_node[0],),
                 node=slot_node[1],
-                command=command,
-                arguments=pre_arguments + tuple(node_keys[slot_node]) + post_arguments,
+                original_request=command,
+                node_arguments=pre_arguments + tuple(node_keys[slot_node]) + post_arguments,
                 key_positions=tuple(node_key_positions[slot_node]),
             )
             for slot_node in node_keys
@@ -260,7 +276,7 @@ class KeyRangeStrategy(RoutingStrategy[R]):
         return """the nodes serving the keys in the command"""
 
 
-class PairStrategy(RoutingStrategy[R]):
+class PairStrategy(RoutingStrategy[CommandResponseT]):
     """
     For commands such as MSET, MSETEX, MSETNX where key:value pairs are sent as part
     of the request
@@ -269,7 +285,7 @@ class PairStrategy(RoutingStrategy[R]):
     def __init__(
         self,
         route: NodeFlag | None,
-        merge_callback: ClusterMultiNodeCallback[R],
+        merge_callback: ClusterMultiNodeCallback[CommandResponseT],
         key_step: int = 2,
         add_count: bool = False,
     ):
@@ -280,19 +296,23 @@ class PairStrategy(RoutingStrategy[R]):
     def distribute(
         self,
         cluster_layout: ClusterLayout,
-        command: bytes,
-        arguments: tuple[RedisValueT, ...],
+        command: CommandRequest[CommandResponseT],
         readonly: bool,
-        execution_parameters: ExecutionParameters,
-    ) -> list[NodeExecution[R]]:
-        _, key_range = KeySpec.extract_keys(command, *arguments, readonly_command=readonly)
-        slots_to_keys = KeySpec.slots_to_keys(command, *arguments, readonly_command=readonly)
+    ) -> list[NodeExecution[CommandResponseT]]:
+        _, key_range = KeySpec.extract_keys(
+            command.name, *command.arguments, readonly_command=readonly
+        )
+        slots_to_keys = KeySpec.slots_to_keys(
+            command.name, *command.arguments, readonly_command=readonly
+        )
         pre_arguments: tuple[RedisValueT, ...] = ()
         if not self.add_count:
-            pre_arguments = arguments[: key_range[0]]
-        post_arguments = arguments[key_range[1] * self.key_step + 2 :]
-        keys = arguments[key_range[0] : key_range[1] * self.key_step + 1 : self.key_step]
-        value_section = arguments[key_range[0] + 1 : key_range[1] * self.key_step + self.key_step]
+            pre_arguments = command.arguments[: key_range[0]]
+        post_arguments = command.arguments[key_range[1] * self.key_step + 2 :]
+        keys = command.arguments[key_range[0] : key_range[1] * self.key_step + 1 : self.key_step]
+        value_section = command.arguments[
+            key_range[0] + 1 : key_range[1] * self.key_step + self.key_step
+        ]
         values = [
             value_section[chunk[0] : chunk[0] + self.key_step - 1]
             for chunk in list(enumerate(value_section))[:: self.key_step]
@@ -309,10 +329,9 @@ class PairStrategy(RoutingStrategy[R]):
                 node_pairs[(slot, node)].insert(0, len(sub_keys))
         return [
             NodeExecution(
-                slots=(slot_node[0],),
                 node=slot_node[1],
-                command=command,
-                arguments=pre_arguments + tuple(node_pairs) + post_arguments,
+                original_request=command,
+                node_arguments=pre_arguments + tuple(node_pairs) + post_arguments,
                 key_positions=tuple(node_key_positions[slot_node]),
             )
             for slot_node, node_pairs in node_pairs.items()
@@ -323,7 +342,7 @@ class PairStrategy(RoutingStrategy[R]):
         return """the nodes serving the keys in the command"""
 
 
-class UndefinedStrategy(RoutingStrategy[R]):
+class UndefinedStrategy(RoutingStrategy[CommandResponseT]):
     cross_slot: ClassVar[bool] = False
 
     def __init__(self) -> None:
@@ -332,12 +351,41 @@ class UndefinedStrategy(RoutingStrategy[R]):
     def distribute(
         self,
         cluster_layout: ClusterLayout,
-        command: bytes,
-        arguments: tuple[RedisValueT, ...],
+        command: CommandRequest[CommandResponseT],
         readonly: bool,
-        execution_parameters: ExecutionParameters,
-    ) -> list[NodeExecution[R]]:
-        raise NotImplementedError(f"{command.decode()} must be routed to a slot explicitly!")
+    ) -> list[NodeExecution[CommandResponseT]]:
+        raise NotImplementedError(f"{nativestr(command.name)} must be routed to a slot explicitly!")
+
+    @property
+    def description(self) -> str:
+        return """the explicitly passed slot when called with :meth:`~coredis.commands.CommandRequest.route`"""
+
+
+class ExplicitSlotStrategy(RoutingStrategy[CommandResponseT]):
+    cross_slot: ClassVar[bool] = False
+    slot: int
+
+    def __init__(self, key_or_slot: StringT | int) -> None:
+        super().__init__(NodeFlag.SLOT_ID, merge_callback=ClusterNoMerge())
+        self.slot = (
+            hash_slot(b(key_or_slot)) if isinstance(key_or_slot, (str, bytes)) else key_or_slot
+        )
+
+    def distribute(
+        self,
+        cluster_layout: ClusterLayout,
+        command: CommandRequest[CommandResponseT],
+        readonly: bool,
+    ) -> list[NodeExecution[CommandResponseT]]:
+        node = cluster_layout.node_for_slot(self.slot)
+        return [
+            NodeExecution(
+                node=node,
+                original_request=command,
+                node_arguments=command.arguments,
+                key_positions=(),
+            )
+        ]
 
     @property
     def description(self) -> str:

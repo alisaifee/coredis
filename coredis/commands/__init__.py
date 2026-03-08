@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from coredis.response._callbacks import NoopCallback
 from coredis.typing import (
     AnyStr,
     Awaitable,
@@ -17,8 +16,6 @@ from coredis.typing import (
     ExecutionParameters,
     Generic,
     R,
-    RedisCommandP,
-    Unpack,
     ValueT,
 )
 
@@ -33,9 +30,7 @@ class CommandMixin(Generic[AnyStr], ABC):
     @abstractmethod
     def execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **options: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> Awaitable[R]: ...
 
     @abstractmethod

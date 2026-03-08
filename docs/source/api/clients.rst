@@ -19,8 +19,6 @@ to the client with a pythonic response mapped from the :term:`RESP` response
    :show-inheritance:
    :class-doc-from: both
 .. autodata:: coredis.commands.CommandResponseT
-.. autoclass:: coredis.typing.RedisCommandP
-   :class-doc-from: both
 .. autoclass:: coredis.typing.ExecutionParameters
    :class-doc-from: both
    :show-inheritance:
