@@ -238,8 +238,8 @@ class StreamPending(NamedTuple):
     """
 
     pending: int
-    minimum_identifier: StringT
-    maximum_identifier: StringT
+    minimum_identifier: StringT | None
+    maximum_identifier: StringT | None
     consumers: OrderedDict[StringT, int]
 
 

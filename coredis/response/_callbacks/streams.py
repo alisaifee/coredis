@@ -106,13 +106,11 @@ class PendingCallback(
         response: list[StringT | int | list[StringT | int | list[StringT]] | None],
     ) -> StreamPending | tuple[StreamPendingExt, ...]:
         if not self.options.get("count"):
-            consumers = [
-                (cast(StringT, r[0]), int(r[1])) for r in cast(list[StringT], response[3] or [])
-            ]
+            consumers = [(r[0], int(r[1])) for r in cast(list[list[StringT]], response[3] or [])]
             return StreamPending(
                 cast(int, response[0]),
-                cast(StringT, response[1]),
-                cast(StringT, response[2]),
+                cast(StringT | None, response[1]),
+                cast(StringT | None, response[2]),
                 OrderedDict(consumers),
             )
         else:
