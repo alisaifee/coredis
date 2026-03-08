@@ -6,12 +6,14 @@ from types import GenericAlias
 from typing import Any, cast, get_origin
 
 from coredis._protocols import AbstractExecutor
+from coredis.response._callbacks import NoopCallback
 from coredis.retry import RetryPolicy
 from coredis.typing import (
     Awaitable,
     Callable,
     ExecutionParameters,
     Generator,
+    ResponseType,
     Serializable,
     TypeAdapter,
     TypeIs,
@@ -42,7 +44,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
         client: AbstractExecutor,
         name: bytes,
         *arguments: ValueT,
-        callback: Callable[..., CommandResponseT],
+        callback: Callable[..., CommandResponseT] = NoopCallback(),
         execution_parameters: ExecutionParameters | None = None,
         **kwargs: Any,
     ) -> None:
@@ -69,9 +71,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
 
     def run(self) -> Awaitable[CommandResponseT]:
         if not hasattr(self, "_response"):
-            self._response = self.client.execute_command(
-                self, self.callback, **self.execution_parameters
-            )
+            self._response = self.client.execute_command(self)
 
         return self._response
 
@@ -113,11 +113,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
 
         """
         return RetryableCommandRequest(
-            self.client,
-            self.name,
-            *self.arguments,
-            callback=self.callback,
-            execution_parameters=self.execution_parameters,
+            self,
             policy=policy,
             failure_hook=failure_hook,
         )
@@ -154,6 +150,34 @@ class CommandRequest(Awaitable[CommandResponseT]):
             transformer=transformer,
         )
 
+    def raw(self, decode_response: bool | None = None) -> CommandRequest[ResponseType]:
+        """
+        :param decode_resonse: Whether to decode any bulk strings from the server.
+         If ``None`` the setting the client was configured with will be used.
+
+        :return: a command request object that when awaited will return the
+         original response from the server without any callback applied to transform
+         the response
+
+         For example when used with a redis command::
+
+           client = coredis.Redis(....)
+           async with client:
+               assert True == await client.set("fubar", 1)
+               assert b"OK" == await client.set("fubar", 1).raw(decode_response=False)
+               assert "OK" == await client.set("fubar", 1).raw(decode_response=True)
+        """
+        return CommandRequest(
+            self.client,
+            self.name,
+            *self.arguments,
+            execution_parameters=(
+                self.execution_parameters
+                if decode_response is None
+                else {**self.execution_parameters, **{"decode": decode_response}}
+            ),
+        )
+
     @property
     def type_adapter(self) -> TypeAdapter:
         from coredis.client import Client
@@ -185,9 +209,15 @@ class TransformedCommandRequest(CommandRequest[TransformedResponse]):
          or a callable that takes a single argument (the original response)
          and returns the transformed response.
         """
-        self.transformer = transformer
+        super().__init__(
+            parent.client,
+            parent.name,
+            *parent.arguments,
+            execution_parameters=parent.execution_parameters,
+        )
+
         self.parent = parent
-        self.client = parent.client
+        self.transformer = transformer
         self.transform_func = cast(
             Callable[..., TransformedResponse],
             (
@@ -208,11 +238,7 @@ class TransformedCommandRequest(CommandRequest[TransformedResponse]):
 class RetryableCommandRequest(CommandRequest[CommandResponseT]):
     def __init__(
         self,
-        client: AbstractExecutor,
-        name: bytes,
-        *arguments: ValueT,
-        callback: Callable[..., CommandResponseT],
-        execution_parameters: ExecutionParameters | None = None,
+        request: CommandRequest[CommandResponseT],
         policy: RetryPolicy,
         failure_hook: Callable[..., Awaitable[Any]]
         | dict[type[BaseException], Callable[..., Awaitable[None]]]
@@ -222,13 +248,7 @@ class RetryableCommandRequest(CommandRequest[CommandResponseT]):
         """
         A retryable command request object.
 
-        :param client: The instance of the :class:`coredis.Redis` that
-        will be used to call :meth:`~coredis.Redis.execute_command`
-        :param name:  The name of the command
-        :param arguments:  All arguments (in redis format) to be passed to the command
-        :param callback: The callback to be used to transform the RESP response
-        :param execution_parameters:  Any additional parameters to be passed to
-        :meth:`coredis.Redis.execute_command`
+        :param request: The original request to retry
         :param policy: The retry policy to use when executing the command
         :param failure_hook: if provided and is a callable it will be
          called everytime a retryable exception is encountered. If it is a mapping
@@ -238,11 +258,11 @@ class RetryableCommandRequest(CommandRequest[CommandResponseT]):
         self.policy = policy
         self.failure_hook = failure_hook
         super().__init__(
-            client,
-            name,
-            *arguments,
-            callback=callback,
-            execution_parameters=execution_parameters,
+            request.client,
+            request.name,
+            *request.arguments,
+            callback=request.callback,
+            execution_parameters=request.execution_parameters,
             policy=self.policy,
             failure_hook=self.failure_hook,
             **kwargs,

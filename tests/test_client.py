@@ -16,7 +16,6 @@ from coredis.exceptions import (
     ReplicationError,
     UnknownCommandError,
 )
-from coredis.typing import RedisCommand
 from tests.conftest import targets
 
 
@@ -41,7 +40,7 @@ class TestClient:
 
     async def test_unknown_command(self, client):
         with pytest.raises(UnknownCommandError):
-            await client.execute_command(RedisCommand(b"BOGUS", ()))
+            await client.create_request(b"BOGUS", callback=lambda _: None)
 
     @pytest.mark.parametrize("client_arguments", [{"db": 1}])
     @pytest.mark.nodragonfly

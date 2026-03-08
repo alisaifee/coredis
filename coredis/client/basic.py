@@ -44,9 +44,6 @@ from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import PubSub, SubscriptionCallback
 from coredis.pool._base import BaseConnectionPool
 from coredis.pool._basic import ConnectionPool, ConnectionPoolParams
-from coredis.response._callbacks import (
-    NoopCallback,
-)
 from coredis.response.types import ScoredMember
 from coredis.retry import (
     CompositeRetryPolicy,
@@ -69,14 +66,12 @@ from coredis.typing import (
     Mapping,
     Parameters,
     ParamSpec,
-    RedisCommandP,
     RedisValueT,
     Self,
     StringT,
     T_co,
     TypeAdapter,
     TypeVar,
-    Unpack,
     ValueT,
 )
 
@@ -193,7 +188,7 @@ class Client(
                 self.server_version = None
 
     async def _ensure_wait_and_persist(
-        self, command: RedisCommandP, connection: BaseConnection
+        self, command: CommandRequest[Any], connection: BaseConnection
     ) -> None:
         wait = self._waitcontext.get()
         waitaof = self._waitaof_context.get()
@@ -433,7 +428,7 @@ class Client(
         finally:
             self._waitaof_context.reset(persistence_reset_token)
 
-    def should_quick_release(self, command: RedisCommandP) -> bool:
+    def should_quick_release(self, command: CommandRequest[Any]) -> bool:
         return CommandFlag.BLOCKING not in COMMAND_FLAGS[command.name]
 
 
@@ -882,23 +877,19 @@ class Redis(Client[AnyStr]):
 
     async def execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **options: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> R:
         """
         Executes a command with configured retries and returns
         the parsed response
         """
         return await self.retry_policy.call_with_retries(
-            lambda: self._execute_command(command, callback=callback, **options),
+            lambda: self._execute_command(command),
         )
 
     async def _execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **options: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> R:
         pool = self.connection_pool
         quick_release = self.should_quick_release(command)
@@ -945,7 +936,7 @@ class Redis(Client[AnyStr]):
                     command.name,
                     *command.arguments,
                     noreply=self.noreply,
-                    decode=options.get("decode", self._decodecontext.get()),
+                    decode=command.execution_parameters.get("decode", self._decodecontext.get()),
                     encoding=self._encodingcontext.get(),
                     disconnect_on_cancellation=should_block,
                 )
@@ -973,7 +964,7 @@ class Redis(Client[AnyStr]):
                         *command.arguments,
                         value=reply,
                     )
-            return callback(cached_reply if cache_hit else reply)
+            return command.callback(cached_reply if cache_hit else reply)
         finally:
             if not released:
                 pool.release(connection)

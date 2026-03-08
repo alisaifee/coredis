@@ -20,6 +20,7 @@ from coredis.commands._key_spec import KeySpec
 from coredis.commands._routing import NodeExecution
 from coredis.commands._validators import mutually_inclusive_parameters
 from coredis.commands.constants import CommandName
+from coredis.commands.request import CommandRequest
 from coredis.connection._base import RedisSSLContext
 from coredis.connection._tcp import TCPLocation
 from coredis.credentials import AbstractCredentialProvider
@@ -42,7 +43,6 @@ from coredis.globals import (
 from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
 from coredis.pool import ClusterConnectionPool
-from coredis.response._callbacks import NoopCallback
 from coredis.retry import (
     CompositeRetryPolicy,
     ConstantRetryPolicy,
@@ -56,7 +56,6 @@ from coredis.typing import (
     Awaitable,
     Callable,
     Coroutine,
-    ExecutionParameters,
     Iterable,
     Iterator,
     KeyT,
@@ -65,13 +64,10 @@ from coredis.typing import (
     Node,
     Parameters,
     ParamSpec,
-    RedisCommand,
-    RedisCommandP,
     Self,
     StringT,
     TypeAdapter,
     TypeVar,
-    Unpack,
 )
 
 P = ParamSpec("P")
@@ -700,9 +696,7 @@ class RedisCluster(
 
     async def execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **kwargs: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> R:
         """
         Sends a command to one or many nodes in the cluster
@@ -710,15 +704,13 @@ class RedisCluster(
         """
 
         return await self.retry_policy.call_with_retries(
-            lambda: self._execute_command(command, callback=callback, **kwargs),
+            lambda: self._execute_command(command),
             failure_hook=self.on_retry_error,
         )
 
     async def _execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **kwargs: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> R:
         """
         Sends a command to one or many nodes in the cluster
@@ -731,13 +723,11 @@ class RedisCluster(
                 command.name,
                 command.arguments,
                 primary=not prefer_replica,
-                execution_parameters=kwargs,
+                execution_parameters=command.execution_parameters,
             )
             return await self._execute_command_on_single_node(
                 node,
                 command,
-                callback=callback,
-                **kwargs,
             )
         except RedisClusterError:
             if (routing_strategy := ROUTING_STRATEGIES.get(command.name)) and (
@@ -745,18 +735,13 @@ class RedisCluster(
             ):
                 node_executions = routing_strategy.distribute(
                     self.connection_pool.cluster_layout,
-                    command.name,
-                    command.arguments,
+                    command,
                     prefer_replica,
-                    execution_parameters=kwargs,
                 )
                 node_command_executions: dict[NodeExecution[R], Coroutine[Any, Any, R]] = {}
-                for portion, execution in enumerate(node_executions):
+                for execution in node_executions:
                     node_command_executions[execution] = self._execute_command_on_single_node(
-                        execution.node,
-                        RedisCommand(command.name, execution.arguments),
-                        callback=callback,
-                        **kwargs,
+                        execution.node, execution
                     )
 
                 results = await gather(*node_command_executions.values(), return_exceptions=True)
@@ -765,19 +750,14 @@ class RedisCluster(
                 else:
                     for execution, result in zip(node_command_executions.keys(), results):
                         execution.result = result
-                    return cast(
-                        R,
-                        routing_strategy.combine(node_executions=node_executions),
-                    )
+                    return cast(R, routing_strategy.combine(node_executions=node_executions))
             else:
                 raise
 
     async def _execute_command_on_single_node(
         self,
         node: ClusterNodeLocation,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **kwargs: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> R:
         redirect_location = None
         asking = False
@@ -841,7 +821,9 @@ class RedisCluster(
                         command.name,
                         *command.arguments,
                         noreply=self.noreply,
-                        decode=kwargs.get("decode", self._decodecontext.get()),
+                        decode=command.execution_parameters.get(
+                            "decode", self._decodecontext.get()
+                        ),
                         encoding=self._encodingcontext.get(),
                         disconnect_on_cancellation=should_block,
                     )
@@ -857,7 +839,7 @@ class RedisCluster(
                 if self.noreply:
                     return  # type: ignore
                 else:
-                    response = callback(
+                    response = command.callback(
                         cached_reply if cache_hit else reply,
                     )
                     if self.connection_pool.cache and cacheable:
