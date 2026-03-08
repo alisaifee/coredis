@@ -42,7 +42,10 @@ class ZMembersOrScoredMembers(
         response: list[AnyStr | list[ResponsePrimitive]],
     ) -> tuple[AnyStr | ScoredMember, ...]:
         if self.options.get("withscores"):
-            return tuple(ScoredMember(*v) for v in cast(list[tuple[AnyStr, float]], response))
+            return tuple(
+                ScoredMember(cast(AnyStr, v[0]), cast(float, v[1]))
+                for v in cast(list[list[StringT | float]], response)
+            )
         else:
             return cast(tuple[AnyStr, ...], tuple(response))
 
@@ -62,25 +65,30 @@ class ZSetScorePairCallback(
             return None
 
         if not (self.options.get("withscores") or self.options.get("count")):
-            return ScoredMember(*cast(tuple[AnyStr, float], response))
+            return ScoredMember(*cast(tuple[AnyStr, float], tuple(response)))
 
-        return tuple(ScoredMember(*v) for v in cast(list[tuple[AnyStr, float]], response))
+        return tuple(
+            ScoredMember(cast(AnyStr, v[0]), cast(float, v[1]))
+            for v in cast(list[list[AnyStr | float]], response)
+        )
 
 
 class ZMPopCallback(
     ResponseCallback[
-        list[ResponseType] | None,
+        list[StringT | list[list[StringT | float]]] | None,
         tuple[AnyStr, ScoredMembers] | None,
     ],
     Generic[AnyStr],
 ):
     def transform(
         self,
-        response: list[ResponseType] | None,
+        response: list[StringT | list[list[StringT | float]]] | None,
     ) -> tuple[AnyStr, ScoredMembers] | None:
-        r = cast(tuple[AnyStr, list[tuple[AnyStr, int]]], response)
-        if r:
-            return r[0], tuple(ScoredMember(v[0], float(v[1])) for v in r[1])
+        if response:
+            return cast(AnyStr, response[0]), tuple(
+                ScoredMember(cast(AnyStr, v[0]), cast(float, v[1]))
+                for v in cast(list[list[StringT | float]], response[1])
+            )
 
         return None
 
@@ -93,7 +101,7 @@ class ZScanCallback(
         self,
         response: list[ResponseType],
     ) -> tuple[int, ScoredMembers]:
-        cursor, r = cast(tuple[int, list[AnyStr]], response)
+        cursor, r = cast(tuple[StringT, list[StringT]], tuple(response))
         it = iter(r)
         return int(cursor), tuple(ScoredMember(*v) for v in zip(it, map(float, it)))
 
