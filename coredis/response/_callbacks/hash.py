@@ -31,20 +31,25 @@ class HScanCallback(
 
 class HRandFieldCallback(
     ResponseCallback[
-        AnyStr | list[AnyStr] | list[list[AnyStr]] | None,
+        StringT | list[StringT] | list[list[StringT]] | None,
         AnyStr | tuple[AnyStr, ...] | dict[AnyStr, AnyStr] | None,
     ]
 ):
     def transform(
         self,
-        response: AnyStr | list[AnyStr] | list[list[AnyStr]] | None,
+        response: StringT | list[StringT] | list[list[StringT]] | None,
     ) -> AnyStr | tuple[AnyStr, ...] | dict[AnyStr, AnyStr] | None:
         if not response:
             return None
         if self.options.get("count"):
             if self.options.get("withvalues"):
-                return dict(cast(list[tuple[AnyStr, AnyStr]], response))
-            return tuple(cast(tuple[AnyStr, AnyStr], response))
+                return dict(
+                    (
+                        cast(tuple[AnyStr, AnyStr], tuple(v))
+                        for v in cast(list[list[StringT]], response)
+                    )
+                )
+            return tuple(cast(list[AnyStr], response))
         return cast(AnyStr, response)
 
 

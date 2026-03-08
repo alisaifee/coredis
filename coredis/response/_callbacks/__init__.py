@@ -501,7 +501,7 @@ class OptionalAnyStrCallback(
 
 class OptionalListCallback(ResponseCallback[list[ResponseType], list[CR_co] | None]):
     def transform(self, response: ResponseType, **options: Any) -> list[CR_co] | None:
-        return cast(list[CR_co], response)
+        return cast(list[CR_co] | None, response)
 
 
 class FirstValueCallback(ResponseCallback[dict[R, S], S]):

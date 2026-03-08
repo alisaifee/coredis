@@ -492,7 +492,7 @@ class TestSearch:
             returns={"summary_text": None},
         )
         assert _s("<blink>Olympics</blink>") in results.documents[0].properties[_s("summary_text")]
-        assert results.documents[0].properties["summary_text"].endswith(_s("{{truncate}}"))
+        assert results.documents[0].properties[_s("summary_text")].endswith(_s("{{truncate}}"))
 
     @pytest.mark.parametrize("index_name", ["{city}idx"])
     async def test_text_search_with_slop(self, client: Redis, city_index, index_name, _s):

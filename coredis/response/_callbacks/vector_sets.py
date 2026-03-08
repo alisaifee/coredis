@@ -43,11 +43,11 @@ class VSimCallback(
                     }
                 case True, True:
                     return {
-                        k: (v[0], json.loads(v[1]))
-                        for k, v in cast(dict[AnyStr, tuple[float, StringT]], response).items()
+                        cast(AnyStr, k): (cast(float, v[0]), json.loads(cast(StringT, v[1])))
+                        for k, v in cast(dict[StringT, list[float | StringT]], response).items()
                     }
                 case _:
-                    return cast(tuple[AnyStr, ...], response)
+                    return cast(dict[AnyStr, float], response)
         else:
             return tuple(response)
 

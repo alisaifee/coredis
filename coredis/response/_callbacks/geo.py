@@ -4,19 +4,19 @@ from typing import Any, cast
 
 from coredis.response._callbacks import ResponseCallback
 from coredis.response.types import GeoCoordinates, GeoSearchResult
-from coredis.typing import AnyStr, Generic, ResponsePrimitive, StringT
+from coredis.typing import AnyStr, Generic, StringT
 
 
 class GeoSearchCallback(
     Generic[AnyStr],
     ResponseCallback[
-        list[StringT | list[ResponsePrimitive | list[ResponsePrimitive]]],
+        list[StringT | list[StringT | int | list[float]]],
         tuple[AnyStr | GeoSearchResult, ...],
     ],
 ):
     def transform(
         self,
-        response: list[StringT | list[ResponsePrimitive | list[ResponsePrimitive]]],
+        response: list[StringT | list[StringT | int | list[float]]],
         **options: Any,
     ) -> tuple[AnyStr | GeoSearchResult, ...]:
         if not (
@@ -28,15 +28,14 @@ class GeoSearchCallback(
 
         results: list[GeoSearchResult] = []
 
-        for result in response:
-            chunk = cast(list[list[ResponsePrimitive | list[ResponsePrimitive]]], result)
+        for result in cast(list[list[StringT | int | list[float]]], response):
             results.append(
                 GeoSearchResult(
-                    cast(StringT, chunk.pop(0)),
-                    float(cast(StringT, chunk.pop(0))) if self.options.get("withdist") else None,
-                    cast(int, chunk.pop(0)) if self.options.get("withhash") else None,
+                    cast(StringT, result.pop(0)),
+                    float(cast(StringT, result.pop(0))) if self.options.get("withdist") else None,
+                    cast(int, result.pop(0)) if self.options.get("withhash") else None,
                     (
-                        GeoCoordinates(*cast(list[float], chunk.pop(0)))
+                        GeoCoordinates(*cast(list[float], result.pop(0)))
                         if self.options.get("withcoord")
                         else None
                     ),

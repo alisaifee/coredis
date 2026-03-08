@@ -72,7 +72,7 @@ class TimeSeriesCallback(
         return {
             cast(AnyStr, k): (
                 cast(dict[AnyStr, AnyStr], v[0]),
-                cast(tuple[int, float], tuple(v[1])),
+                cast(tuple[int, float] | tuple[()], tuple(v[1])),
             )
             for k, v in response.items()
         }

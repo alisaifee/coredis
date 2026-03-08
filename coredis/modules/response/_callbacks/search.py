@@ -68,7 +68,7 @@ class SearchResultCallback(
                     score_explain,
                     result["payload"] if self.options.get("withpayloads") else None,
                     result["sortkey"] if self.options.get("withsortkeys") else None,
-                    cast(dict[Any, ResponseType], fields),
+                    dict(fields),
                 )
             )
         return SearchResult[AnyStr](search_results["total_results"], tuple(results))
