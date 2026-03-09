@@ -29,6 +29,7 @@ from coredis.exceptions import (
     ClusterError,
     ConnectionError,
     MovedError,
+    RedisClusterError,
     RedisError,
     TryAgainError,
 )
@@ -725,12 +726,7 @@ class RedisCluster(
         prefer_replica = (
             command.name in READONLY_COMMANDS and self.connection_pool.read_from_replicas
         )
-        affected_slots = len(
-            KeySpec.affected_slots(
-                command.name, *command.arguments, readonly_command=prefer_replica
-            )
-        )
-        if affected_slots == 1:
+        try:
             node = self.connection_pool.cluster_layout.node_for_request(
                 command.name,
                 command.arguments,
@@ -743,42 +739,38 @@ class RedisCluster(
                 callback=callback,
                 **kwargs,
             )
-        elif (routing_strategy := ROUTING_STRATEGIES.get(command.name)) and (
-            self.non_atomic_cross_slot or not routing_strategy.cross_slot
-        ):
-            node_executions = routing_strategy.distribute(
-                self.connection_pool.cluster_layout,
-                command.name,
-                command.arguments,
-                prefer_replica,
-                execution_parameters=kwargs,
-            )
-            node_command_executions: dict[NodeExecution[R], Coroutine[Any, Any, R]] = {}
-            for portion, execution in enumerate(node_executions):
-                node_command_executions[execution] = self._execute_command_on_single_node(
-                    execution.node,
-                    RedisCommand(command.name, execution.arguments),
-                    callback=callback,
-                    **kwargs,
+        except RedisClusterError:
+            if (routing_strategy := ROUTING_STRATEGIES.get(command.name)) and (
+                self.non_atomic_cross_slot or not routing_strategy.cross_slot
+            ):
+                node_executions = routing_strategy.distribute(
+                    self.connection_pool.cluster_layout,
+                    command.name,
+                    command.arguments,
+                    prefer_replica,
+                    execution_parameters=kwargs,
                 )
+                node_command_executions: dict[NodeExecution[R], Coroutine[Any, Any, R]] = {}
+                for portion, execution in enumerate(node_executions):
+                    node_command_executions[execution] = self._execute_command_on_single_node(
+                        execution.node,
+                        RedisCommand(command.name, execution.arguments),
+                        callback=callback,
+                        **kwargs,
+                    )
 
-            results = await gather(*node_command_executions.values(), return_exceptions=True)
-            if self.noreply:
-                return None  # type: ignore
+                results = await gather(*node_command_executions.values(), return_exceptions=True)
+                if self.noreply:
+                    return None  # type: ignore
+                else:
+                    for execution, result in zip(node_command_executions.keys(), results):
+                        execution.result = result
+                    return cast(
+                        R,
+                        routing_strategy.combine(node_executions=node_executions),
+                    )
             else:
-                for execution, result in zip(node_command_executions.keys(), results):
-                    execution.result = result
-                return cast(
-                    R,
-                    routing_strategy.combine(node_executions=node_executions),
-                )
-        else:
-            return await self._execute_command_on_single_node(
-                self.connection_pool.cluster_layout.random_node(not prefer_replica),
-                command,
-                callback=callback,
-                **kwargs,
-            )
+                raise
 
     async def _execute_command_on_single_node(
         self,
