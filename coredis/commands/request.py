@@ -96,16 +96,16 @@ class CommandRequest(Awaitable[CommandResponseT]):
         With :meth:`retry`::
 
             async with coredis.Redis() as client:
-                await client.lpush("mylist", [1,2,3]).retryable(
+                await client.lpush("mylist", [1,2,3]).retry(
                     coredis.retry.ConstantRetryPolicy(
-                        (coredis.exceptions.RedisError,), 2, 1
+                        (coredis.exceptions.RedisError,), retries=2, delay=1
                     ),
                 )
 
         Explicitly retrying::
 
             retry_policy = coredis.retry.ConstantRetryPolicy(
-                (coredis.exceptions.RedisError,), 2, 1
+                (coredis.exceptions.RedisError,), retries=2, delay=1
             )
 
             async with coredis.Redis() as client:
