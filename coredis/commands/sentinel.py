@@ -31,8 +31,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
         CommandName.SENTINEL_CKQUORUM,
     )
     def sentinel_ckquorum(self, service_name: StringT) -> CommandRequest[bool]:
-        return CommandRequest(
-            self,
+        return self.create_request(
             CommandName.SENTINEL_CKQUORUM,
             service_name,
             callback=SimpleStringCallback(prefix_match=True),
@@ -44,8 +43,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
         Get the current value of a global Sentinel configuration parameter.
         The specified name may be a wildcard, similar to :meth:`config_get`
         """
-        return CommandRequest(
-            self,
+        return self.create_request(
             CommandName.SENTINEL_CONFIG_GET,
             name,
             callback=DictCallback[AnyStr, AnyStr](),
@@ -56,8 +54,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
         """
         Set the value of a global Sentinel configuration parameter
         """
-        return CommandRequest(
-            self,
+        return self.create_request(
             CommandName.SENTINEL_CONFIG_SET,
             name,
             value,
@@ -74,8 +71,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
         Returns a (host, port) pair for the given :paramref:`service_name`
         """
 
-        return CommandRequest(
-            self,
+        return self.create_request(
             CommandName.SENTINEL_GET_MASTER_ADDR_BY_NAME,
             service_name,
             callback=GetPrimaryCallback(),
@@ -89,8 +85,8 @@ class SentinelCommands(CommandMixin[AnyStr]):
         Force a failover as if the master was not reachable, and without asking
         for agreement to other Sentinels
         """
-        return CommandRequest(
-            self, CommandName.SENTINEL_FAILOVER, service_name, callback=SimpleStringCallback()
+        return self.create_request(
+            CommandName.SENTINEL_FAILOVER, service_name, callback=SimpleStringCallback()
         )
 
     @redis_command(CommandName.SENTINEL_FLUSHCONFIG)
@@ -98,8 +94,8 @@ class SentinelCommands(CommandMixin[AnyStr]):
         """
         Force Sentinel to rewrite its configuration on disk, including the current Sentinel state.
         """
-        return CommandRequest(
-            self, CommandName.SENTINEL_FLUSHCONFIG, callback=SimpleStringCallback()
+        return self.create_request(
+            CommandName.SENTINEL_FLUSHCONFIG, callback=SimpleStringCallback()
         )
 
     @redis_command(CommandName.SENTINEL_INFO_CACHE)
@@ -109,8 +105,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
         """
         Return cached INFO output from masters and replicas.
         """
-        return CommandRequest(
-            self,
+        return self.create_request(
             CommandName.SENTINEL_INFO_CACHE,
             *nodenames,
             callback=SentinelInfoCallback[AnyStr](),
@@ -124,8 +119,8 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> CommandRequest[dict[str, ResponsePrimitive]]:
         """Returns a dictionary containing the specified masters state."""
 
-        return CommandRequest(
-            self, CommandName.SENTINEL_MASTER, service_name, callback=PrimaryCallback()
+        return self.create_request(
+            CommandName.SENTINEL_MASTER, service_name, callback=PrimaryCallback()
         )
 
     @redis_command(
@@ -134,7 +129,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     def sentinel_masters(self) -> CommandRequest[dict[str, dict[str, ResponsePrimitive]]]:
         """Returns a list of dictionaries containing each master's state."""
 
-        return CommandRequest(self, CommandName.SENTINEL_MASTERS, callback=PrimariesCallback())
+        return self.create_request(CommandName.SENTINEL_MASTERS, callback=PrimariesCallback())
 
     @redis_command(
         CommandName.SENTINEL_MONITOR,
@@ -144,8 +139,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> CommandRequest[bool]:
         """Adds a new master to Sentinel to be monitored"""
 
-        return CommandRequest(
-            self,
+        return self.create_request(
             CommandName.SENTINEL_MONITOR,
             name,
             ip,
@@ -158,7 +152,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     def sentinel_myid(self) -> CommandRequest[AnyStr]:
         """Return the ID of the Sentinel instance"""
 
-        return CommandRequest(self, CommandName.SENTINEL_MYID, callback=AnyStrCallback[AnyStr]())
+        return self.create_request(CommandName.SENTINEL_MYID, callback=AnyStrCallback[AnyStr]())
 
     @redis_command(
         CommandName.SENTINEL_REMOVE,
@@ -166,8 +160,8 @@ class SentinelCommands(CommandMixin[AnyStr]):
     def sentinel_remove(self, name: RedisValueT) -> CommandRequest[bool]:
         """Removes a master from Sentinel's monitoring"""
 
-        return CommandRequest(
-            self, CommandName.SENTINEL_REMOVE, name, callback=SimpleStringCallback()
+        return self.create_request(
+            CommandName.SENTINEL_REMOVE, name, callback=SimpleStringCallback()
         )
 
     @redis_command(
@@ -178,8 +172,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> CommandRequest[tuple[dict[str, ResponsePrimitive], ...]]:
         """Returns a list of sentinels for :paramref:`service_name`"""
 
-        return CommandRequest(
-            self,
+        return self.create_request(
             CommandName.SENTINEL_SENTINELS,
             service_name,
             callback=SentinelsStateCallback(),
@@ -193,8 +186,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> CommandRequest[bool]:
         """Sets Sentinel monitoring parameters for a given master"""
 
-        return CommandRequest(
-            self,
+        return self.create_request(
             CommandName.SENTINEL_SET,
             name,
             option,
@@ -210,8 +202,8 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> CommandRequest[tuple[dict[str, ResponsePrimitive], ...]]:
         """Returns a list of slaves for paramref:`service_name`"""
 
-        return CommandRequest(
-            self, CommandName.SENTINEL_SLAVES, service_name, callback=SentinelsStateCallback()
+        return self.create_request(
+            CommandName.SENTINEL_SLAVES, service_name, callback=SentinelsStateCallback()
         )
 
     @redis_command(
@@ -222,8 +214,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
     ) -> CommandRequest[tuple[dict[str, ResponsePrimitive], ...]]:
         """Returns a list of replicas for :paramref:`service_name`"""
 
-        return CommandRequest(
-            self,
+        return self.create_request(
             CommandName.SENTINEL_REPLICAS,
             service_name,
             callback=SentinelsStateCallback(),
@@ -238,8 +229,7 @@ class SentinelCommands(CommandMixin[AnyStr]):
         failover in progress), and removes every replica and sentinel already
         discovered and associated with the master.
         """
-        return CommandRequest(
-            self,
+        return self.create_request(
             CommandName.SENTINEL_RESET,
             pattern,
             callback=IntCallback(),
