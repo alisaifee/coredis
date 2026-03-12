@@ -763,8 +763,7 @@ class RedisCluster(
         asking = False
 
         remaining_attempts = int(self.MAX_RETRIES)
-        quick_release = self.should_quick_release(command)
-        should_block = not quick_release or self.requires_wait or self.requires_waitaof
+        should_block = command.blocking or self.requires_wait or self.requires_waitaof
         attempt_node: ClusterNodeLocation | None = node
         while remaining_attempts > 0:
             remaining_attempts -= 1

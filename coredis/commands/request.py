@@ -6,6 +6,7 @@ from types import GenericAlias
 from typing import Any, cast, get_origin
 
 from coredis._protocols import AbstractExecutor
+from coredis.globals import COMMAND_FLAGS
 from coredis.response._callbacks import NoopCallback
 from coredis.retry import RetryPolicy
 from coredis.typing import (
@@ -20,6 +21,8 @@ from coredis.typing import (
     TypeVar,
     ValueT,
 )
+
+from .constants import CommandFlag
 
 #: Covariant type used for generalizing :class:`~coredis.command.CommandRequest`
 CommandResponseT = TypeVar("CommandResponseT", covariant=True)
@@ -45,7 +48,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
         name: bytes,
         *arguments: ValueT,
         callback: Callable[..., CommandResponseT] = NoopCallback(),
-        execution_parameters: ExecutionParameters | None = None,
+        execution_parameters: ExecutionParameters,
         **kwargs: Any,
     ) -> None:
         """
@@ -68,6 +71,8 @@ class CommandRequest(Awaitable[CommandResponseT]):
             self.type_adapter.serialize(k) if isinstance(k, Serializable) else k for k in arguments
         )
         self.kwargs = kwargs
+        self.blocking = CommandFlag.BLOCKING in COMMAND_FLAGS[name]
+        self.noreply = execution_parameters.get("noreply", False)
 
     def run(self) -> Awaitable[CommandResponseT]:
         if not hasattr(self, "_response"):

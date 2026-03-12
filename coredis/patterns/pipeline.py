@@ -101,7 +101,7 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
         name: bytes,
         *arguments: ValueT,
         callback: Callable[..., CommandResponseT],
-        execution_parameters: ExecutionParameters | None = None,
+        execution_parameters: ExecutionParameters,
     ) -> None:
         super().__init__(
             client, name, *arguments, callback=callback, execution_parameters=execution_parameters
@@ -127,7 +127,7 @@ class ClusterPipelineCommandRequest(CommandRequest[CommandResponseT]):
         name: bytes,
         *arguments: ValueT,
         callback: Callable[..., CommandResponseT],
-        execution_parameters: ExecutionParameters | None = None,
+        execution_parameters: ExecutionParameters,
     ) -> None:
         super().__init__(
             client, name, *arguments, callback=callback, execution_parameters=execution_parameters
@@ -325,7 +325,11 @@ class Pipeline(Client[AnyStr]):
         :meta private:
         """
         return PipelineCommandRequest(
-            self, name, *arguments, callback=callback, execution_parameters=execution_parameters
+            self,
+            name,
+            *arguments,
+            callback=callback,
+            execution_parameters=execution_parameters or {},
         )
 
     @asynccontextmanager
@@ -654,7 +658,11 @@ class ClusterPipeline(Client[AnyStr]):
         :meta private:
         """
         return ClusterPipelineCommandRequest(
-            self, name, *arguments, callback=callback, execution_parameters=execution_parameters
+            self,
+            name,
+            *arguments,
+            callback=callback,
+            execution_parameters=execution_parameters or {},
         )
 
     @asynccontextmanager

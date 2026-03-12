@@ -113,6 +113,9 @@ class ExecutionParameters(TypedDict):
     #: (ignoring the value of :paramref:`~coredis.Redis.decode_responses`)
     decode: NotRequired[bool]
     slot_arguments_range: NotRequired[tuple[int, int]]
+    noreply: NotRequired[bool]
+    ensure_persistence: NotRequired[tuple[bool, int, int]]
+    ensure_replication: NotRequired[tuple[int, int]]
 
 
 #: Represents the acceptable types of a redis key

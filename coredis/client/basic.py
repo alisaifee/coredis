@@ -18,7 +18,7 @@ from coredis.commands._key_spec import KeySpec
 from coredis.commands._validators import (
     mutually_inclusive_parameters,
 )
-from coredis.commands.constants import CommandFlag, CommandName
+from coredis.commands.constants import CommandName
 from coredis.commands.core import CoreCommands
 from coredis.commands.function import Library
 from coredis.commands.script import Script
@@ -38,7 +38,7 @@ from coredis.exceptions import (
     ReplicationError,
     WatchError,
 )
-from coredis.globals import CACHEABLE_COMMANDS, COMMAND_FLAGS, READONLY_COMMANDS
+from coredis.globals import CACHEABLE_COMMANDS, READONLY_COMMANDS
 from coredis.modules import ModuleMixin
 from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import PubSub, SubscriptionCallback
@@ -147,7 +147,14 @@ class Client(
         :return: An instance of a command request bound to this client.
         """
         return CommandRequest(
-            self, name, *arguments, callback=callback, execution_parameters=execution_parameters
+            self,
+            name,
+            *arguments,
+            callback=callback,
+            execution_parameters={
+                **(execution_parameters or {}),
+                **{"noreply": self.noreply},
+            },
         )
 
     @property
@@ -427,9 +434,6 @@ class Client(
             yield self
         finally:
             self._waitaof_context.reset(persistence_reset_token)
-
-    def should_quick_release(self, command: CommandRequest[Any]) -> bool:
-        return CommandFlag.BLOCKING not in COMMAND_FLAGS[command.name]
 
 
 class Redis(Client[AnyStr]):
@@ -892,8 +896,7 @@ class Redis(Client[AnyStr]):
         command: CommandRequest[R],
     ) -> R:
         pool = self.connection_pool
-        quick_release = self.should_quick_release(command)
-        should_block = not quick_release or self.requires_wait or self.requires_waitaof
+        should_block = command.blocking or self.requires_wait or self.requires_waitaof
         keys = KeySpec.extract_keys(command.name, *command.arguments)[0]
         cacheable = (
             command.name in CACHEABLE_COMMANDS
