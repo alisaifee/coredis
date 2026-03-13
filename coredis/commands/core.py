@@ -15,6 +15,7 @@ from coredis.commands._routing import (
     PairStrategy,
     RandomStrategy,
     SlotRangeStrategy,
+    UndefinedStrategy,
 )
 from coredis.commands._utils import (
     normalized_milliseconds,
@@ -3707,7 +3708,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.SCAN,
         group=CommandGroup.GENERIC,
-        cluster=ClusterCommandConfig(enabled=False),
+        cluster=ClusterCommandConfig(routing_strategy=UndefinedStrategy()),
         flags={CommandFlag.READONLY},
     )
     def scan(
