@@ -596,8 +596,10 @@ class TestGeneric:
     @pytest.mark.clusteronly
     async def test_scan_cluster(self, client, _s):
         await client.set("a", "1")
-        with pytest.raises(NotImplementedError, match="scan is disabled for cluster client"):
+        with pytest.raises(NotImplementedError, match="must be routed to a slot explicitly"):
             await client.scan()
+        _, keys = await client.scan(match="*").route("a")
+        assert _s("a") in keys
 
     async def test_scan_iter(self, client, _s):
         await client.set("a", "1")
