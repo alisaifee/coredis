@@ -17,17 +17,13 @@ from pytest_lazy_fixtures import lf
 import coredis
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.client.basic import Redis
+from coredis.commands.request import CommandRequest
 from coredis.credentials import UserPassCredentialProvider
 from coredis.patterns.cache import LRUCache
-from coredis.response._callbacks import NoopCallback
 from coredis.retry import NoRetryPolicy
 from coredis.typing import (
     RUNTIME_TYPECHECKS,
-    Callable,
-    ExecutionParameters,
     R,
-    RedisCommandP,
-    Unpack,
 )
 
 REDIS_VERSIONS = {}
@@ -827,16 +823,14 @@ def fake_redis():
 
         async def execute_command(
             self,
-            command: RedisCommandP,
-            callback: Callable[..., R] = NoopCallback(),
-            **options: Unpack[ExecutionParameters],
+            command: CommandRequest[R],
         ) -> R:
             resp = self.responses.get(command.name, {}).get(command.arguments)
 
             if isinstance(resp, Exception):
                 raise resp
 
-            return callback(resp)
+            return command.callback(resp)
 
     return _()
 
@@ -854,16 +848,14 @@ def fake_redis_cluster():
 
         async def execute_command(
             self,
-            command: RedisCommandP,
-            callback: Callable[..., R] = NoopCallback(),
-            **options: Unpack[ExecutionParameters],
+            command: CommandRequest[R],
         ) -> R:
             resp = self.responses.get(command.name, {}).get(command.arguments)
 
             if isinstance(resp, Exception):
                 raise resp
 
-            return callback(resp)
+            return command.callback(resp)
 
     return _()
 

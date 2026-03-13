@@ -33,7 +33,7 @@ from coredis.pool import ClusterConnectionPool
 from coredis.response._callbacks import (
     AnyStrCallback,
     BoolsCallback,
-    NoopCallback,
+    SimpleStringCallback,
 )
 from coredis.retry import ConstantRetryPolicy, retryable
 from coredis.typing import (
@@ -46,8 +46,6 @@ from coredis.typing import (
     Iterable,
     KeyT,
     ParamSpec,
-    RedisCommand,
-    RedisCommandP,
     RedisValueT,
     ResponseType,
     Self,
@@ -103,7 +101,7 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
         name: bytes,
         *arguments: ValueT,
         callback: Callable[..., CommandResponseT],
-        execution_parameters: ExecutionParameters | None = None,
+        execution_parameters: ExecutionParameters,
     ) -> None:
         super().__init__(
             client, name, *arguments, callback=callback, execution_parameters=execution_parameters
@@ -129,7 +127,7 @@ class ClusterPipelineCommandRequest(CommandRequest[CommandResponseT]):
         name: bytes,
         *arguments: ValueT,
         callback: Callable[..., CommandResponseT],
-        execution_parameters: ExecutionParameters | None = None,
+        execution_parameters: ExecutionParameters,
     ) -> None:
         super().__init__(
             client, name, *arguments, callback=callback, execution_parameters=execution_parameters
@@ -327,7 +325,11 @@ class Pipeline(Client[AnyStr]):
         :meta private:
         """
         return PipelineCommandRequest(
-            self, name, *arguments, callback=callback, execution_parameters=execution_parameters
+            self,
+            name,
+            *arguments,
+            callback=callback,
+            execution_parameters=execution_parameters or {},
         )
 
     @asynccontextmanager
@@ -343,7 +345,9 @@ class Pipeline(Client[AnyStr]):
             self._connection = await self.client.connection_pool.get_connection()
         self.watches.extend(keys)
         await self._immediate_execute_command(
-            RedisCommand(CommandName.WATCH, arguments=tuple(self.watches))
+            self.client.create_request(
+                CommandName.WATCH, *self.watches, callback=SimpleStringCallback()
+            )
         )
         self.explicit_transaction = True
         yield
@@ -361,9 +365,7 @@ class Pipeline(Client[AnyStr]):
 
     def execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **options: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> Awaitable[R]:
         raise NotImplementedError
 
@@ -381,9 +383,7 @@ class Pipeline(Client[AnyStr]):
 
     async def _immediate_execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **kwargs: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> R:
         """
         Executes a command immediately, but don't auto-retry on a
@@ -395,9 +395,9 @@ class Pipeline(Client[AnyStr]):
         """
         assert self._connection
         request = self._connection.create_request(
-            command.name, *command.arguments, decode=kwargs.get("decode")
+            command.name, *command.arguments, decode=command.execution_parameters.get("decode")
         )
-        return callback(await request)
+        return command.callback(await request)
 
     def _pipeline_execute_command(
         self,
@@ -552,15 +552,18 @@ class Pipeline(Client[AnyStr]):
         scripts = list(self.scripts)
         shas = [s.sha for s in scripts]
         exists = await self._immediate_execute_command(
-            RedisCommand(CommandName.SCRIPT_EXISTS, tuple(shas)), callback=BoolsCallback()
+            self.client.create_request(CommandName.SCRIPT_EXISTS, *shas, callback=BoolsCallback())
         )
 
         if not all(exists):
             for s, exist in zip(scripts, exists):
                 if not exist:
                     s.sha = await self._immediate_execute_command(
-                        RedisCommand(CommandName.SCRIPT_LOAD, (s.script,)),
-                        callback=AnyStrCallback[AnyStr](),
+                        self.client.create_request(
+                            CommandName.SCRIPT_LOAD,
+                            s.script,
+                            callback=AnyStrCallback[AnyStr](),
+                        )
                     )
 
     async def _execute(self) -> None:
@@ -655,7 +658,11 @@ class ClusterPipeline(Client[AnyStr]):
         :meta private:
         """
         return ClusterPipelineCommandRequest(
-            self, name, *arguments, callback=callback, execution_parameters=execution_parameters
+            self,
+            name,
+            *arguments,
+            callback=callback,
+            execution_parameters=execution_parameters or {},
         )
 
     @asynccontextmanager
@@ -690,9 +697,7 @@ class ClusterPipeline(Client[AnyStr]):
 
     def execute_command(
         self,
-        command: RedisCommandP,
-        callback: Callable[..., R] = NoopCallback(),
-        **options: Unpack[ExecutionParameters],
+        command: CommandRequest[R],
     ) -> Awaitable[R]:
         raise NotImplementedError
 
@@ -842,9 +847,7 @@ class ClusterPipeline(Client[AnyStr]):
             for c, node in attempt.items():
                 self.connection_pool.cluster_layout.report_errors(node, c.result)
                 try:
-                    c.result = await self.client.execute_command(
-                        RedisCommand(c.name, c.arguments), **c.execution_parameters
-                    )
+                    c.result = await self.client.execute_command(c.raw())
                 except (RedisError, TimeoutError) as e:
                     c.result = e
 
@@ -883,14 +886,9 @@ class ClusterPipeline(Client[AnyStr]):
 
     async def _load_scripts(self) -> None:
         shas = [s.sha for s in self.scripts]
-        exists = await self.client.execute_command(
-            RedisCommand(CommandName.SCRIPT_EXISTS, tuple(shas)), callback=BoolsCallback()
-        )
+        exists = await self.client.script_exists(shas)
 
         if not all(exists):
             for s, exist in zip(self.scripts, exists):
                 if not exist:
-                    s.sha = await self.client.execute_command(
-                        RedisCommand(CommandName.SCRIPT_LOAD, (s.script,)),
-                        callback=AnyStrCallback[AnyStr](),
-                    )
+                    s.sha = await self.client.script_load(s.script)

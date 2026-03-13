@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import inspect
 import sys
 from collections import OrderedDict
@@ -105,31 +104,6 @@ class Node(TypedDict):
     port: int
 
 
-class RedisCommandP(Protocol):
-    """
-    Protocol of a redis command with all associated arguments
-    converted into the shape expected by the redis server.
-    Used by :meth:`~coredis.Redis.execute_command`
-    """
-
-    #: The name of the redis command
-    name: bytes
-    #: All arguments to be passed to the command
-    arguments: tuple[RedisValueT, ...]
-
-
-@dataclasses.dataclass
-class RedisCommand:
-    """
-    Convenience data class that conforms to :class:`~coredis.typing.RedisCommandP`
-    """
-
-    #: The name of the redis command
-    name: bytes
-    #: All arguments to be passed to the command
-    arguments: tuple[RedisValueT, ...]
-
-
 class ExecutionParameters(TypedDict):
     """
     Extra parameters that can be passed to :meth:`~coredis.Redis.execute_command`
@@ -139,6 +113,9 @@ class ExecutionParameters(TypedDict):
     #: (ignoring the value of :paramref:`~coredis.Redis.decode_responses`)
     decode: NotRequired[bool]
     slot_arguments_range: NotRequired[tuple[int, int]]
+    noreply: NotRequired[bool]
+    ensure_persistence: NotRequired[tuple[bool, int, int]]
+    ensure_replication: NotRequired[tuple[int, int]]
 
 
 #: Represents the acceptable types of a redis key
@@ -605,8 +582,6 @@ __all__ = [
     "Parameters",
     "ParamSpec",
     "Protocol",
-    "RedisCommand",
-    "RedisCommandP",
     "ExecutionParameters",
     "ResponsePrimitive",
     "ResponseType",
