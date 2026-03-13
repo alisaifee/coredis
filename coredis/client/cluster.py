@@ -14,6 +14,7 @@ from anyio import sleep
 from deprecated.sphinx import versionadded, versionchanged
 
 from coredis._concurrency import gather
+from coredis._utils import b, hash_slot
 from coredis.client.basic import Client, Redis
 from coredis.cluster._node import ClusterNodeLocation
 from coredis.commands._key_spec import KeySpec
@@ -723,6 +724,19 @@ class RedisCluster(
         """
         Sends a command to one or many nodes in the cluster
         """
+        # explicit routes take preference
+        if command.by is not None:
+            if isinstance(command.by, str | bytes):
+                slot = hash_slot(b(command.by))
+                node = self.connection_pool.cluster_layout.node_for_slot(slot)
+            else:
+                node = self.connection_pool.cluster_layout.node_for_slot(command.by)
+            return await self._execute_command_on_single_node(
+                node,
+                command,
+                callback=callback,
+                **kwargs,
+            )
         prefer_replica = (
             command.name in READONLY_COMMANDS and self.connection_pool.read_from_replicas
         )

@@ -141,6 +141,17 @@ class TestCluster:
         assert _s("slots") in shards[0]
         assert _s("nodes") in shards[0]
 
+    async def test_cluster_explicit_routing(self, client, _s):
+        # spread keys across nodes
+        for i in range(16):
+            await client.set(f"prefix:{i}", 1)
+        # initial scan should succeed
+        keys = await client.keys("prefix:*")
+        assert len(keys) == 16
+        # limited scan should have less keys
+        keys = await client.keys("prefix:*").route("{1}")
+        assert len(keys) < 16
+
 
 async def test_cluster_bumpepoch(fake_redis):
     fake_redis.responses[b"CLUSTER BUMPEPOCH"] = {
