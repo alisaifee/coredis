@@ -313,3 +313,17 @@ class TestPipeline:
         async with client.pipeline(timeout=5) as pipeline:
             for _ in range(20):
                 pipeline.hgetall("hash")
+
+    async def test_explicit_routing_pipeline(self, client):
+        async with client.pipeline(transaction=False) as pipe:
+            pipe.get("{1}")
+            pipe.publish("channel", "message").route("{1}")
+            pipe.keys("{1}*").route("{1}")
+        assert pipe.results == (None, 0, set())
+
+    async def test_explicit_routing_transaction(self, client):
+        async with client.pipeline(transaction=True) as pipe:
+            pipe.get("{1}")
+            pipe.publish("channel", "message").route("{1}")
+            pipe.keys("{1}*").route("{1}")
+        assert pipe.results == (None, 0, set())

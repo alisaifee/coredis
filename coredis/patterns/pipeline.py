@@ -6,7 +6,7 @@ from typing import Any, cast
 from anyio import AsyncContextManagerMixin
 from deprecated.sphinx import versionchanged
 
-from coredis._utils import nativestr
+from coredis._utils import b, hash_slot, nativestr
 from coredis.client import Client, RedisCluster
 from coredis.cluster._node import ClusterNodeLocation
 from coredis.commands import CommandRequest, CommandResponseT
@@ -750,6 +750,15 @@ class ClusterPipeline(Client[AnyStr]):
         finally:
             await self._clear()
 
+    def _get_slot_for_command(self, command: ClusterPipelineCommandRequest[Any]) -> int:
+        if command.by is not None:
+            if isinstance(command.by, str | bytes):
+                return hash_slot(b(command.by))
+            return command.by
+        return self._determine_slot(
+            command.name, *command.arguments, **command.execution_parameters
+        )
+
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), retries=3, delay=0.1))
     async def _send_cluster_transaction(self, raise_on_error: bool = True) -> None:
         """
@@ -758,7 +767,7 @@ class ClusterPipeline(Client[AnyStr]):
         attempt = sorted(self.command_stack, key=lambda x: x.position)
         slots: set[int] = set()
         for c in attempt:
-            slots.add(self._determine_slot(c.name, *c.arguments, **c.execution_parameters))
+            slots.add(self._get_slot_for_command(c))
             if len(slots) > 1:
                 raise ClusterTransactionError("Multiple slots involved in transaction")
         if not slots:
@@ -812,7 +821,8 @@ class ClusterPipeline(Client[AnyStr]):
         # Group commands by node for efficient network usage.
         nodes: dict[str, NodeCommands] = {}
         for c in sorted(self.command_stack, key=lambda x: x.position):
-            node = self.connection_pool.cluster_layout.node_for_request(c.name, c.arguments)
+            slot = self._get_slot_for_command(c)
+            node = self.connection_pool.cluster_layout.node_for_slot(slot)
 
             if node.name not in nodes:
                 nodes[node.name] = NodeCommands(

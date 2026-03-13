@@ -116,6 +116,7 @@ class RedisCommandP(Protocol):
     name: bytes
     #: All arguments to be passed to the command
     arguments: tuple[RedisValueT, ...]
+    by: bytes | str | int | None
 
 
 @dataclasses.dataclass
@@ -128,6 +129,7 @@ class RedisCommand:
     name: bytes
     #: All arguments to be passed to the command
     arguments: tuple[RedisValueT, ...]
+    by: bytes | str | int | None = None
 
 
 class ExecutionParameters(TypedDict):

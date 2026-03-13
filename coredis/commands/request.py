@@ -66,6 +66,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
             self.type_adapter.serialize(k) if isinstance(k, Serializable) else k for k in arguments
         )
         self.kwargs = kwargs
+        self.by: bytes | str | int | None = None
 
     def run(self) -> Awaitable[CommandResponseT]:
         if not hasattr(self, "_response"):
@@ -162,6 +163,15 @@ class CommandRequest(Awaitable[CommandResponseT]):
             return self.client.type_adapter
 
         return empty_adapter
+
+    def route(self, by: bytes | str | int) -> CommandRequest[CommandResponseT]:
+        """
+        Explicitly set the node the command should be routed to in cluster mode.
+
+        :param by: either a key to hash by or a slot
+        """
+        self.by = by
+        return self
 
     def __await__(self) -> Generator[Any, Any, CommandResponseT]:
         return self.run().__await__()
