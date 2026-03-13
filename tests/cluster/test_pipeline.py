@@ -254,7 +254,7 @@ class TestPipeline:
         with pytest.raises(RedisClusterError) as exc:
             async with client.pipeline() as pipe:
                 function(pipe, *args, **kwargs)
-        exc.match("Could not map .* to a node in the cluster")
+        exc.match("No way to dispatch .* to Redis Cluster")
 
     @pytest.mark.parametrize(
         "function, args, kwargs",
