@@ -171,3 +171,40 @@ async def test_connection_rerun(redis_basic):
     async with create_task_group() as tg:
         with pytest.raises(RuntimeError, match="cannot be reused"):
             await tg.start(conn.run)
+
+
+# Test for CLIENT SETINFO auth error handling
+async def test_client_setinfo_auth_error_handling(redis_basic):
+    """
+    Test that CLIENT SETINFO errors are gracefully handled when
+    user lacks CLIENT permission (e.g., sentinel user).
+    This matches redis-py behavior.
+    """
+    from unittest.mock import AsyncMock, patch
+    from coredis.exceptions import ResponseError
+
+    conn = TCPConnection(location=redis_basic.connection_pool.location)
+    
+    call_count = 0
+    original_create_request = conn.create_request
+
+    async def mock_create_request(*args, **kwargs):
+        nonlocal call_count
+        # First two calls are for CLIENT SETINFO (LIB-NAME, LIB-VER)
+        if args and args[0] == b"CLIENT SETINFO":
+            call_count += 1
+            if call_count <= 2:
+                raise ResponseError("NOPERM this user has no permissions to run the 'CLIENT' command")
+        return await original_create_request(*args, **kwargs)
+
+    with patch.object(conn, 'create_request', side_effect=mock_create_request):
+        async with create_task_group() as tg:
+            await tg.start(conn.run)
+            # If the fix works, connection should still be usable
+            request = conn.create_request(b"PING")
+            result = await request
+            assert result == b"PONG"
+            tg.cancel_scope.cancel()
+    
+    # Verify CLIENT SETINFO was called and errors were caught
+    assert call_count == 2
