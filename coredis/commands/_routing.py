@@ -341,4 +341,4 @@ class UndefinedStrategy(RoutingStrategy[R]):
 
     @property
     def description(self) -> str:
-        return """explicitly passed slot via `route()`"""
+        return """the explicitly passed slot when called with :meth:`~coredis.commands.CommandRequest.route`"""
