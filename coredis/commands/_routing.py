@@ -321,3 +321,24 @@ class PairStrategy(RoutingStrategy[R]):
     @property
     def description(self) -> str:
         return """the nodes serving the keys in the command"""
+
+
+class UndefinedStrategy(RoutingStrategy[R]):
+    cross_slot: ClassVar[bool] = False
+
+    def __init__(self) -> None:
+        super().__init__(NodeFlag.SLOT_ID, merge_callback=ClusterNoMerge())
+
+    def distribute(
+        self,
+        cluster_layout: ClusterLayout,
+        command: bytes,
+        arguments: tuple[RedisValueT, ...],
+        readonly: bool,
+        execution_parameters: ExecutionParameters,
+    ) -> list[NodeExecution[R]]:
+        raise NotImplementedError(f"{command.decode()} must be routed to a slot explicitly!")
+
+    @property
+    def description(self) -> str:
+        return """the explicitly passed slot when called with :meth:`~coredis.commands.CommandRequest.route`"""
