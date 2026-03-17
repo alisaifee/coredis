@@ -272,7 +272,7 @@ services:
     ports:
       - '9379:6379'
   dragonfly:
-    image: "docker.dragonflydb.io/dragonflydb/dragonfly:latest"
+    image: "docker.dragonflydb.io/dragonflydb/dragonfly:${DRAGONFLY_VERSION:-latest}"
     ports:
       - '11379:6379'
     ulimits:
