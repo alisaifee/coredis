@@ -49,6 +49,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
         "arguments",
         "execution_parameters",
         "callback",
+        "decode",
         "blocking",
         "noreply",
         "routing_strategy",
@@ -87,6 +88,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
         )
         self.blocking = CommandFlag.BLOCKING in COMMAND_FLAGS[name]
         self.noreply = execution_parameters.get("noreply", False)
+        self.decode = execution_parameters.get("decode", None)
         self.routing_strategy = ROUTING_STRATEGIES.get(name)
         self.kwargs = kwargs
 

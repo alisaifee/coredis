@@ -13,7 +13,7 @@ from coredis.commands import CommandRequest, CommandResponseT
 from coredis.commands._routing import ExplicitSlotStrategy, RandomStrategy
 from coredis.commands.constants import CommandName
 from coredis.commands.script import Script
-from coredis.connection._base import BaseConnection, CommandInvocation
+from coredis.connection._base import BaseConnection
 from coredis.connection._request import Request
 from coredis.exceptions import (
     AskError,
@@ -199,19 +199,7 @@ class NodeCommands(AsyncContextManagerMixin):
             if self.in_transaction:
                 self.multi_cmd = connection.create_request(CommandName.MULTI, timeout=self.timeout)
             requests = connection.create_requests(
-                [
-                    CommandInvocation(
-                        cmd.name,
-                        cmd.arguments,
-                        (
-                            bool(cmd.execution_parameters.get("decode"))
-                            if cmd.execution_parameters.get("decode")
-                            else None
-                        ),
-                        None,
-                    )
-                    for cmd in commands
-                ],
+                commands,
                 timeout=self.timeout,
             )
             if self.in_transaction:
@@ -417,25 +405,12 @@ class Pipeline(Client[AnyStr]):
         connection: BaseConnection,
         commands: list[PipelineCommandRequest[Any]],
     ) -> None:
-        requests = connection.create_requests(
-            [CommandInvocation(CommandName.MULTI, (), None, None)]
-            + [
-                CommandInvocation(
-                    cmd.name,
-                    cmd.arguments,
-                    (
-                        bool(cmd.execution_parameters.get("decode"))
-                        if cmd.execution_parameters.get("decode")
-                        else None
-                    ),
-                    None,
-                )
-                for cmd in commands
-            ]
-            + [CommandInvocation(CommandName.EXEC, (), None, None)],
-            timeout=self.timeout,
-        )
 
+        requests = [
+            connection.create_request(CommandName.MULTI, timeout=self.timeout),
+            *connection.create_requests(commands, timeout=self.timeout),
+            connection.create_request(CommandName.EXEC, timeout=self.timeout),
+        ]
         errors: list[tuple[int, RedisError | TimeoutError | None]] = []
         # parse off the response for MULTI
         # NOTE: we need to handle ResponseErrors here and continue
@@ -491,22 +466,7 @@ class Pipeline(Client[AnyStr]):
         self, connection: BaseConnection, commands: list[PipelineCommandRequest[Any]]
     ) -> None:
         # build up all commands into a single request to increase network perf
-        requests = connection.create_requests(
-            [
-                CommandInvocation(
-                    cmd.name,
-                    cmd.arguments,
-                    (
-                        bool(cmd.execution_parameters.get("decode"))
-                        if cmd.execution_parameters.get("decode")
-                        else None
-                    ),
-                    None,
-                )
-                for cmd in commands
-            ],
-            timeout=self.timeout,
-        )
+        requests = connection.create_requests(commands, timeout=self.timeout)
         for i, cmd in enumerate(commands):
             cmd._response = requests[i]
 
