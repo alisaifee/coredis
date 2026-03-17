@@ -8,7 +8,7 @@ import os
 import ssl
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import cast
+from typing import Any, cast
 
 from anyio import (
     TASK_STATUS_IGNORED,
@@ -29,6 +29,7 @@ import coredis
 from coredis._packer import Packer
 from coredis._utils import logger, nativestr
 from coredis.commands.constants import CommandName
+from coredis.commands.request import CommandRequest
 from coredis.constants.resp import DataType
 from coredis.credentials import AbstractCredentialProvider, UserPassCredentialProvider
 from coredis.exceptions import ConnectionError, UnknownCommandError
@@ -46,6 +47,7 @@ from coredis.typing import (
     RedisValueT,
     ResponseType,
     Self,
+    Sequence,
     TypedDict,
     TypeVar,
 )
@@ -735,7 +737,7 @@ class BaseConnection(ABC):
     @_ensure_usable
     def create_requests(
         self,
-        commands: list[CommandInvocation],
+        commands: Sequence[CommandRequest[Any]],
         raise_exceptions: bool = True,
         timeout: float | None = None,
         disconnect_on_cancellation: bool = False,
@@ -747,10 +749,10 @@ class BaseConnection(ABC):
         requests = [
             Request(
                 connection=self,
-                command=cmd.command,
-                args=cmd.args,
+                command=cmd.name,
+                args=cmd.arguments,
                 decode=bool(cmd.decode) if cmd.decode is not None else self._decode_responses,
-                encoding=cmd.encoding or self._encoding,
+                encoding=self._encoding,
                 raise_exceptions=raise_exceptions,
                 response_timeout=request_timeout,
                 disconnect_on_cancellation=disconnect_on_cancellation,
