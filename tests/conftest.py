@@ -56,6 +56,9 @@ SERVER_DEFAULT_ARGS = {
     "7.2": None,
 }
 
+def ci_wait():
+    if os.environ.get("CI") == "True":
+        time.sleep(10)
 
 def get_backends():
     backend = os.environ.get("COREDIS_ANYIO_BACKEND", None) or "asyncio"
@@ -335,60 +338,51 @@ def redis_ssl_server_no_client_auth(docker_services):
 @pytest.fixture(scope="session")
 def redis_cluster_server(docker_services):
     docker_services.start("redis-cluster-init")
+    ci_wait()
     docker_services.wait_for_service("redis-cluster-6", 7005, check_redis_cluster_ready)
-
-    if os.environ.get("CI") == "True":
-        time.sleep(10)
     yield ["localhost", 7000]
 
 
 @pytest.fixture(scope="session")
 def redis_cluster_auth_server(docker_services):
     docker_services.start("redis-cluster-auth-init")
+    ci_wait()
     docker_services.wait_for_service(
         "redis-cluster-auth-1", 8500, lambda h, p: ping_socket("localhost", 8500)
     )
-
-    if os.environ.get("CI") == "True":
-        time.sleep(10)
     yield ["localhost", 8500]
 
 
 @pytest.fixture(scope="session")
 def redis_cluster_noreplica_server(docker_services):
     docker_services.start("redis-cluster-noreplica-init")
+    ci_wait()
     docker_services.wait_for_service("redis-cluster-noreplica-3", 8402, check_redis_cluster_ready)
-
-    if os.environ.get("CI") == "True":
-        time.sleep(10)
     yield ["localhost", 8400]
 
 
 @pytest.fixture(scope="session")
 def redis_ssl_cluster_server(docker_services):
     docker_services.start("redis-ssl-cluster-init")
+    ci_wait()
     docker_services.wait_for_service(
         "redis-ssl-cluster-6", 8306, lambda h, p: ping_socket("localhost", 8306)
     )
-
-    if os.environ.get("CI") == "True":
-        time.sleep(10)
     yield ["localhost", 8301]
 
 
 @pytest.fixture(scope="session")
 def redis_stack_cluster_server(docker_services):
     docker_services.start("redis-stack-cluster-init")
+    ci_wait()
     docker_services.wait_for_service("redis-stack-cluster-6", 9005, check_redis_cluster_ready)
-
-    if os.environ.get("CI") == "True":
-        time.sleep(10)
     yield ["localhost", 9005]
 
 
 @pytest.fixture(scope="session")
 def redis_sentinel_server(docker_services) -> Generator[tuple[str, int], Any, None]:
     docker_services.start("redis-sentinel")
+    ci_wait()
     docker_services.wait_for_service("redis-sentinel", 26379, check_sentinel_ready)
     yield "localhost", 26379
 
@@ -396,6 +390,7 @@ def redis_sentinel_server(docker_services) -> Generator[tuple[str, int], Any, No
 @pytest.fixture(scope="session")
 def redis_sentinel_auth_server(docker_services):
     docker_services.start("redis-sentinel-auth")
+    ci_wait()
     docker_services.wait_for_service("redis-sentinel-auth", 26379, check_sentinel_auth_ready)
     yield ["localhost", 36379]
 
@@ -404,10 +399,8 @@ def redis_sentinel_auth_server(docker_services):
 def redis_stack_server(docker_services):
     if os.environ.get("CI") == "True" and not os.environ.get("REDIS_STACK_VERSION"):
         pytest.skip("Redis stack tests skipped")
-
-    if os.environ.get("CI") == "True":
-        time.sleep(10)
     docker_services.start("redis-stack")
+    ci_wait()
     docker_services.wait_for_service("redis-stack", 6379, ping_socket)
     yield ["localhost", 9379]
 
@@ -415,6 +408,7 @@ def redis_stack_server(docker_services):
 @pytest.fixture(scope="session")
 def dragonfly_server(docker_services):
     docker_services.start("dragonfly")
+    ci_wait()
     docker_services.wait_for_service("dragonfly", 6379, ping_socket)
     yield ["localhost", 11379]
 
@@ -422,6 +416,7 @@ def dragonfly_server(docker_services):
 @pytest.fixture(scope="session")
 def valkey_server(docker_services):
     docker_services.start("valkey")
+    ci_wait()
     docker_services.wait_for_service("valkey", 6379, ping_socket)
     yield ["localhost", 12379]
 
