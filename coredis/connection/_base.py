@@ -159,14 +159,6 @@ class RedisSSLContext:
         return self.context
 
 
-@dataclasses.dataclass
-class CommandInvocation:
-    command: bytes
-    args: tuple[RedisValueT, ...]
-    decode: bool | None
-    encoding: str | None
-
-
 class BaseConnection(ABC):
     """
     Base class for Redis connections.
