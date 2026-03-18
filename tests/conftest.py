@@ -56,9 +56,11 @@ SERVER_DEFAULT_ARGS = {
     "7.2": None,
 }
 
+
 def ci_wait():
     if os.environ.get("CI") == "True":
         time.sleep(10)
+
 
 def get_backends():
     backend = os.environ.get("COREDIS_ANYIO_BACKEND", None) or "asyncio"

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import ssl
 from ssl import SSLError
 
@@ -52,6 +53,15 @@ class TestClient:
     @pytest.mark.nodragonfly
     async def test_set_client_name(self, client, client_arguments):
         assert (await client.client_info())["name"] == "coredis"
+
+    async def test_client_setinfo_disabled(self, client, user_client, caplog):
+        caplog.set_level(logging.INFO)
+        async with await user_client(
+            "testuser", "on", "allkeys", "+@all", "-CLIENT"
+        ) as no_setinfo_client:
+            await no_setinfo_client.ping()
+
+        assert "Unable to set client info due to authorization error" in caplog.text
 
     @pytest.mark.nodragonfly
     async def test_noreply_client(self, client, cloner, _s):
