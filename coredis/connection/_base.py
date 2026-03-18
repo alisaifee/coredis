@@ -31,7 +31,7 @@ from coredis._utils import logger, nativestr
 from coredis.commands.constants import CommandName
 from coredis.constants.resp import DataType
 from coredis.credentials import AbstractCredentialProvider, UserPassCredentialProvider
-from coredis.exceptions import ConnectionError, UnknownCommandError
+from coredis.exceptions import ConnectionError, ResponseError, UnknownCommandError
 from coredis.parser import NotEnoughData, Parser
 from coredis.tokens import PureToken
 from coredis.typing import (
@@ -592,16 +592,22 @@ class BaseConnection(ABC):
             self.server_version = nativestr(resp3[b"version"])
             self.client_id = int(resp3[b"id"])
             if self.server_version >= "7.2":
-                await self.create_request(
-                    b"CLIENT SETINFO",
-                    b"LIB-NAME",
-                    b"coredis",
-                )
-                await self.create_request(
-                    b"CLIENT SETINFO",
-                    b"LIB-VER",
-                    coredis.__version__,
-                )
+                try:
+                    await self.create_request(
+                        b"CLIENT SETINFO",
+                        b"LIB-NAME",
+                        b"coredis",
+                    )
+                except ResponseError:
+                    pass
+                try:
+                    await self.create_request(
+                        b"CLIENT SETINFO",
+                        b"LIB-VER",
+                        coredis.__version__,
+                    )
+                except ResponseError:
+                    pass
 
             if self._db:
                 if await self.create_request(b"SELECT", self._db, decode=False) != b"OK":
