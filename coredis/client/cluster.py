@@ -105,7 +105,7 @@ class ClusterMeta(ABCMeta):
                         doc_addition = f"""
 .. admonition:: Cluster note
 
-   The command will be routed to **{cmd.cluster.routing_strategy.description}**
+   The command will be routed to {cmd.cluster.routing_strategy.description}
    and return {cmd.cluster.routing_strategy.merge_callback.response_policy}.
 
                     """

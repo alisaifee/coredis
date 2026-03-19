@@ -226,6 +226,15 @@ class CommandRequest(Awaitable[CommandResponseT]):
         Explicitly set the node the command should be routed to in cluster mode.
 
         :param by: either a key to hash by or a slot
+
+        For example to explicitly route the scan call to the cluster node serving slot "0"::
+
+          client = coredis.RedisCluster(...)
+          async with client:
+             cursor = None
+             while cursor != 0:
+                cursor, keys = await client.scan(cursor).route(0)
+
         """
         from coredis.commands._routing import ExplicitSlotStrategy
 
