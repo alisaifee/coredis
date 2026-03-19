@@ -1,0 +1,4 @@
+* Feature
+
+  * Allow explicitly specifying (through :meth:`~coredis.commands.CommandRequest.route`)
+    the cluster node per command for methods  that can't automatically be routed to one or many nodes.
