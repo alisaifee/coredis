@@ -1,0 +1,4 @@
+* Feature
+
+  * Enable ``SCAN`` in cluster when used with explicit ``.route``
+    to perform the scan on a single node in the cluster
