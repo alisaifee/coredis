@@ -119,7 +119,7 @@ class ClusterPipelineCommandRequest(CommandRequest[CommandResponseT]):
     Command request for cluster pipelines, tracks position and result for cluster routing.
     """
 
-    __slots__ = ("position", "result", "asking")
+    __slots__ = ("position", "result")
 
     client: ClusterPipeline[Any]
 
@@ -136,7 +136,6 @@ class ClusterPipelineCommandRequest(CommandRequest[CommandResponseT]):
         )
         self.position: int = 0
         self.result: Any = None
-        self.asking: bool = False
         client._pipeline_execute_command(self)
 
     def __await__(self) -> Generator[None, None, CommandResponseT]:
