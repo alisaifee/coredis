@@ -131,6 +131,22 @@ class TestPipeline:
         assert await client.get("b{fu}") == "b1"
         assert await client.get("c{fu}") == "c1"
 
+    @pytest.mark.parametrize(
+        "transaction",
+        (True, False),
+    )
+    @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
+    async def test_read_from_replicas(self, client, mocker, transaction, client_arguments):
+        acquire = mocker.spy(client.connection_pool, "acquire")
+        async with client.pipeline(transaction=transaction) as pipe:
+            [pipe.get(f"{i}{{fu}}") for i in range(10)]
+        assert acquire.call_args[1]["node"].server_type == "replica"
+
+        async with client.pipeline(transaction=transaction) as pipe:
+            pipe.set("a{fu}", 1)
+            pipe.get("a{fu}")
+        assert acquire.call_args[1]["node"].server_type == "primary"
+
     async def test_pipeline_transaction_cross_slot(self, client):
         with pytest.raises(ClusterTransactionError):
             async with client.pipeline(transaction=True) as pipe:

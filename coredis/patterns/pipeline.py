@@ -33,6 +33,7 @@ from coredis.pool import ClusterConnectionPool
 from coredis.response._callbacks import (
     AnyStrCallback,
     BoolsCallback,
+    NoopCallback,
     SimpleStringCallback,
 )
 from coredis.retry import ConstantRetryPolicy, retryable
@@ -635,7 +636,9 @@ class ClusterPipeline(Client[AnyStr]):
         """
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
-        self._watched_node = self.connection_pool.cluster_layout.node_for_request(b"WATCH", keys)
+        self._watched_node = self.connection_pool.cluster_layout.node_for_request(
+            self.client.create_request(b"WATCH", *keys, callback=NoopCallback())
+        )
         self.watches.extend(keys)
         async with self.connection_pool.acquire(
             node=self._watched_node
@@ -707,12 +710,16 @@ class ClusterPipeline(Client[AnyStr]):
             return
         if self.scripts:
             await self._load_scripts()
+        use_primary = not (
+            self.client.connection_pool.read_from_replicas
+            and all(cmd.readonly for cmd in self.command_stack)
+        )
         if self._transaction or self.explicit_transaction:
             execute = self._send_cluster_transaction
         else:
             execute = self._send_cluster_commands
         try:
-            await execute(self._raise_on_error)
+            await execute(self._raise_on_error, use_primary)
         finally:
             await self._clear()
 
@@ -734,7 +741,9 @@ class ClusterPipeline(Client[AnyStr]):
             raise ClusterCrossSlotError(command=command.name, keys=command.keys)
 
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), retries=3, delay=0.1))
-    async def _send_cluster_transaction(self, raise_on_error: bool = True) -> None:
+    async def _send_cluster_transaction(
+        self, raise_on_error: bool = True, use_primary: bool = False
+    ) -> None:
         """
         :meta private:
         """
@@ -747,7 +756,7 @@ class ClusterPipeline(Client[AnyStr]):
             raise ClusterTransactionError("Multiple slots involved in transaction")
         if not slots:
             raise ClusterTransactionError("No slots found for transaction")
-        node = self.connection_pool.cluster_layout.node_for_slot(slots.pop())
+        node = self.connection_pool.cluster_layout.node_for_slot(slots.pop(), use_primary)
         if self._watched_node and node != self._watched_node:
             raise ClusterTransactionError("Multiple slots involved in transaction")
 
@@ -783,7 +792,7 @@ class ClusterPipeline(Client[AnyStr]):
 
     @retryable(policy=ConstantRetryPolicy((ClusterDownError,), retries=3, delay=0.1))
     async def _send_cluster_commands(
-        self, raise_on_error: bool = True, allow_redirections: bool = True
+        self, raise_on_error: bool = True, use_primary: bool = False
     ) -> None:
         """
         Execute all queued commands in the cluster pipeline, handling redirections
@@ -791,15 +800,13 @@ class ClusterPipeline(Client[AnyStr]):
 
         :meta private:
         """
-        # On first send, queue all commands. On retry, only failed ones.
         attempt: dict[ClusterPipelineCommandRequest[Any], ClusterNodeLocation] = {}
-        # Group commands by node for efficient network usage.
         nodes: dict[str, NodeCommands] = {}
         for c in sorted(self.command_stack, key=lambda x: x.position):
             if (slot := self._get_slot_for_command(c)) is not None:
-                node = self.connection_pool.cluster_layout.node_for_slot(slot)
+                node = self.connection_pool.cluster_layout.node_for_slot(slot, use_primary)
             else:
-                node = node or self.connection_pool.cluster_layout.random_node()
+                node = node or self.connection_pool.cluster_layout.random_node(use_primary)
             if node.name not in nodes:
                 nodes[node.name] = NodeCommands(
                     self.client,
@@ -824,7 +831,7 @@ class ClusterPipeline(Client[AnyStr]):
             )
         )
 
-        if attempt and allow_redirections:
+        if attempt:
             for c, node in attempt.items():
                 self.connection_pool.cluster_layout.report_errors(node, c.result)
                 try:

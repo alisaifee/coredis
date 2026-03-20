@@ -37,7 +37,6 @@ from coredis.exceptions import (
 from coredis.globals import (
     CACHEABLE_COMMANDS,
     MODULE_GROUPS,
-    READONLY_COMMANDS,
 )
 from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
@@ -710,15 +709,11 @@ class RedisCluster(
         """
         Sends a command to one or many nodes in the cluster
         """
-        prefer_replica = (
-            command.name in READONLY_COMMANDS and self.connection_pool.read_from_replicas
-        )
+        prefer_replica = command.readonly and self.connection_pool.read_from_replicas
         try:
             node = self.connection_pool.cluster_layout.node_for_request(
-                command.name,
-                command.arguments,
+                command,
                 primary=not prefer_replica,
-                execution_parameters=command.execution_parameters,
             )
             return await self._execute_command_on_single_node(
                 node,
@@ -791,7 +786,7 @@ class RedisCluster(
                         await r.update_tracking_client(
                             True, self.connection_pool.cache.get_client_id(r)
                         )
-                    if command.name not in READONLY_COMMANDS:
+                    if not command.readonly:
                         self.connection_pool.cache.invalidate(*keys)
                     elif cacheable:
                         try:

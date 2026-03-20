@@ -6,8 +6,10 @@ from anyio import create_task_group, sleep
 import coredis
 from coredis.cluster._discovery import DiscoveryService
 from coredis.cluster._layout import ClusterLayout
+from coredis.commands.request import CommandRequest
 from coredis.connection import TCPLocation
 from coredis.exceptions import ConnectionError, MovedError, RedisClusterError
+from coredis.response._callbacks import NoopCallback
 
 
 class TestClusterLayout:
@@ -227,15 +229,41 @@ class TestClusterLayout:
 
             tg.cancel_scope.cancel()
 
-    async def test_node_for_request(self, redis_cluster_server, discovery_service):
+    async def test_node_for_request(self, redis_cluster_server, discovery_service, mocker):
         layout = ClusterLayout(discovery_service, error_threshold=1, maximum_staleness=1)
         await layout.initialize()
+        client = mocker.Mock()
 
         with pytest.raises(RedisClusterError, match="don't hash to the same slot"):
-            layout.node_for_request(b"MGET", ("a{a}", "a{b}", "a{c}"))
-        assert layout.node_for_request(b"MGET", ("a{a}", "b{a}"))
+            layout.node_for_request(
+                CommandRequest(
+                    client,
+                    b"MGET",
+                    "a{a}",
+                    "a{b}",
+                    "a{c}",
+                    callback=NoopCallback(),
+                    execution_parameters={},
+                )
+            )
+        assert layout.node_for_request(
+            CommandRequest(
+                client, b"MGET", "a{a}", "b{a}", callback=NoopCallback(), execution_parameters={}
+            )
+        )
         with pytest.raises(RedisClusterError):
-            layout.node_for_request(b"DEL", ("a{a}", "b{b}", "c{c}", "d{d}"))
+            layout.node_for_request(
+                CommandRequest(
+                    client,
+                    b"DEL",
+                    "a{a}",
+                    "b{b}",
+                    "c{c}",
+                    "d{d}",
+                    callback=NoopCallback(),
+                    execution_parameters={},
+                )
+            )
 
     async def test_node_for_slot(self, redis_cluster_server, discovery_service):
         layout = ClusterLayout(discovery_service, error_threshold=1, maximum_staleness=1)

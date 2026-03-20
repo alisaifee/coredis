@@ -7,7 +7,7 @@ from types import GenericAlias
 from typing import Any, cast, get_origin
 
 from coredis._protocols import AbstractExecutor
-from coredis.globals import COMMAND_FLAGS, ROUTING_STRATEGIES
+from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS, ROUTING_STRATEGIES
 from coredis.response._callbacks import NoopCallback
 from coredis.retry import RetryPolicy
 from coredis.typing import (
@@ -51,6 +51,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
         "callback",
         "decode",
         "blocking",
+        "readonly",
         "noreply",
         "routing_strategy",
         "kwargs",
@@ -87,6 +88,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
             self.type_adapter.serialize(k) if isinstance(k, Serializable) else k for k in arguments
         )
         self.blocking = CommandFlag.BLOCKING in COMMAND_FLAGS[name]
+        self.readonly = name in READONLY_COMMANDS
         self.noreply = execution_parameters.get("noreply", False)
         self.decode = execution_parameters.get("decode", None)
         self.routing_strategy = ROUTING_STRATEGIES.get(name)
@@ -101,6 +103,11 @@ class CommandRequest(Awaitable[CommandResponseT]):
     @cache
     def affected_slots(self) -> tuple[int, ...]:
         return tuple(KeySpec.affected_slots(self.name, *self.arguments))
+
+    @property
+    @cache
+    def slots_to_keys(self) -> dict[int, list[tuple[int, RedisValueT]]]:
+        return KeySpec.slots_to_keys(self.name, *self.arguments)
 
     @property
     @cache

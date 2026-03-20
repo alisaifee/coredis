@@ -4,14 +4,15 @@ import math
 import random
 import time
 from collections import Counter, defaultdict
+from typing import Any
 
 from anyio import TASK_STATUS_IGNORED, WouldBlock, create_memory_object_stream
 from anyio.abc import TaskStatus
 from anyio.lowlevel import checkpoint
 
 from coredis._utils import logger, nativestr
-from coredis.commands._key_spec import KeySpec
 from coredis.commands.constants import CommandName
+from coredis.commands.request import CommandRequest
 from coredis.connection import TCPLocation
 from coredis.exceptions import (
     ClusterCrossSlotError,
@@ -21,9 +22,7 @@ from coredis.exceptions import (
     RedisError,
     ResponseError,
 )
-from coredis.globals import READONLY_COMMANDS
 from coredis.retry import ExponentialBackoffRetryPolicy
-from coredis.typing import ExecutionParameters, RedisValueT
 
 from ._discovery import DiscoveryService
 from ._node import ClusterNodeLocation
@@ -59,10 +58,8 @@ class ClusterLayout:
 
     def node_for_request(
         self,
-        command: bytes,
-        arguments: tuple[RedisValueT, ...],
+        command: CommandRequest[Any],
         primary: bool = True,
-        execution_parameters: ExecutionParameters = {},
     ) -> ClusterNodeLocation:
         """
         Maps a request to a single node if possible (i.e. all keys
@@ -77,16 +74,13 @@ class ClusterLayout:
         if not self._nodes:
             raise RedisClusterError("Local cluster layout cache is empty")
 
-        slots_to_keys = KeySpec.slots_to_keys(
-            command, *arguments, readonly_command=command in READONLY_COMMANDS and not primary
-        )
-        keys, _ = KeySpec.extract_keys(command, *arguments)
-        if slots_to_keys:
-            if len(slots_to_keys) > 1:
-                raise ClusterCrossSlotError(command=command, keys=keys)
-            slot = list(slots_to_keys.keys())[0]
-            return self.node_for_slot(slot, primary)
-        elif command in {
+        if command.keys:
+            if len(command.affected_slots) > 1:
+                raise ClusterCrossSlotError(command=command.name, keys=command.keys)
+            else:
+                slot = list(command.slots_to_keys.keys())[0]
+                return self.node_for_slot(slot, primary)
+        elif command.name in {
             CommandName.FCALL,
             CommandName.FCALL_RO,
             CommandName.EVAL,
@@ -97,7 +91,7 @@ class ClusterLayout:
             return self.random_node(primary)
         else:
             raise RedisClusterError(
-                f"Could not map {nativestr(command)} request to a node in the cluster"
+                f"Could not map {nativestr(command.name)} request to a node in the cluster"
             )
 
     def node_for_location(self, location: TCPLocation) -> ClusterNodeLocation | None:
