@@ -1,0 +1,4 @@
+* Bug Fix
+
+  * Catch authorization errors on connection establishment when setting
+    ``CLIENT SETINFO`` and allow it to be usable
