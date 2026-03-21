@@ -1,0 +1,3 @@
+* Feature
+
+  * Use replicas in cluster pipelines when all commands are readonly
