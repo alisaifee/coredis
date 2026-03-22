@@ -144,9 +144,9 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
         self._available_connections: Queue[ConnectionT] = Queue(self.max_connections)
         # All connections that are still active
         self._online_connections: set[ConnectionT] = set()
-        # This should be used by the connection to limit concurrently entering
-        # CPU hotspots to ensure all fairness between connections in the pool.
-        # The main observed scenario where this can happen is if the connection pool
+        # Used by the connection to limit concurrently entering
+        # CPU hotspots to ensure fairness between connections in the pool.
+        # The main observed scenario where this is useful is if the connection pool
         # is being used by multiple push message consumers that are constantly
         # receiving data in the read task.
         self._connection_processing_budget = CapacityLimiter(1)

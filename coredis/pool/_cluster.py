@@ -4,7 +4,7 @@ import warnings
 from contextlib import asynccontextmanager
 from typing import Any
 
-from anyio import TASK_STATUS_IGNORED, fail_after, sleep
+from anyio import TASK_STATUS_IGNORED, CapacityLimiter, fail_after, sleep
 from anyio.abc import TaskStatus
 
 from coredis._concurrency import Queue, QueueEmpty, QueueFull
@@ -163,7 +163,13 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
             ),
             error_threshold=reinitialize_steps or 2,
         )
-        self.connection_kwargs = connection_kwargs
+        # Used by the connection to limit concurrently entering
+        # CPU hotspots to ensure fairness between connections in the pool.
+        # The main observed scenario where this is useful is if the connection pool
+        # is being used by multiple push message consumers that are constantly
+        # receiving data in the read task.
+        self._connection_processing_budget = CapacityLimiter(1)
+        self.connection_kwargs["processing_budget"] = self._connection_processing_budget
         self.read_from_replicas = read_from_replicas or readonly
         # TODO: Use the `max_failures` argument of tracking cache
         self.cache = ClusterTrackingCache(self, _cache) if _cache else None
