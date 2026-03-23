@@ -33,10 +33,7 @@ from coredis.exceptions import (
     RedisError,
     TryAgainError,
 )
-from coredis.globals import (
-    CACHEABLE_COMMANDS,
-    MODULE_GROUPS,
-)
+from coredis.globals import CACHEABLE_COMMANDS, MODULE_GROUPS, Telemetry
 from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import ClusterPubSub, ShardedPubSub, SubscriptionCallback
 from coredis.pool import ClusterConnectionPool
@@ -701,10 +698,11 @@ class RedisCluster(
         with retries based on :paramref:`RedisCluster.retry_policy`
         """
 
-        return await self.retry_policy.call_with_retries(
-            lambda: self._execute_command(command),
-            failure_hook=self.on_retry_error,
-        )
+        with Telemetry.start_span((command,), self.connection_pool):
+            return await self.retry_policy.call_with_retries(
+                lambda: self._execute_command(command),
+                failure_hook=self.on_retry_error,
+            )
 
     async def _execute_command(
         self,

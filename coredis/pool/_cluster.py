@@ -18,6 +18,7 @@ from coredis.connection import (
 )
 from coredis.connection._tcp import TCPLocation
 from coredis.exceptions import RedisError
+from coredis.globals import Telemetry
 from coredis.patterns.cache import AbstractCache, ClusterTrackingCache
 from coredis.pool._basic import ConnectionPoolParams
 from coredis.typing import (
@@ -243,11 +244,13 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         :param primary: If False a connection from the replica will be returned
         """
         connection: ClusterConnection
-        if node:
-            connection = await self._get_connection_by_node(node)
-        else:
-            connection = await self._get_random_connection(primary=primary)
-        return connection
+        with Telemetry.capture_connection_wait_time(self):
+            if node:
+                connection = await self._get_connection_by_node(node)
+            else:
+                connection = await self._get_random_connection(primary=primary)
+            self.statistics.connection_leased(connection)
+            return connection
 
     @asynccontextmanager
     async def acquire(
@@ -272,6 +275,7 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
     def release(self, connection: ClusterConnection) -> None:
         """Releases the connection back to the pool"""
         assert isinstance(connection, ClusterConnection)
+        self.statistics.connection_released(connection)
         try:
             if connection.usable:
                 self._node_pool(connection.location).put_nowait(connection)
@@ -287,6 +291,14 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         """Resets the connection pool back to a clean state"""
         self._cluster_available_connections = {}
         self._online_connections = set()
+
+    @property
+    def telemetry_attributes(self) -> dict[str, str | int]:
+        return {
+            "db.client.connection.pool.name": ",".join(
+                [node.name for node in list(self.cluster_layout.nodes)]
+            )
+        }
 
     async def _wrap_connection(
         self,
@@ -311,13 +323,15 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         """Creates a new connection to a node"""
 
         location = TCPLocation(node.host, node.port)
-        connection = self.connection_class(
-            location=location,
-            read_from_replicas=self.read_from_replicas and node.server_type == "replica",
-            **self.connection_kwargs,
-        )
-        if err := await self.task_group.start(self._wrap_connection, connection):
-            raise err
+        with Telemetry.capture_connection_create_time(self):
+            connection = self.connection_class(
+                location=location,
+                read_from_replicas=self.read_from_replicas and node.server_type == "replica",
+                **self.connection_kwargs,
+            )
+            if err := await self.task_group.start(self._wrap_connection, connection):
+                raise err
+        self.statistics.connection_created(connection)
         self._online_connections.add(connection)
         return connection
 

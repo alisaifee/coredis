@@ -7,9 +7,11 @@ from types import GenericAlias
 from typing import Any, cast, get_origin
 
 from coredis._protocols import AbstractExecutor
+from coredis._utils import nativestr
 from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS, ROUTING_STRATEGIES
 from coredis.response._callbacks import NoopCallback
 from coredis.retry import RetryPolicy
+from coredis.tokens import PrefixToken, PureToken
 from coredis.typing import (
     Awaitable,
     Callable,
@@ -127,6 +129,22 @@ class CommandRequest(Awaitable[CommandResponseT]):
             if isinstance(arg, Key):
                 indices.append(idx)
         return tuple(indices)
+
+    @property
+    @cache
+    def summary(self) -> str:
+        sanitized_args = map(
+            nativestr,
+            [
+                k.key
+                if isinstance(k, Key)
+                else k
+                if isinstance(k, (PureToken, PrefixToken))
+                else "?"
+                for k in self.arguments
+            ],
+        )
+        return f"{nativestr(self.name)} {' '.join(sanitized_args)}"
 
     @property
     @cache

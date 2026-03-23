@@ -18,7 +18,7 @@ class UnixDomainSocketLocation(Location):
     path: str
 
     def __repr__(self) -> str:
-        return f"<path={self.path}>"
+        return f"{self.path}"
 
     async def check(self) -> bool:
         try:
@@ -48,3 +48,13 @@ class UnixDomainSocketConnection(BaseConnection):
 
     def describe(self) -> str:
         return f"UnixDomainSocketConnection<path={self.location.path},db={self._db}>"
+
+    @property
+    def telemetry_attributes(self) -> dict[str, str | int]:
+        return {
+            **super().telemetry_attributes,
+            **{
+                "network.peer.hostname": self.location.path,
+                "server.address": self.location.path,
+            },
+        }

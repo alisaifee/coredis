@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from anyio import Event, get_cancelled_exc_class, move_on_after
 
 from coredis._utils import nativestr
+from coredis.globals import Telemetry
 from coredis.typing import Generator, RedisValueT, ResponseType
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ class Request:
     _result: ResponseType | None = dataclasses.field(init=False, default=None)
 
     def __post_init__(self, connection: BaseConnection) -> None:
+        Telemetry.update_span_attributes(connection)
         self._connection = proxy(connection)
         self._connection.statistics.request_created()
         if not self.expects_response:

@@ -21,7 +21,7 @@ class TCPLocation(Location):
     port: int
 
     def __repr__(self) -> str:
-        return f"<host={self.host},port={self.port}>"
+        return f"{self.host}:{self.port}"
 
     async def check(self) -> bool:
         try:
@@ -73,3 +73,15 @@ class TCPConnection(BaseConnection):
 
     def describe(self) -> str:
         return f"Connection<host={self.location.host},port={self.location.port},db={self._db}>"
+
+    @property
+    def telemetry_attributes(self) -> dict[str, str | int]:
+        return {
+            **super().telemetry_attributes,
+            **{
+                "network.peer.hostname": self.location.host,
+                "network.peer.port": self.location.port,
+                "server.address": self.location.host,
+                "server.port": self.location.port,
+            },
+        }

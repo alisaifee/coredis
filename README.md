@@ -32,6 +32,24 @@ Fast, async, fully-typed Redis client with support for cluster and sentinel
 
 ## Installation
 
+### OpenTelemetry (traces + metrics)
+
+`coredis` can emit OpenTelemetry traces and metrics when:
+
+- you install the optional dependencies: `pip install coredis[otel]`
+- you enable instrumentation: `export COREDIS_OTEL_ENABLED=true`
+
+`coredis` uses the global OpenTelemetry tracer/meter providers, so your application
+should configure exporters/readers as usual.
+
+Optional OTel tuning (all environment variables):
+
+- `COREDIS_OTEL_CAPTURE_COMMAND_ARGS=true` (default: false)
+- `COREDIS_OTEL_CAPTURE_COMMAND_ARGS_MAX_ARGS=20`
+- `COREDIS_OTEL_CAPTURE_COMMAND_ARGS_MAX_LENGTH=128`
+- `COREDIS_OTEL_CAPTURE_INTERNAL_COMMANDS=true` (default: false)
+- `COREDIS_OTEL_CAPTURE_NOREPLY_REQUESTS=true` (default: false)
+
 ```console
 $ pip install coredis
 ```

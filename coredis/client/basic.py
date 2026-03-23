@@ -37,7 +37,7 @@ from coredis.exceptions import (
     ReplicationError,
     WatchError,
 )
-from coredis.globals import CACHEABLE_COMMANDS, READONLY_COMMANDS
+from coredis.globals import CACHEABLE_COMMANDS, READONLY_COMMANDS, Telemetry
 from coredis.modules import ModuleMixin
 from coredis.patterns.cache import AbstractCache
 from coredis.patterns.pubsub import PubSub, SubscriptionCallback
@@ -892,9 +892,10 @@ class Redis(Client[AnyStr]):
         Executes a command with configured retries and returns
         the parsed response
         """
-        return await self.retry_policy.call_with_retries(
-            lambda: self._execute_command(command),
-        )
+        with Telemetry.start_span((command,)):
+            return await self.retry_policy.call_with_retries(
+                lambda: self._execute_command(command),
+            )
 
     async def _execute_command(
         self,

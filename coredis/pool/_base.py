@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextvars
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -11,6 +11,7 @@ from anyio import (
 )
 from anyio.abc import TaskGroup
 
+from coredis._otel import TelemetryAttributeProvider
 from coredis._utils import query_param_to_bool
 from coredis.connection._base import (
     BaseConnectionParams,
@@ -20,6 +21,7 @@ from coredis.connection._base import (
 )
 from coredis.connection._tcp import TCPLocation
 from coredis.connection._uds import UnixDomainSocketLocation
+from coredis.globals import Telemetry
 from coredis.typing import (
     AsyncContextManager,
     Callable,
@@ -31,6 +33,8 @@ from coredis.typing import (
     TypeVar,
     Unpack,
 )
+
+from ._statistics import ConnectionPoolStatistics
 
 BaseConnectionPoolParamsT = TypeVar(
     "BaseConnectionPoolParamsT", bound="BaseConnectionPoolParams[Any]"
@@ -56,7 +60,7 @@ class BaseConnectionPoolParams(BaseConnectionParams, Generic[ConnectionT]):
     timeout: NotRequired[float | None]
 
 
-class BaseConnectionPool(ABC, Generic[ConnectionT]):
+class BaseConnectionPool(TelemetryAttributeProvider, Generic[ConnectionT]):
     URL_QUERY_ARGUMENT_PARSERS: ClassVar[
         dict[str, Callable[..., int | float | bool | str | None]]
     ] = {
@@ -100,6 +104,7 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
         self.encoding = str(self.connection_kwargs.get("encoding", "utf-8"))
         self.connect_timeout = self.connection_kwargs.get("connect_timeout", 1)
         self.location = location
+        self.statistics = ConnectionPoolStatistics(self)
         # reference count for context manager to support this pool being re-entered.
         self._counter = 0
         # context to track whether the intializing task (anchor) is active
@@ -107,6 +112,8 @@ class BaseConnectionPool(ABC, Generic[ConnectionT]):
         self._anchor_reset_token: contextvars.Token[bool] | None = None
         self._initialization_lock = Lock()
         self._task_group: TaskGroup | None = None
+
+        Telemetry.observe_connection_pool(self)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{self.location}>"

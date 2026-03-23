@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
+from coredis._otel import OtelTelemetry
+
 if TYPE_CHECKING:
     from coredis.commands._routing import RoutingStrategy
     from coredis.commands.constants import CommandFlag
@@ -24,3 +26,6 @@ MODULE_GROUPS: set[ModuleGroupRegistry] = set()
 
 #: Populated by ModuleRegistry
 MODULES: dict[str, ModuleRegistry] = {}
+
+#: Default Telemetry singleton
+Telemetry = OtelTelemetry()

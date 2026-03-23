@@ -26,6 +26,7 @@ from anyio.lowlevel import checkpoint
 from exceptiongroup import BaseExceptionGroup, catch
 
 import coredis
+from coredis._otel import TelemetryAttributeProvider
 from coredis._packer import Packer
 from coredis._utils import logger, nativestr
 from coredis.commands.constants import CommandName
@@ -159,7 +160,7 @@ class RedisSSLContext:
         return self.context
 
 
-class BaseConnection(ABC):
+class BaseConnection(TelemetryAttributeProvider):
     """
     Base class for Redis connections.
 
@@ -343,6 +344,13 @@ class BaseConnection(ABC):
             self._push_message_buffer_in.statistics().current_buffer_used == 0
             and self._streamed_message_buffer_in.statistics().current_buffer_used == 0
         )
+
+    @property
+    def telemetry_attributes(self) -> dict[str, str | int]:
+        attributes: dict[str, str | int] = {}
+        if self._db is not None:
+            attributes["db.namespace"] = self._db
+        return attributes
 
     def register_connect_callback(
         self,
