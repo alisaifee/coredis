@@ -3,6 +3,26 @@
 Changelog
 =========
 
+v6.3.0
+------
+Release Date: 2026-03-23
+
+* Feature
+
+  * Allow explicitly specifying (through :meth:`~coredis.commands.CommandRequest.route`)
+    the cluster node per command for methods  that can't automatically be routed to one or many nodes.
+  * Enable ``SCAN`` in cluster when used with explicit :meth:`~coredis.commands.CommandRequest.route`
+    to perform the scan on a single node in the cluster
+  * Use replicas in cluster pipelines when all commands are readonly
+
+* Bug Fix
+
+  * Fix performance regression in cluster pubsub due to a new
+    capacity limiter being used for each connection instead of
+    being shared by the pool.
+  * Catch authorization errors on connection establishment when setting
+    ``CLIENT SETINFO`` and allow it to be usable
+
 v6.2.0
 ------
 Release Date: 2026-03-07
