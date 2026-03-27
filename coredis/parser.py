@@ -95,7 +95,7 @@ class ListNode(RESPNode):
 
 
 class DictNode(RESPNode):
-    __slots__ = ("container", "key")
+    __slots__ = ("container")
 
     def __init__(self, depth: int) -> None:
         self.container: dict[Hashable, ResponseType] = {}
@@ -103,7 +103,7 @@ class DictNode(RESPNode):
 
     def append(self, item: ResponseType) -> None:
         self.depth -= 1
-        if not self.key:
+        if self.key is None:
             self.key = self.ensure_hashable(item)
         else:
             self.container[self.key] = item
