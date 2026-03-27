@@ -66,7 +66,7 @@ class RESPNode:
         self.key = key
 
     @abstractmethod
-    def append(self, item: ResponseType) -> None: ...
+    def append(self, item: ResponseType) -> int: ...
 
     def ensure_hashable(self, item: ResponseType) -> Hashable:
         if isinstance(item, (int, float, bool, str, bytes)):
@@ -89,25 +89,27 @@ class ListNode(RESPNode):
         self.container: list[ResponseType] = []
         super().__init__(depth, node_type, None)
 
-    def append(self, item: ResponseType) -> None:
+    def append(self, item: ResponseType) -> int:
         self.depth -= 1
         self.container.append(item)
+        return self.depth
 
 
 class DictNode(RESPNode):
-    __slots__ = ("container")
+    __slots__ = "container"
 
     def __init__(self, depth: int) -> None:
         self.container: dict[Hashable, ResponseType] = {}
         super().__init__(depth * 2, DataType.MAP, None)
 
-    def append(self, item: ResponseType) -> None:
+    def append(self, item: ResponseType) -> int:
         self.depth -= 1
         if self.key is None:
             self.key = self.ensure_hashable(item)
         else:
             self.container[self.key] = item
             self.key = None
+        return self.depth
 
 
 class SetNode(RESPNode):
@@ -120,9 +122,10 @@ class SetNode(RESPNode):
     def append(
         self,
         item: ResponseType,
-    ) -> None:
+    ) -> int:
         self.depth -= 1
         self.container.add(self.ensure_hashable(item))
+        return self.depth
 
 
 RESPScalar = (
@@ -182,6 +185,7 @@ class Parser:
         self.bytes_read: int = 0
         self.bytes_written: int = 0
         self.nodes: list[ListNode | SetNode | DictNode] = []
+        self.current_node: ListNode | SetNode | DictNode | None = None
 
     def feed(self, data: bytes) -> None:
         self.localbuffer.seek(self.bytes_written)
@@ -219,7 +223,7 @@ class Parser:
         """
         while True:
             data = self.localbuffer.readline()
-            if not data[-2::] == SYM_CRLF:
+            if not data.endswith(SYM_CRLF):
                 return NOT_ENOUGH_DATA
             data_len = len(data)
             self.bytes_read += data_len
@@ -262,13 +266,17 @@ class Parser:
                     if length >= 0:
                         match marker:
                             case DataType.ARRAY:
-                                self.nodes.append(ListNode(length, DataType.ARRAY))
+                                self.current_node = ListNode(length, DataType.ARRAY)
+                                self.nodes.append(self.current_node)
                             case DataType.PUSH:
-                                self.nodes.append(ListNode(length, DataType.PUSH))
+                                self.current_node = ListNode(length, DataType.PUSH)
+                                self.nodes.append(self.current_node)
                             case DataType.MAP:
-                                self.nodes.append(DictNode(length))
+                                self.current_node = DictNode(length)
+                                self.nodes.append(self.current_node)
                             case DataType.SET:
-                                self.nodes.append(SetNode(length))
+                                self.current_node = SetNode(length)
+                                self.nodes.append(self.current_node)
                         if length > 0:
                             continue
                 case DataType.ERROR:
@@ -277,19 +285,22 @@ class Parser:
                     raise InvalidResponse(
                         f"Protocol Error: Unknown RESP data type: {chr(marker)!r}"
                     )
-            if self.nodes:
-                if self.nodes[-1].depth > 0:
-                    self.nodes[-1].append(response)
-                    if self.nodes[-1].depth > 1:
+            if self.current_node:
+                if self.current_node.depth > 0:
+                    if self.current_node.append(response) > 1:
                         continue
-
-                while len(self.nodes) > 1 and self.nodes[-1].depth == 0:
-                    self.nodes[-2].append(self.nodes[-1].container)
+                while len(self.nodes) > 1 and self.current_node.depth == 0:
+                    self.nodes[-2].append(self.current_node.container)
                     self.nodes.pop()
+                    self.current_node = self.nodes[-1]
 
-            if len(self.nodes) == 1 and self.nodes[-1].depth == 0:
-                node = self.nodes.pop()
-                parsed = cast(UnpackedResponse, (DataType(node.node_type), node.container))
+            if self.current_node and self.current_node.depth == 0:
+                self.nodes.pop()
+                parsed = cast(
+                    UnpackedResponse,
+                    (DataType(self.current_node.node_type), self.current_node.container),
+                )
+                self.current_node = None
                 break
             if not self.nodes:
                 parsed = cast(UnpackedResponse, (DataType(marker), response))
