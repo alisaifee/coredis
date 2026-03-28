@@ -16,7 +16,6 @@ from deprecated.sphinx import versionadded, versionchanged
 from coredis._concurrency import gather
 from coredis.client.basic import Client, Redis
 from coredis.cluster._node import ClusterNodeLocation
-from coredis.commands._key_spec import KeySpec
 from coredis.commands._routing import NodeExecution
 from coredis.commands._validators import mutually_inclusive_parameters
 from coredis.commands.constants import CommandName
@@ -768,7 +767,7 @@ class RedisCluster(
                 if asking:
                     await r.create_request(CommandName.ASKING, noreply=self.noreply, decode=False)
                     asking = False
-                keys = KeySpec.extract_keys(command.name, *command.arguments)[0]
+                keys = command.keys
                 cacheable = (
                     self.connection_pool.cache
                     and command.name in CACHEABLE_COMMANDS
@@ -795,7 +794,7 @@ class RedisCluster(
                                 self.connection_pool.cache.get(
                                     command.name,
                                     keys[0],
-                                    *command.arguments,
+                                    *command.serialized_arguments,
                                 ),
                             )
                             use_cached = random.random() * 100.0 < min(
@@ -808,7 +807,7 @@ class RedisCluster(
                 if not (use_cached and cached_reply):
                     request = r.create_request(
                         command.name,
-                        *command.arguments,
+                        *command.serialized_arguments,
                         noreply=self.noreply,
                         decode=command.execution_parameters.get(
                             "decode", self._decodecontext.get()
@@ -836,14 +835,14 @@ class RedisCluster(
                             self.connection_pool.cache.feedback(
                                 command.name,
                                 keys[0],
-                                *command.arguments,
+                                *command.serialized_arguments,
                                 match=cached_reply == reply,
                             )
                         if not cache_hit:
                             self.connection_pool.cache.put(
                                 command.name,
                                 keys[0],
-                                *command.arguments,
+                                *command.serialized_arguments,
                                 value=reply,
                             )
                     return response

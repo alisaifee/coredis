@@ -14,7 +14,6 @@ from packaging.version import InvalidVersion, Version
 
 from coredis._utils import logger, nativestr
 from coredis.commands import CommandRequest
-from coredis.commands._key_spec import KeySpec
 from coredis.commands._validators import (
     mutually_inclusive_parameters,
 )
@@ -61,6 +60,7 @@ from coredis.typing import (
     ExecutionParameters,
     Generic,
     Iterator,
+    Key,
     KeyT,
     Literal,
     Mapping,
@@ -130,7 +130,7 @@ class Client(
     def create_request(
         self,
         name: bytes,
-        *arguments: ValueT,
+        *arguments: ValueT | Key,
         callback: Callable[..., T_co],
         execution_parameters: ExecutionParameters | None = None,
     ) -> CommandRequest[T_co]:
@@ -897,7 +897,7 @@ class Redis(Client[AnyStr]):
     ) -> R:
         pool = self.connection_pool
         should_block = command.blocking or self.requires_wait or self.requires_waitaof
-        keys = KeySpec.extract_keys(command.name, *command.arguments)[0]
+        keys = command.keys
         cacheable = (
             command.name in CACHEABLE_COMMANDS
             and len(keys) == 1
@@ -927,7 +927,7 @@ class Redis(Client[AnyStr]):
                             pool.cache.get(
                                 command.name,
                                 keys[0],
-                                *command.arguments,
+                                *command.serialized_arguments,
                             ),
                         )
                         use_cached = random.random() * 100.0 < min(100.0, pool.cache.confidence)
@@ -937,7 +937,7 @@ class Redis(Client[AnyStr]):
             if not (use_cached and cached_reply):
                 request = connection.create_request(
                     command.name,
-                    *command.arguments,
+                    *command.serialized_arguments,
                     noreply=self.noreply,
                     decode=command.execution_parameters.get("decode", self._decodecontext.get()),
                     encoding=self._encodingcontext.get(),
@@ -958,13 +958,16 @@ class Redis(Client[AnyStr]):
             if pool.cache and cacheable:
                 if cache_hit and not use_cached:
                     pool.cache.feedback(
-                        command.name, keys[0], *command.arguments, match=cached_reply == reply
+                        command.name,
+                        keys[0],
+                        *command.serialized_arguments,
+                        match=cached_reply == reply,
                     )
                 if not cache_hit:
                     pool.cache.put(
                         command.name,
                         keys[0],
-                        *command.arguments,
+                        *command.serialized_arguments,
                         value=reply,
                     )
             return command.callback(cached_reply if cache_hit else reply)

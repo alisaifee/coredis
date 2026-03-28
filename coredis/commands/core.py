@@ -152,10 +152,12 @@ from coredis.typing import (
     AnyStr,
     CommandArgList,
     JsonType,
+    Key,
     KeyT,
     Literal,
     Mapping,
     MappingKeyT,
+    MappingStringKeyT,
     Parameters,
     RedisValueT,
     ResponsePrimitive,
@@ -181,7 +183,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The length of the string after the append operation.
         """
 
-        return self.create_request(CommandName.APPEND, key, value, callback=IntCallback())
+        return self.create_request(CommandName.APPEND, Key(key), value, callback=IntCallback())
 
     @redis_command(CommandName.DECR, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def decr(self, key: KeyT) -> CommandRequest[int]:
@@ -204,7 +206,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The value of the key after the decrement.
         """
 
-        return self.create_request(CommandName.DECRBY, key, decrement, callback=IntCallback())
+        return self.create_request(CommandName.DECRBY, Key(key), decrement, callback=IntCallback())
 
     @redis_command(
         CommandName.GET,
@@ -222,7 +224,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.GET,
-            key,
+            Key(key),
             callback=OptionalAnyStrCallback[AnyStr](),
         )
 
@@ -242,7 +244,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.GETDEL, key, callback=OptionalAnyStrCallback[AnyStr]()
+            CommandName.GETDEL, Key(key), callback=OptionalAnyStrCallback[AnyStr]()
         )
 
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "persist")
@@ -299,7 +301,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.GETEX,
-            key,
+            Key(key),
             *command_arguments,
             callback=OptionalAnyStrCallback[AnyStr](),
         )
@@ -324,7 +326,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.GETRANGE, key, start, end, callback=AnyStrCallback[AnyStr]()
+            CommandName.GETRANGE, Key(key), start, end, callback=AnyStrCallback[AnyStr]()
         )
 
     @redis_command(
@@ -342,7 +344,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.GETSET, key, value, callback=OptionalAnyStrCallback[AnyStr]()
+            CommandName.GETSET, Key(key), value, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
     @redis_command(CommandName.INCR, group=CommandGroup.STRING, flags={CommandFlag.FAST})
@@ -356,7 +358,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.INCR,
-            key,
+            Key(key),
             callback=IntCallback(),
         )
 
@@ -370,7 +372,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The value of the key after the increment (increment if key did not exist).
         """
 
-        return self.create_request(CommandName.INCRBY, key, increment, callback=IntCallback())
+        return self.create_request(CommandName.INCRBY, Key(key), increment, callback=IntCallback())
 
     @redis_command(CommandName.INCRBYFLOAT, group=CommandGroup.STRING, flags={CommandFlag.FAST})
     def incrbyfloat(self, key: KeyT, increment: int | float) -> CommandRequest[float]:
@@ -383,7 +385,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.INCRBYFLOAT, key, increment, callback=FloatCallback()
+            CommandName.INCRBYFLOAT, Key(key), increment, callback=FloatCallback()
         )
 
     @overload
@@ -437,7 +439,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The matched string (default), the length (if len_), or match
          positions and optionally lengths (if idx). Type depends on arguments.
         """
-        command_arguments: CommandArgList = [key1, key2]
+        command_arguments: CommandArgList = [Key(key1), Key(key2)]
 
         if len_ is not None:
             command_arguments.append(PureToken.LEN)
@@ -484,7 +486,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A tuple of values in the same order as keys; ``None`` for missing keys.
         """
 
-        return self.create_request(CommandName.MGET, *keys, callback=TupleCallback[AnyStr | None]())
+        return self.create_request(
+            CommandName.MGET, *[Key(key) for key in keys], callback=TupleCallback[AnyStr | None]()
+        )
 
     @redis_command(
         CommandName.MSET,
@@ -503,7 +507,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.MSET,
-            *dict_to_flat_list(key_values),
+            *dict_to_flat_list({Key(kv[0]): kv[1] for kv in key_values.items()}),
             callback=SimpleStringCallback(),
         )
 
@@ -520,7 +524,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.MSETNX, *dict_to_flat_list(key_values), callback=BoolCallback()
+            CommandName.MSETNX,
+            *dict_to_flat_list({Key(kv[0]): kv[1] for kv in key_values.items()}),
+            callback=BoolCallback(),
         )
 
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "keepttl")
@@ -552,7 +558,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param keepttl: If ``True``, retain existing TTL on keys that have one.
         :return: ``True`` if all keys were set.
         """
-        command_arguments: CommandArgList = [len(key_values), *dict_to_flat_list(key_values)]
+        command_arguments: CommandArgList = [
+            len(key_values),
+            *dict_to_flat_list({Key(kv[0]): kv[1] for kv in key_values.items()}),
+        ]
         if condition is not None:
             command_arguments.append(condition)
         if ex is not None:
@@ -601,7 +610,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.PSETEX,
-            key,
+            Key(key),
             normalized_milliseconds(milliseconds),
             value,
             callback=SimpleStringCallback(),
@@ -695,7 +704,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True``/``False`` if the set operation succeeded unless :paramref:`get` is
          ``True``, in which case the previous value or ``None`` if the key didn't exist.
         """
-        command_arguments: CommandArgList = [key, value]
+        command_arguments: CommandArgList = [Key(key), value]
 
         if ex is not None:
             command_arguments.append(PrefixToken.EX)
@@ -757,7 +766,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.SETEX,
-            key,
+            Key(key),
             normalized_seconds(seconds),
             value,
             callback=SimpleStringCallback(),
@@ -773,7 +782,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` if the key was set, ``False`` if it already existed.
         """
 
-        return self.create_request(CommandName.SETNX, key, value, callback=BoolCallback())
+        return self.create_request(CommandName.SETNX, Key(key), value, callback=BoolCallback())
 
     @redis_command(CommandName.SETRANGE, group=CommandGroup.STRING)
     def setrange(self, key: KeyT, offset: int, value: ValueT) -> CommandRequest[int]:
@@ -789,7 +798,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The length of the string after the operation.
         """
 
-        return self.create_request(CommandName.SETRANGE, key, offset, value, callback=IntCallback())
+        return self.create_request(
+            CommandName.SETRANGE, Key(key), offset, value, callback=IntCallback()
+        )
 
     @redis_command(
         CommandName.STRLEN,
@@ -805,7 +816,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The length of the string in bytes, or ``0`` if the key does not exist.
         """
 
-        return self.create_request(CommandName.STRLEN, key, callback=IntCallback())
+        return self.create_request(CommandName.STRLEN, Key(key), callback=IntCallback())
 
     @redis_command(
         CommandName.SUBSTR,
@@ -826,7 +837,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.SUBSTR, key, start, end, callback=AnyStrCallback[AnyStr]()
+            CommandName.SUBSTR, Key(key), start, end, callback=AnyStrCallback[AnyStr]()
         )
 
     @redis_command(
@@ -1082,7 +1093,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The slot number
         """
 
-        return self.create_request(CommandName.CLUSTER_KEYSLOT, key, callback=IntCallback())
+        return self.create_request(CommandName.CLUSTER_KEYSLOT, Key(key), callback=IntCallback())
 
     @versionadded(version="3.1.1")
     @redis_command(
@@ -1561,7 +1572,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param change: If ``True``, return the number of elements changed (not just added).
         :return: The number of elements added; or, if :paramref:`change` is ``True``, the number changed.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
 
         if condition is not None:
             command_arguments.append(condition)
@@ -1594,7 +1605,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param unit: M, KM, FT, or MI; default is meters.
         :return: The distance in the requested unit, or ``None`` if a member is missing.
         """
-        command_arguments: CommandArgList = [key, member1, member2]
+        command_arguments: CommandArgList = [Key(key), member1, member2]
 
         if unit:
             command_arguments.append(unit.lower())
@@ -1618,7 +1629,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.GEOHASH, key, *members, callback=TupleCallback[AnyStr]()
+            CommandName.GEOHASH, Key(key), *members, callback=TupleCallback[AnyStr]()
         )
 
     @redis_command(
@@ -1638,7 +1649,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.GEOPOS, key, *members, callback=GeoCoordinatesCallback()
+            CommandName.GEOPOS, Key(key), *members, callback=GeoCoordinatesCallback()
         )
 
     @overload
@@ -1774,7 +1785,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self._georadiusgeneric(
             CommandName.GEORADIUS,
-            key,
+            Key(key),
             longitude,
             latitude,
             radius,
@@ -1839,7 +1850,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self._georadiusgeneric(
             CommandName.GEORADIUSBYMEMBER,
-            key,
+            Key(key),
             member,
             radius,
             unit=unit,
@@ -1859,7 +1870,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.GEORADIUS,
             CommandName.GEORADIUSBYMEMBER,
         ],
-        *args: ValueT,
+        *args: Key | ValueT,
         unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI],
         withcoord: bool | None = None,
         withdist: bool | None = None,
@@ -1971,7 +1982,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self._geosearchgeneric(
             CommandName.GEOSEARCH,
-            key,
+            Key(key),
             member=member,
             longitude=longitude,
             latitude=latitude,
@@ -2034,8 +2045,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self._geosearchgeneric(
             CommandName.GEOSEARCHSTORE,
-            destination,
-            source,
+            Key(destination),
+            Key(source),
             member=member,
             longitude=longitude,
             latitude=latitude,
@@ -2057,7 +2068,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     def _geosearchgeneric(
         self,
         command: Literal[CommandName.GEOSEARCH],
-        *args: ValueT,
+        *args: Key | ValueT,
         member: ValueT | None = ...,
         longitude: int | float | None = ...,
         latitude: int | float | None = ...,
@@ -2075,7 +2086,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     def _geosearchgeneric(
         self,
         command: Literal[CommandName.GEOSEARCHSTORE],
-        *args: ValueT,
+        *args: Key | ValueT,
         member: ValueT | None = ...,
         longitude: int | float | None = ...,
         latitude: int | float | None = ...,
@@ -2092,7 +2103,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     def _geosearchgeneric(
         self,
         command: Literal[CommandName.GEOSEARCH, CommandName.GEOSEARCHSTORE],
-        *args: ValueT,
+        *args: Key | ValueT,
         member: ValueT | None = None,
         longitude: int | float | None = None,
         latitude: int | float | None = None,
@@ -2164,7 +2175,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of fields that were removed.
         """
 
-        return self.create_request(CommandName.HDEL, key, *fields, callback=IntCallback())
+        return self.create_request(CommandName.HDEL, Key(key), *fields, callback=IntCallback())
 
     @redis_command(
         CommandName.HEXISTS,
@@ -2181,7 +2192,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` if the field exists, ``False`` otherwise.
         """
 
-        return self.create_request(CommandName.HEXISTS, key, field, callback=BoolCallback())
+        return self.create_request(CommandName.HEXISTS, Key(key), field, callback=BoolCallback())
 
     @versionadded(version="4.18.0")
     @redis_command(CommandName.HEXPIRE, version_introduced="7.4.0", group=CommandGroup.HASH)
@@ -2201,7 +2212,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param condition: Optional GT, LT, NX, or XX.
         :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
-        command_arguments: CommandArgList = [key, normalized_seconds(seconds)]
+        command_arguments: CommandArgList = [Key(key), normalized_seconds(seconds)]
 
         if condition is not None:
             command_arguments.append(condition)
@@ -2225,7 +2236,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param fields: One or more field names.
         :return: A tuple of Unix timestamps (-1 if no expiry, -2 if field missing).
         """
-        command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
+        command_arguments: CommandArgList = [Key(key), PrefixToken.FIELDS, len(list(fields))]
         command_arguments.extend(fields)
 
         return self.create_request(
@@ -2244,7 +2255,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param fields: One or more field names.
         :return: A tuple of Unix timestamps in ms (-1 if no expiry, -2 if field missing).
         """
-        command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
+        command_arguments: CommandArgList = [Key(key), PrefixToken.FIELDS, len(list(fields))]
 
         command_arguments.extend(fields)
 
@@ -2270,7 +2281,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param condition: Optional GT, LT, NX, or XX.
         :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
-        command_arguments: CommandArgList = [key, normalized_milliseconds(milliseconds)]
+        command_arguments: CommandArgList = [Key(key), normalized_milliseconds(milliseconds)]
 
         if condition is not None:
             command_arguments.append(condition)
@@ -2300,7 +2311,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param condition: Optional GT, LT, NX, or XX.
         :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
-        command_arguments: CommandArgList = [key, normalized_time_seconds(unix_time_seconds)]
+        command_arguments: CommandArgList = [Key(key), normalized_time_seconds(unix_time_seconds)]
         if condition is not None:
             command_arguments.append(condition)
         command_arguments.append(PrefixToken.FIELDS)
@@ -2330,7 +2341,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A tuple of 1 for each field that was set, 0 for each that was not.
         """
         command_arguments: CommandArgList = [
-            key,
+            Key(key),
             normalized_time_milliseconds(unix_time_milliseconds),
         ]
 
@@ -2354,7 +2365,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param fields: One or more field names.
         :return: A tuple of 1 for each field that had TTL removed, 0 for each that did not.
         """
-        command_arguments: CommandArgList = [key, PrefixToken.FIELDS, len(list(fields))]
+        command_arguments: CommandArgList = [Key(key), PrefixToken.FIELDS, len(list(fields))]
         command_arguments.extend(fields)
 
         return self.create_request(
@@ -2377,7 +2388,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.HGET, key, field, callback=OptionalAnyStrCallback[AnyStr]()
+            CommandName.HGET, Key(key), field, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
     @redis_command(
@@ -2394,7 +2405,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A mapping of field names to values.
         """
 
-        return self.create_request(CommandName.HGETALL, key, callback=HGetAllCallback[AnyStr]())
+        return self.create_request(
+            CommandName.HGETALL, Key(key), callback=HGetAllCallback[AnyStr]()
+        )
 
     @versionadded(version="5.0.0")
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "persist", required=True)
@@ -2423,7 +2436,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: the values of each of the fields requested (Missing fields are returned
          as ``None``)
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if ex is not None:
             command_arguments.extend([PrefixToken.EX, normalized_seconds(ex)])
         elif px is not None:
@@ -2457,7 +2470,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         return self.create_request(
             CommandName.HGETDEL,
-            key,
+            Key(key),
             PrefixToken.FIELDS,
             len(list(fields)),
             *fields,
@@ -2476,7 +2489,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.HINCRBY, key, field, increment, callback=IntCallback()
+            CommandName.HINCRBY, Key(key), field, increment, callback=IntCallback()
         )
 
     @redis_command(CommandName.HINCRBYFLOAT, group=CommandGroup.HASH, flags={CommandFlag.FAST})
@@ -2493,7 +2506,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.HINCRBYFLOAT, key, field, increment, callback=FloatCallback()
+            CommandName.HINCRBYFLOAT, Key(key), field, increment, callback=FloatCallback()
         )
 
     @redis_command(
@@ -2510,7 +2523,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A tuple of field names.
         """
 
-        return self.create_request(CommandName.HKEYS, key, callback=TupleCallback[AnyStr]())
+        return self.create_request(CommandName.HKEYS, Key(key), callback=TupleCallback[AnyStr]())
 
     @redis_command(
         CommandName.HLEN,
@@ -2526,7 +2539,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of fields.
         """
 
-        return self.create_request(CommandName.HLEN, key, callback=IntCallback())
+        return self.create_request(CommandName.HLEN, Key(key), callback=IntCallback())
 
     @redis_command(CommandName.HSET, group=CommandGroup.HASH, flags={CommandFlag.FAST})
     def hset(self, key: KeyT, field_values: Mapping[MappingKeyT, ValueT]) -> CommandRequest[int]:
@@ -2540,7 +2553,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.HSET,
-            key,
+            Key(key),
             *dict_to_flat_list(field_values),
             callback=IntCallback(),
         )
@@ -2574,7 +2587,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param keepttl: Retain the TTL already associated with the fields.
         :return: ``True`` if all the fields were successfully set
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if condition is not None:
             command_arguments.append(condition)
         if ex is not None:
@@ -2609,7 +2622,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` if the field was set, ``False`` if it already existed.
         """
 
-        return self.create_request(CommandName.HSETNX, key, field, value, callback=BoolCallback())
+        return self.create_request(
+            CommandName.HSETNX, Key(key), field, value, callback=BoolCallback()
+        )
 
     @redis_command(
         CommandName.HMSET,
@@ -2627,7 +2642,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` on success.
         """
 
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
 
         for pair in field_values.items():
             command_arguments.extend(pair)
@@ -2655,7 +2670,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.HMGET, key, *fields, callback=TupleCallback[AnyStr | None]()
+            CommandName.HMGET, Key(key), *fields, callback=TupleCallback[AnyStr | None]()
         )
 
     @versionadded(version="4.18.0")
@@ -2670,7 +2685,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         command_arguments: CommandArgList = []
 
-        command_arguments.append(key)
+        command_arguments.append(Key(key))
         command_arguments.append(PrefixToken.FIELDS)
         command_arguments.append(len(list(fields)))
         command_arguments.extend(fields)
@@ -2691,7 +2706,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         command_arguments: CommandArgList = []
 
-        command_arguments.append(key)
+        command_arguments.append(Key(key))
         command_arguments.append(PrefixToken.FIELDS)
         command_arguments.append(len(list(fields)))
         command_arguments.extend(fields)
@@ -2714,7 +2729,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A tuple of values. Empty tuple if the key does not exist.
         """
 
-        return self.create_request(CommandName.HVALS, key, callback=TupleCallback[AnyStr]())
+        return self.create_request(CommandName.HVALS, Key(key), callback=TupleCallback[AnyStr]())
 
     @overload
     def hscan(
@@ -2763,7 +2778,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
          ``next_cursor`` 0 means done.
         """
-        command_arguments: CommandArgList = [key, cursor or "0"]
+        command_arguments: CommandArgList = [Key(key), cursor or "0"]
 
         if match is not None:
             command_arguments.extend([PrefixToken.MATCH, match])
@@ -2794,7 +2809,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The length in bytes, or 0 if the field or key does not exist.
         """
 
-        return self.create_request(CommandName.HSTRLEN, key, field, callback=IntCallback())
+        return self.create_request(CommandName.HSTRLEN, Key(key), field, callback=IntCallback())
 
     @overload
     def hrandfield(
@@ -2841,7 +2856,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param withvalues: If ``True``, return a mapping of fields to values instead of just fields.
         :return: A single field, a tuple of fields, a dict (if withvalues), or ``None`` if key is empty.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         options = {"withvalues": withvalues, "count": count}
 
         if count is not None:
@@ -2870,7 +2885,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param elements: One or more elements to add.
         :return: ``True`` if at least one internal register was altered.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
 
         if elements:
             command_arguments.extend(elements)
@@ -2890,7 +2905,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The approximated number of unique elements.
         """
 
-        return self.create_request(CommandName.PFCOUNT, *keys, callback=IntCallback())
+        return self.create_request(
+            CommandName.PFCOUNT, *[Key(key) for key in keys], callback=IntCallback()
+        )
 
     @redis_command(
         CommandName.PFMERGE,
@@ -2906,7 +2923,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.PFMERGE, destkey, *sourcekeys, callback=SimpleStringCallback()
+            CommandName.PFMERGE,
+            Key(destkey),
+            *[Key(key) for key in sourcekeys],
+            callback=SimpleStringCallback(),
         )
 
     @versionadded(version="3.0.0")
@@ -2931,7 +2951,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param replace: If ``True``, overwrite destination if it exists.
         :return: ``True`` on success.
         """
-        command_arguments: CommandArgList = [source, destination]
+        command_arguments: CommandArgList = [Key(source), Key(destination)]
 
         if db is not None:
             command_arguments.extend([PrefixToken.DB, db])
@@ -2960,7 +2980,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of keys that were removed.
         """
 
-        return self.create_request(CommandName.DEL, *keys, callback=IntCallback())
+        return self.create_request(
+            CommandName.DEL, *[Key(key) for key in keys], callback=IntCallback()
+        )
 
     @mutually_exclusive_parameters("ifeq", "ifne", "ifdeq", "ifdne")
     @redis_command(
@@ -2987,7 +3009,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param ifdne: Remove only if current hash digest does not equal this value.
         :return: ``True`` if the key was removed.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if ifeq is not None:
             command_arguments.extend([PrefixToken.IFEQ, ifeq])
         if ifne is not None:
@@ -3012,7 +3034,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The hex digest string, or ``None`` if the key does not exist.
         """
         return self.create_request(
-            CommandName.DIGEST, key, callback=OptionalAnyStrCallback[AnyStr]()
+            CommandName.DIGEST, Key(key), callback=OptionalAnyStrCallback[AnyStr]()
         )
 
     @redis_command(
@@ -3030,7 +3052,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.DUMP,
-            key,
+            Key(key),
             execution_parameters={"decode": False},
             callback=NoopCallback[bytes](),
         )
@@ -3051,7 +3073,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of keys that exist.
         """
 
-        return self.create_request(CommandName.EXISTS, *keys, callback=IntCallback())
+        return self.create_request(
+            CommandName.EXISTS, *[Key(key) for key in keys], callback=IntCallback()
+        )
 
     @redis_command(
         CommandName.EXPIRE,
@@ -3074,7 +3098,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` if the timeout was set, ``False`` otherwise (e.g. key does not exist).
         """
 
-        command_arguments: CommandArgList = [key, normalized_seconds(seconds)]
+        command_arguments: CommandArgList = [Key(key), normalized_seconds(seconds)]
 
         if condition is not None:
             command_arguments.append(condition)
@@ -3103,7 +3127,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         command_arguments: CommandArgList = [
-            key,
+            Key(key),
             normalized_time_seconds(unix_time_seconds),
         ]
 
@@ -3129,7 +3153,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: Expiration as datetime. -1 if key has no expiry, -2 if key does not exist.
         """
 
-        return self.create_request(CommandName.EXPIRETIME, key, callback=ExpiryCallback())
+        return self.create_request(CommandName.EXPIRETIME, Key(key), callback=ExpiryCallback())
 
     @redis_command(
         CommandName.KEYS,
@@ -3226,7 +3250,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` if the key was moved, ``False`` if it already existed in the target db.
         """
 
-        return self.create_request(CommandName.MOVE, key, db, callback=BoolCallback())
+        return self.create_request(CommandName.MOVE, Key(key), db, callback=BoolCallback())
 
     @redis_command(
         CommandName.OBJECT_ENCODING,
@@ -3242,7 +3266,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.OBJECT_ENCODING, key, callback=OptionalAnyStrCallback[AnyStr]()
+            CommandName.OBJECT_ENCODING, Key(key), callback=OptionalAnyStrCallback[AnyStr]()
         )
 
     @redis_command(
@@ -3258,7 +3282,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The counter value.
         """
 
-        return self.create_request(CommandName.OBJECT_FREQ, key, callback=IntCallback())
+        return self.create_request(CommandName.OBJECT_FREQ, Key(key), callback=IntCallback())
 
     @redis_command(
         CommandName.OBJECT_IDLETIME,
@@ -3273,7 +3297,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The idle time in seconds.
         """
 
-        return self.create_request(CommandName.OBJECT_IDLETIME, key, callback=IntCallback())
+        return self.create_request(CommandName.OBJECT_IDLETIME, Key(key), callback=IntCallback())
 
     @redis_command(
         CommandName.OBJECT_REFCOUNT,
@@ -3288,7 +3312,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of references.
         """
 
-        return self.create_request(CommandName.OBJECT_REFCOUNT, key, callback=IntCallback())
+        return self.create_request(CommandName.OBJECT_REFCOUNT, Key(key), callback=IntCallback())
 
     @redis_command(CommandName.PERSIST, group=CommandGroup.GENERIC, flags={CommandFlag.FAST})
     def persist(self, key: KeyT) -> CommandRequest[bool]:
@@ -3299,7 +3323,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` if the expiration was removed, ``False`` if the key had no expiry.
         """
 
-        return self.create_request(CommandName.PERSIST, key, callback=BoolCallback())
+        return self.create_request(CommandName.PERSIST, Key(key), callback=BoolCallback())
 
     @redis_command(
         CommandName.PEXPIRE,
@@ -3321,7 +3345,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param condition: Optional NX, XX, GT, or LT.
         :return: ``True`` if the timeout was set, ``False`` otherwise.
         """
-        command_arguments: CommandArgList = [key, normalized_milliseconds(milliseconds)]
+        command_arguments: CommandArgList = [Key(key), normalized_milliseconds(milliseconds)]
 
         if condition is not None:
             command_arguments.append(condition)
@@ -3350,7 +3374,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         command_arguments: CommandArgList = [
-            key,
+            Key(key),
             normalized_time_milliseconds(unix_time_milliseconds),
         ]
 
@@ -3378,7 +3402,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.PEXPIRETIME,
-            key,
+            Key(key),
             callback=ExpiryCallback(unit="milliseconds"),
         )
 
@@ -3395,7 +3419,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: TTL in milliseconds. -1 if key has no expiry, -2 if key does not exist.
         """
 
-        return self.create_request(CommandName.PTTL, key, callback=IntCallback())
+        return self.create_request(CommandName.PTTL, Key(key), callback=IntCallback())
 
     @redis_command(
         CommandName.RANDOMKEY,
@@ -3425,7 +3449,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` on success.
         """
 
-        return self.create_request(CommandName.RENAME, key, newkey, callback=SimpleStringCallback())
+        return self.create_request(
+            CommandName.RENAME, Key(key), Key(newkey), callback=SimpleStringCallback()
+        )
 
     @redis_command(CommandName.RENAMENX, group=CommandGroup.GENERIC, flags={CommandFlag.FAST})
     def renamenx(self, key: KeyT, newkey: KeyT) -> CommandRequest[bool]:
@@ -3437,7 +3463,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` if the key was renamed, ``False`` if newkey already exists.
         """
 
-        return self.create_request(CommandName.RENAMENX, key, newkey, callback=BoolCallback())
+        return self.create_request(
+            CommandName.RENAMENX, Key(key), Key(newkey), callback=BoolCallback()
+        )
 
     @redis_command(
         CommandName.RESTORE,
@@ -3467,7 +3495,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         command_arguments: CommandArgList = [
-            key,
+            Key(key),
             (
                 normalized_milliseconds(ttl)  # type: ignore
                 if not absttl
@@ -3522,7 +3550,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A tuple of sorted elements, or the number of stored elements if store is set.
         """
 
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         options = {}
 
         if by is not None:
@@ -3580,7 +3608,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: sorted elements.
 
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
 
         if by is not None:
             command_arguments.extend([PrefixToken.BY, by])
@@ -3617,7 +3645,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of keys that existed and were touched.
         """
 
-        return self.create_request(CommandName.TOUCH, *keys, callback=IntCallback())
+        return self.create_request(
+            CommandName.TOUCH, *[Key(key) for key in keys], callback=IntCallback()
+        )
 
     @redis_command(
         CommandName.TTL,
@@ -3632,7 +3662,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: TTL in seconds. -1 if key has no expiry, -2 if key does not exist.
         """
 
-        return self.create_request(CommandName.TTL, key, callback=IntCallback())
+        return self.create_request(CommandName.TTL, Key(key), callback=IntCallback())
 
     @redis_command(
         CommandName.UNLINK,
@@ -3650,7 +3680,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of keys that were unlinked.
         """
 
-        return self.create_request(CommandName.UNLINK, *keys, callback=IntCallback())
+        return self.create_request(
+            CommandName.UNLINK, *[Key(key) for key in keys], callback=IntCallback()
+        )
 
     @redis_command(
         CommandName.WAIT,
@@ -3767,8 +3799,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The element that was moved, or ``None`` if timeout was reached.
         """
         command_arguments: CommandArgList = [
-            source,
-            destination,
+            Key(source),
+            Key(destination),
             wherefrom,
             whereto,
             timeout,
@@ -3801,7 +3833,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: Maximum number of elements to pop.
         :return: ``None`` if timeout reached; otherwise [key_name, [elements]].
         """
-        _keys: list[KeyT] = list(keys)
+        _keys: list[Key] = [Key(key) for key in keys]
         command_arguments: CommandArgList = [timeout, len(_keys), *_keys, where]
 
         if count is not None:
@@ -3826,7 +3858,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.BLPOP, *keys, timeout, callback=OptionalListCallback[AnyStr]()
+            CommandName.BLPOP,
+            *[Key(key) for key in keys],
+            timeout,
+            callback=OptionalListCallback[AnyStr](),
         )
 
     @redis_command(CommandName.BRPOP, group=CommandGroup.LIST, flags={CommandFlag.BLOCKING})
@@ -3842,7 +3877,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.BRPOP, *keys, timeout, callback=OptionalListCallback[AnyStr]()
+            CommandName.BRPOP,
+            *[Key(key) for key in keys],
+            timeout,
+            callback=OptionalListCallback[AnyStr](),
         )
 
     @redis_command(
@@ -3866,8 +3904,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.BRPOPLPUSH,
-            source,
-            destination,
+            Key(source),
+            Key(destination),
             timeout,
             callback=OptionalAnyStrCallback[AnyStr](),
         )
@@ -3888,7 +3926,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.LINDEX, key, index, callback=OptionalAnyStrCallback[AnyStr]()
+            CommandName.LINDEX, Key(key), index, callback=OptionalAnyStrCallback[AnyStr]()
         )
 
     @redis_command(CommandName.LINSERT, group=CommandGroup.LIST)
@@ -3910,7 +3948,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.LINSERT, key, where, pivot, element, callback=IntCallback()
+            CommandName.LINSERT, Key(key), where, pivot, element, callback=IntCallback()
         )
 
     @redis_command(
@@ -3927,7 +3965,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The length of the list (0 if key does not exist).
         """
 
-        return self.create_request(CommandName.LLEN, key, callback=IntCallback())
+        return self.create_request(CommandName.LLEN, Key(key), callback=IntCallback())
 
     @redis_command(CommandName.LMOVE, version_introduced="6.2.0", group=CommandGroup.LIST)
     def lmove(
@@ -3946,7 +3984,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param whereto: LEFT or RIGHT (end to push to).
         :return: The element that was moved.
         """
-        command_arguments: CommandArgList = [source, destination, wherefrom, whereto]
+        command_arguments: CommandArgList = [Key(source), Key(destination), wherefrom, whereto]
 
         return self.create_request(
             CommandName.LMOVE, *command_arguments, callback=OptionalAnyStrCallback[AnyStr]()
@@ -3968,7 +4006,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: Maximum number of elements to pop.
         :return: ``None`` if all lists are empty; otherwise [key_name, [elements]].
         """
-        _keys: list[KeyT] = list(keys)
+        _keys: list[Key] = [Key(key) for key in keys]
         command_arguments: CommandArgList = [len(_keys), *_keys, where]
 
         if count is not None:
@@ -4010,13 +4048,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         if count is not None:
             return self.create_request(
                 CommandName.LPOP,
-                key,
+                Key(key),
                 *command_arguments,
                 callback=OptionalListCallback[AnyStr](),
             )
         return self.create_request(
             CommandName.LPOP,
-            key,
+            Key(key),
             *command_arguments,
             callback=OptionalAnyStrCallback[AnyStr](),
         )
@@ -4046,7 +4084,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param maxlen: Only search this many elements from the head.
         :return: A single index, or a list of indices if count is set; ``None`` if no match.
         """
-        command_arguments: CommandArgList = [key, element]
+        command_arguments: CommandArgList = [Key(key), element]
 
         if count is not None:
             command_arguments.extend([PrefixToken.COUNT, count])
@@ -4074,7 +4112,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param elements: One or more values to prepend.
         :return: The length of the list after the push.
         """
-        return self.create_request(CommandName.LPUSH, key, *elements, callback=IntCallback())
+        return self.create_request(CommandName.LPUSH, Key(key), *elements, callback=IntCallback())
 
     @redis_command(CommandName.LPUSHX, group=CommandGroup.LIST, flags={CommandFlag.FAST})
     def lpushx(self, key: KeyT, elements: Parameters[ValueT]) -> CommandRequest[int]:
@@ -4086,7 +4124,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The length of the list after the push (0 if key did not exist).
         """
 
-        return self.create_request(CommandName.LPUSHX, key, *elements, callback=IntCallback())
+        return self.create_request(CommandName.LPUSHX, Key(key), *elements, callback=IntCallback())
 
     @redis_command(
         CommandName.LRANGE,
@@ -4105,7 +4143,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.LRANGE, key, start, stop, callback=ListCallback[AnyStr]()
+            CommandName.LRANGE, Key(key), start, stop, callback=ListCallback[AnyStr]()
         )
 
     @redis_command(CommandName.LREM, group=CommandGroup.LIST)
@@ -4119,7 +4157,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of elements removed.
         """
 
-        return self.create_request(CommandName.LREM, key, count, element, callback=IntCallback())
+        return self.create_request(
+            CommandName.LREM, Key(key), count, element, callback=IntCallback()
+        )
 
     @redis_command(
         CommandName.LSET,
@@ -4136,7 +4176,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.LSET, key, index, element, callback=SimpleStringCallback()
+            CommandName.LSET, Key(key), index, element, callback=SimpleStringCallback()
         )
 
     @redis_command(
@@ -4154,7 +4194,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.LTRIM, key, start, stop, callback=SimpleStringCallback()
+            CommandName.LTRIM, Key(key), start, stop, callback=SimpleStringCallback()
         )
 
     @overload
@@ -4188,13 +4228,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         if count is None:
             return self.create_request(
                 CommandName.RPOP,
-                key,
+                Key(key),
                 *command_arguments,
                 callback=OptionalAnyStrCallback[AnyStr](),
             )
         return self.create_request(
             CommandName.RPOP,
-            key,
+            Key(key),
             *command_arguments,
             callback=OptionalListCallback[AnyStr](),
         )
@@ -4216,8 +4256,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.RPOPLPUSH,
-            source,
-            destination,
+            Key(source),
+            Key(destination),
             callback=OptionalAnyStrCallback[AnyStr](),
         )
 
@@ -4235,7 +4275,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The length of the list after the push.
         """
 
-        return self.create_request(CommandName.RPUSH, key, *elements, callback=IntCallback())
+        return self.create_request(CommandName.RPUSH, Key(key), *elements, callback=IntCallback())
 
     @redis_command(
         CommandName.RPUSHX,
@@ -4251,7 +4291,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The length of the list after the push (0 if key did not exist).
         """
 
-        return self.create_request(CommandName.RPUSHX, key, *elements, callback=IntCallback())
+        return self.create_request(CommandName.RPUSHX, Key(key), *elements, callback=IntCallback())
 
     @redis_command(
         CommandName.SADD,
@@ -4267,7 +4307,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of members that were added (excluding those already in the set).
         """
 
-        return self.create_request(CommandName.SADD, key, *members, callback=IntCallback())
+        return self.create_request(CommandName.SADD, Key(key), *members, callback=IntCallback())
 
     @redis_command(
         CommandName.SCARD,
@@ -4283,7 +4323,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The cardinality of the set (0 if key does not exist).
         """
 
-        return self.create_request(CommandName.SCARD, key, callback=IntCallback())
+        return self.create_request(CommandName.SCARD, Key(key), callback=IntCallback())
 
     @redis_command(
         CommandName.SDIFF,
@@ -4298,7 +4338,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A set of members in the difference.
         """
 
-        return self.create_request(CommandName.SDIFF, *keys, callback=SetCallback[AnyStr]())
+        return self.create_request(
+            CommandName.SDIFF, *[Key(key) for key in keys], callback=SetCallback[AnyStr]()
+        )
 
     @redis_command(CommandName.SDIFFSTORE, group=CommandGroup.SET)
     def sdiffstore(self, keys: Parameters[KeyT], destination: KeyT) -> CommandRequest[int]:
@@ -4311,7 +4353,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.SDIFFSTORE, destination, *keys, callback=IntCallback()
+            CommandName.SDIFFSTORE,
+            Key(destination),
+            *[Key(key) for key in keys],
+            callback=IntCallback(),
         )
 
     @redis_command(
@@ -4327,7 +4372,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A set of members in the intersection.
         """
 
-        return self.create_request(CommandName.SINTER, *keys, callback=SetCallback[AnyStr]())
+        return self.create_request(
+            CommandName.SINTER, *[Key(key) for key in keys], callback=SetCallback[AnyStr]()
+        )
 
     @redis_command(CommandName.SINTERSTORE, group=CommandGroup.SET)
     def sinterstore(self, keys: Parameters[KeyT], destination: KeyT) -> CommandRequest[int]:
@@ -4340,7 +4387,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.SINTERSTORE, destination, *keys, callback=IntCallback()
+            CommandName.SINTERSTORE,
+            Key(destination),
+            *[Key(key) for key in keys],
+            callback=IntCallback(),
         )
 
     @versionadded(version="3.0.0")
@@ -4362,7 +4412,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param limit: If set, limit the result to this maximum (approximate).
         :return: The number of elements in the resulting intersection.
         """
-        _keys: list[KeyT] = list(keys)
+        _keys: list[Key] = [Key(key) for key in keys]
 
         command_arguments: CommandArgList = [len(_keys), *_keys]
 
@@ -4388,7 +4438,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` if member is in the set, ``False`` otherwise or if key does not exist.
         """
 
-        return self.create_request(CommandName.SISMEMBER, key, member, callback=BoolCallback())
+        return self.create_request(CommandName.SISMEMBER, Key(key), member, callback=BoolCallback())
 
     @redis_command(
         CommandName.SMEMBERS,
@@ -4404,7 +4454,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A set of all members; empty set if the key does not exist.
         """
 
-        return self.create_request(CommandName.SMEMBERS, key, callback=SetCallback[AnyStr]())
+        return self.create_request(CommandName.SMEMBERS, Key(key), callback=SetCallback[AnyStr]())
 
     @redis_command(
         CommandName.SMISMEMBER,
@@ -4424,7 +4474,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A tuple of booleans in the same order as members.
         """
 
-        return self.create_request(CommandName.SMISMEMBER, key, *members, callback=BoolsCallback())
+        return self.create_request(
+            CommandName.SMISMEMBER, Key(key), *members, callback=BoolsCallback()
+        )
 
     @redis_command(
         CommandName.SMOVE,
@@ -4442,7 +4494,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.SMOVE, source, destination, member, callback=BoolCallback()
+            CommandName.SMOVE, Key(source), Key(destination), member, callback=BoolCallback()
         )
 
     @redis_command(
@@ -4464,12 +4516,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         if count is not None:
             return self.create_request(
                 CommandName.SPOP,
-                key,
+                Key(key),
                 count,
                 callback=SetCallback[AnyStr](count=count),
             )
         else:
-            return self.create_request(CommandName.SPOP, key, callback=AnyStrCallback[AnyStr]())
+            return self.create_request(
+                CommandName.SPOP, Key(key), callback=AnyStrCallback[AnyStr]()
+            )
 
     @redis_command(
         CommandName.SRANDMEMBER,
@@ -4493,7 +4547,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.SRANDMEMBER,
-            key,
+            Key(key),
             *command_arguments,
             callback=ItemOrSetCallback[AnyStr](count=count),
         )
@@ -4512,7 +4566,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of members that were removed.
         """
 
-        return self.create_request(CommandName.SREM, key, *members, callback=IntCallback())
+        return self.create_request(CommandName.SREM, Key(key), *members, callback=IntCallback())
 
     @redis_command(
         CommandName.SUNION,
@@ -4527,7 +4581,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A set of all members in the union.
         """
 
-        return self.create_request(CommandName.SUNION, *keys, callback=SetCallback[AnyStr]())
+        return self.create_request(
+            CommandName.SUNION, *[Key(key) for key in keys], callback=SetCallback[AnyStr]()
+        )
 
     @redis_command(CommandName.SUNIONSTORE, group=CommandGroup.SET)
     def sunionstore(self, keys: Parameters[KeyT], destination: KeyT) -> CommandRequest[int]:
@@ -4540,7 +4596,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.SUNIONSTORE, destination, *keys, callback=IntCallback()
+            CommandName.SUNIONSTORE,
+            Key(destination),
+            *[Key(key) for key in keys],
+            callback=IntCallback(),
         )
 
     @redis_command(
@@ -4564,7 +4623,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: Hint for minimum number of members per iteration.
         :return: A tuple of (next_cursor, set_of_members); next_cursor 0 means done.
         """
-        command_arguments: CommandArgList = [key, cursor or "0"]
+        command_arguments: CommandArgList = [Key(key), cursor or "0"]
 
         if match is not None:
             command_arguments.extend(["MATCH", match])
@@ -4599,7 +4658,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: Maximum number of members to pop.
         :return: ``None`` if timeout reached; otherwise (key_name, [(member, score), ...]).
         """
-        _keys: list[KeyT] = list(keys)
+        _keys: list[Key] = [Key(key) for key in keys]
         command_arguments: CommandArgList = [timeout, len(_keys), *_keys, where]
 
         if count is not None:
@@ -4624,7 +4683,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param timeout: Block timeout in seconds (0 = indefinitely).
         :return: ``None`` if timeout reached; otherwise (key_name, member, score).
         """
-        command_arguments: CommandArgList = [*keys, timeout]
+        command_arguments: CommandArgList = [*[Key(key) for key in keys], timeout]
 
         return self.create_request(
             CommandName.BZPOPMAX, *command_arguments, callback=BZPopCallback[AnyStr]()
@@ -4646,7 +4705,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``None`` if timeout reached; otherwise (key_name, member, score).
         """
 
-        command_arguments: CommandArgList = [*keys, timeout]
+        command_arguments: CommandArgList = [*[Key(key) for key in keys], timeout]
 
         return self.create_request(
             CommandName.BZPOPMIN, *command_arguments, callback=BZPopCallback[AnyStr]()
@@ -4696,7 +4755,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments.extend(flat_member_scores)
 
         return self.create_request(
-            CommandName.ZADD, key, *command_arguments, callback=ZAddCallback()
+            CommandName.ZADD, Key(key), *command_arguments, callback=ZAddCallback()
         )
 
     @redis_command(
@@ -4712,7 +4771,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The cardinality (0 if key does not exist).
         """
 
-        return self.create_request(CommandName.ZCARD, key, callback=IntCallback())
+        return self.create_request(CommandName.ZCARD, Key(key), callback=IntCallback())
 
     @redis_command(
         CommandName.ZCOUNT,
@@ -4734,7 +4793,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of members in the score range.
         """
 
-        return self.create_request(CommandName.ZCOUNT, key, min_, max_, callback=IntCallback())
+        return self.create_request(CommandName.ZCOUNT, Key(key), min_, max_, callback=IntCallback())
 
     @redis_command(
         CommandName.ZDIFF,
@@ -4752,7 +4811,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param withscores: If ``True``, include scores in the result.
         :return: Members (and optionally scores) in the difference.
         """
-        command_arguments: CommandArgList = [len(list(keys)), *keys]
+        command_arguments: CommandArgList = [len(list(keys)), *[Key(key) for key in keys]]
 
         if withscores:
             command_arguments.append(PureToken.WITHSCORES)
@@ -4776,11 +4835,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param destination: Key where the result is stored.
         :return: The number of elements in the resulting sorted set.
         """
-        command_arguments: CommandArgList = [len(list(keys)), *keys]
+        command_arguments: CommandArgList = [len(list(keys)), *[Key(key) for key in keys]]
 
         return self.create_request(
             CommandName.ZDIFFSTORE,
-            destination,
+            Key(destination),
             *command_arguments,
             callback=IntCallback(),
         )
@@ -4802,7 +4861,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.ZINCRBY,
-            key,
+            Key(key),
             increment,
             member,
             callback=FloatCallback(),
@@ -4832,7 +4891,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self._zaggregate(
-            CommandName.ZINTER, keys, weights=weights, aggregate=aggregate, withscores=withscores
+            CommandName.ZINTER,
+            [Key(key) for key in keys],
+            weights=weights,
+            aggregate=aggregate,
+            withscores=withscores,
         )
 
     @redis_command(CommandName.ZINTERSTORE, group=CommandGroup.SORTED_SET)
@@ -4855,8 +4918,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self._zaggregate(
             CommandName.ZINTERSTORE,
-            keys,
-            destination=destination,
+            [Key(key) for key in keys],
+            destination=Key(destination),
             weights=weights,
             aggregate=aggregate,
         )
@@ -4876,7 +4939,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param limit: If set, limit the result to this maximum (approximate).
         :return: The number of elements in the resulting intersection.
         """
-        _keys: list[KeyT] = list(keys)
+        _keys: list[Key] = [Key(key) for key in keys]
         command_arguments: CommandArgList = [len(_keys), *_keys]
 
         if limit is not None:
@@ -4902,7 +4965,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of members in the range.
         """
 
-        return self.create_request(CommandName.ZLEXCOUNT, key, min_, max_, callback=IntCallback())
+        return self.create_request(
+            CommandName.ZLEXCOUNT, Key(key), min_, max_, callback=IntCallback()
+        )
 
     @versionadded(version="3.0.0")
     @redis_command(
@@ -4924,7 +4989,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: Maximum number of members to pop.
         :return: ``None`` if all sets are empty; otherwise (key_name, [(member, score), ...]).
         """
-        _keys: list[KeyT] = list(keys)
+        _keys: list[Key] = [Key(key) for key in keys]
         command_arguments: CommandArgList = [len(_keys), *_keys, where]
 
         if count is not None:
@@ -4956,7 +5021,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             raise DataError("ZMSCORE members must be a non-empty list")
 
         return self.create_request(
-            CommandName.ZMSCORE, key, *members, callback=TupleCallback[float | None]()
+            CommandName.ZMSCORE, Key(key), *members, callback=TupleCallback[float | None]()
         )
 
     @redis_command(
@@ -4976,7 +5041,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         args = (count is not None) and [count] or []
         return self.create_request(
             CommandName.ZPOPMAX,
-            key,
+            Key(key),
             *args,
             callback=ZSetScorePairCallback[AnyStr](count=count),
         )
@@ -4997,7 +5062,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.ZPOPMIN,
-            key,
+            Key(key),
             *args,
             callback=ZSetScorePairCallback[AnyStr](count=count),
         )
@@ -5022,7 +5087,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param withscores: If ``True``, return (member, score) pairs.
         :return: A single member, a tuple of members, or (member, score) tuples; ``None`` or empty if key is empty.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         options = {}
 
         if count is not None:
@@ -5105,7 +5170,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self._zrange(
             CommandName.ZRANGE,
-            key,
+            Key(key),
             min_,
             max_,
             None,
@@ -5144,7 +5209,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: Tuple of members in the specified lex range.
         """
 
-        command_arguments: CommandArgList = [key, min_, max_]
+        command_arguments: CommandArgList = [Key(key), min_, max_]
 
         if offset is not None and count is not None:
             command_arguments.extend(["LIMIT", offset, count])
@@ -5185,7 +5250,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: Tuple of members, or (member, score) tuples if withscores.
         """
 
-        command_arguments: CommandArgList = [key, min_, max_]
+        command_arguments: CommandArgList = [Key(key), min_, max_]
 
         if offset is not None and count is not None:
             command_arguments.extend([PrefixToken.LIMIT, offset, count])
@@ -5233,10 +5298,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self._zrange(
             CommandName.ZRANGESTORE,
-            src,
+            Key(src),
             min_,
             max_,
-            dst,
+            Key(dst),
             rev,
             sortby,
             False,
@@ -5262,7 +5327,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param withscore: If ``True``, return (rank, score).
         :return: The rank, or (rank, score) if withscore; ``None`` if member is not in the set.
         """
-        command_arguments: CommandArgList = [key, member]
+        command_arguments: CommandArgList = [Key(key), member]
 
         if withscore:
             command_arguments.append(PureToken.WITHSCORE)
@@ -5287,7 +5352,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of members that were removed.
         """
 
-        return self.create_request(CommandName.ZREM, key, *members, callback=IntCallback())
+        return self.create_request(CommandName.ZREM, Key(key), *members, callback=IntCallback())
 
     @redis_command(CommandName.ZREMRANGEBYLEX, group=CommandGroup.SORTED_SET)
     def zremrangebylex(self, key: KeyT, min_: ValueT, max_: ValueT) -> CommandRequest[int]:
@@ -5301,7 +5366,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.ZREMRANGEBYLEX, key, min_, max_, callback=IntCallback()
+            CommandName.ZREMRANGEBYLEX, Key(key), min_, max_, callback=IntCallback()
         )
 
     @redis_command(CommandName.ZREMRANGEBYRANK, group=CommandGroup.SORTED_SET)
@@ -5316,7 +5381,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.ZREMRANGEBYRANK, key, start, stop, callback=IntCallback()
+            CommandName.ZREMRANGEBYRANK, Key(key), start, stop, callback=IntCallback()
         )
 
     @redis_command(CommandName.ZREMRANGEBYSCORE, group=CommandGroup.SORTED_SET)
@@ -5333,7 +5398,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.ZREMRANGEBYSCORE, key, min_, max_, callback=IntCallback()
+            CommandName.ZREMRANGEBYSCORE, Key(key), min_, max_, callback=IntCallback()
         )
 
     @redis_command(
@@ -5360,7 +5425,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param withscores: If ``True``, include scores in the result.
         :return: Members (and optionally scores) in the specified range.
         """
-        command_arguments: CommandArgList = [key, start, stop]
+        command_arguments: CommandArgList = [Key(key), start, stop]
 
         if withscores:
             command_arguments.append(PureToken.WITHSCORES)
@@ -5399,7 +5464,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: Tuple of members in the specified lex range.
         """
 
-        command_arguments: CommandArgList = [key, max_, min_]
+        command_arguments: CommandArgList = [Key(key), max_, min_]
 
         if offset is not None and count is not None:
             command_arguments.extend(["LIMIT", offset, count])
@@ -5440,7 +5505,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: Tuple of members, or (member, score) tuples if withscores.
         """
 
-        command_arguments: CommandArgList = [key, max_, min_]
+        command_arguments: CommandArgList = [Key(key), max_, min_]
 
         if offset is not None and count is not None:
             command_arguments.extend(["LIMIT", offset, count])
@@ -5472,7 +5537,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param withscore: If ``True``, return (rank, score).
         :return: The rank, or (rank, score) if withscore; ``None`` if member is not in the set.
         """
-        command_arguments: CommandArgList = [key, member]
+        command_arguments: CommandArgList = [Key(key), member]
         if withscore:
             command_arguments.append(PureToken.WITHSCORE)
         return self.create_request(
@@ -5502,7 +5567,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: Hint for minimum number of entries per iteration.
         :return: A tuple of (next_cursor, (member, score), ...); next_cursor 0 means done.
         """
-        command_arguments: CommandArgList = [key, cursor or "0"]
+        command_arguments: CommandArgList = [Key(key), cursor or "0"]
 
         if match is not None:
             command_arguments.extend(["MATCH", match])
@@ -5530,7 +5595,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.ZSCORE, key, member, callback=OptionalFloatCallback()
+            CommandName.ZSCORE, Key(key), member, callback=OptionalFloatCallback()
         )
 
     @redis_command(
@@ -5558,7 +5623,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self._zaggregate(
             CommandName.ZUNION,
-            keys,
+            [Key(key) for key in keys],
             weights=weights,
             aggregate=aggregate,
             withscores=withscores,
@@ -5584,8 +5649,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self._zaggregate(
             CommandName.ZUNIONSTORE,
-            keys,
-            destination=destination,
+            [Key(key) for key in keys],
+            destination=Key(destination),
             weights=weights,
             aggregate=aggregate,
         )
@@ -5594,10 +5659,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     def _zrange(
         self,
         command: Literal[CommandName.ZRANGESTORE],
-        key: KeyT,
+        key: Key,
         start: int | ValueT,
         stop: int | ValueT,
-        dest: ValueT | None = ...,
+        dest: Key | None = ...,
         rev: bool | None = None,
         sortby: PureToken | None = ...,
         withscores: bool | None = ...,
@@ -5609,10 +5674,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     def _zrange(
         self,
         command: Literal[CommandName.ZRANGE],
-        key: KeyT,
+        key: Key,
         start: int | ValueT,
         stop: int | ValueT,
-        dest: ValueT | None = ...,
+        dest: Key | None = ...,
         rev: bool | None = None,
         sortby: PureToken | None = ...,
         withscores: bool | None = ...,
@@ -5623,10 +5688,10 @@ class CoreCommands(CommandMixin[AnyStr]):
     def _zrange(
         self,
         command: Literal[CommandName.ZRANGE, CommandName.ZRANGESTORE],
-        key: KeyT,
+        key: Key,
         start: int | ValueT,
         stop: int | ValueT,
-        dest: ValueT | None = None,
+        dest: Key | None = None,
         rev: bool | None = None,
         sortby: PureToken | None = None,
         withscores: bool | None = False,
@@ -5667,9 +5732,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZUNIONSTORE,
             CommandName.ZINTERSTORE,
         ],
-        keys: Parameters[KeyT],
+        keys: Parameters[Key],
         *,
-        destination: KeyT | None = ...,
+        destination: Key | None = ...,
         weights: Parameters[int] | None = ...,
         aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None = ...,
         withscores: bool | None = ...,
@@ -5682,9 +5747,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZUNION,
             CommandName.ZINTER,
         ],
-        keys: Parameters[KeyT],
+        keys: Parameters[Key],
         *,
-        destination: KeyT | None = ...,
+        destination: Key | None = ...,
         weights: Parameters[int] | None = ...,
         aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None = ...,
         withscores: bool | None = ...,
@@ -5698,9 +5763,9 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.ZINTER,
             CommandName.ZINTERSTORE,
         ],
-        keys: Parameters[KeyT],
+        keys: Parameters[Key],
         *,
-        destination: KeyT | None = None,
+        destination: Key | None = None,
         weights: Parameters[int] | None = None,
         aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None = None,
         withscores: bool | None = None,
@@ -5755,7 +5820,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.XACK, key, group, *identifiers, callback=IntCallback()
+            CommandName.XACK, Key(key), group, *identifiers, callback=IntCallback()
         )
 
     @versionadded(version="5.2.0")
@@ -5781,7 +5846,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param condition: KEEPREF, DELREF, or ACKED (affects reference counting).
         :return: Tuple of 1 for each entry that was acked/deleted, 0 for others.
         """
-        command_arguments: CommandArgList = [key, group]
+        command_arguments: CommandArgList = [Key(key), group]
         if condition is not None:
             command_arguments.append(condition)
 
@@ -5867,7 +5932,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.XADD,
-            key,
+            Key(key),
             *command_arguments,
             callback=OptionalAnyStrCallback[AnyStr](),
         )
@@ -5884,7 +5949,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The stream key.
         :return: Number of entries in the stream.
         """
-        return self.create_request(CommandName.XLEN, key, callback=IntCallback())
+        return self.create_request(CommandName.XLEN, Key(key), callback=IntCallback())
 
     @redis_command(
         CommandName.XRANGE,
@@ -5917,7 +5982,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.append(count)
 
         return self.create_request(
-            CommandName.XRANGE, key, *command_arguments, callback=StreamRangeCallback()
+            CommandName.XRANGE, Key(key), *command_arguments, callback=StreamRangeCallback()
         )
 
     @redis_command(
@@ -5952,7 +6017,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.XREVRANGE,
-            key,
+            Key(key),
             *command_arguments,
             callback=StreamRangeCallback(),
         )
@@ -5964,7 +6029,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def xread(
         self,
-        streams: Mapping[MappingKeyT, ValueT],
+        streams: Mapping[MappingStringKeyT, ValueT],
         count: int | None = None,
         block: int | datetime.timedelta | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
@@ -5989,7 +6054,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         ids: CommandArgList = []
 
         for partial_stream in streams.items():
-            command_arguments.append(partial_stream[0])
+            command_arguments.append(Key(partial_stream[0]))
             ids.append(partial_stream[1])
         command_arguments.extend(ids)
 
@@ -6004,7 +6069,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         group: StringT,
         consumer: StringT,
-        streams: Mapping[MappingKeyT, ValueT],
+        streams: Mapping[MappingStringKeyT, ValueT],
         count: int | None = None,
         block: int | datetime.timedelta | None = None,
         noack: bool | None = None,
@@ -6037,7 +6102,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         ids: CommandArgList = []
 
         for partial_stream in streams.items():
-            command_arguments.append(partial_stream[0])
+            command_arguments.append(Key(partial_stream[0]))
             ids.append(partial_stream[1])
         command_arguments.extend(ids)
         return self.create_request(
@@ -6075,7 +6140,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param consumer: Filter by consumer name.
         :return: Summary (total, min/max ids, consumers) or tuple of pending entry details.
         """
-        command_arguments: CommandArgList = [key, group]
+        command_arguments: CommandArgList = [Key(key), group]
 
         if idle is not None:
             command_arguments.extend([PrefixToken.IDLE, idle])
@@ -6134,7 +6199,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.append(condition)
 
         return self.create_request(
-            CommandName.XTRIM, key, *command_arguments, callback=IntCallback()
+            CommandName.XTRIM, Key(key), *command_arguments, callback=IntCallback()
         )
 
     @redis_command(
@@ -6150,7 +6215,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param identifiers: Entry IDs to delete.
         :return: Number of entries deleted.
         """
-        return self.create_request(CommandName.XDEL, key, *identifiers, callback=IntCallback())
+        return self.create_request(CommandName.XDEL, Key(key), *identifiers, callback=IntCallback())
 
     @versionadded(version="5.2.0")
     @redis_command(
@@ -6173,7 +6238,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param condition: KEEPREF, DELREF, or ACKED (affects reference counting).
         :return: Tuple of 1 for each deleted entry, 0 for skipped.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if condition is not None:
             command_arguments.append(condition)
         command_arguments.extend([PrefixToken.IDS, len(list(identifiers)), *identifiers])
@@ -6199,7 +6264,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         return self.create_request(
             CommandName.XINFO_CONSUMERS,
-            key,
+            Key(key),
             groupname,
             callback=TupleCallback[dict[AnyStr, AnyStr | int | None]](),
         )
@@ -6220,7 +6285,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         return self.create_request(
             CommandName.XINFO_GROUPS,
-            key,
+            Key(key),
             callback=TupleCallback[dict[AnyStr, AnyStr | int | None]](),
         )
 
@@ -6251,7 +6316,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.XINFO_STREAM,
-            key,
+            Key(key),
             *command_arguments,
             callback=StreamInfoCallback(full=full),
         )
@@ -6292,7 +6357,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: Tuple of claimed entry IDs, or tuple of stream entries (unless justid).
         """
         command_arguments: CommandArgList = [
-            key,
+            Key(key),
             group,
             consumer,
             normalized_milliseconds(min_idle_time),
@@ -6346,7 +6411,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [
-            key,
+            Key(key),
             groupname,
             identifier or PureToken.NEW_ID,
         ]
@@ -6380,7 +6445,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param consumername: Name of the consumer to create.
         :return: ``True`` if the consumer was created, False if it already existed.
         """
-        command_arguments: CommandArgList = [key, groupname, consumername]
+        command_arguments: CommandArgList = [Key(key), groupname, consumername]
 
         return self.create_request(
             CommandName.XGROUP_CREATECONSUMER,
@@ -6411,7 +6476,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` on success.
         """
         command_arguments: CommandArgList = [
-            key,
+            Key(key),
             groupname,
             identifier or PureToken.NEW_ID,
         ]
@@ -6435,7 +6500,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: Number of groups destroyed (1 or 0).
         """
         return self.create_request(
-            CommandName.XGROUP_DESTROY, key, groupname, callback=IntCallback()
+            CommandName.XGROUP_DESTROY, Key(key), groupname, callback=IntCallback()
         )
 
     @versionadded(version="3.0.0")
@@ -6453,7 +6518,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         return self.create_request(
             CommandName.XGROUP_DELCONSUMER,
-            key,
+            Key(key),
             groupname,
             consumername,
             callback=IntCallback(),
@@ -6493,7 +6558,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: k(next_start_id, claimed_entries) or (next_start_id, claimed_entries, deleted_ids).
         """
         command_arguments: CommandArgList = [
-            key,
+            Key(key),
             group,
             consumer,
             normalized_milliseconds(min_idle_time),
@@ -6532,7 +6597,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param idmp_maxsize: Max size for idempotency tracking.
         :return: ``True`` on success.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if idmp_duration is not None:
             command_arguments.append(PrefixToken.IDMP_DURATION)
             command_arguments.append(normalized_seconds(idmp_duration))
@@ -6567,7 +6632,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param index_unit: BIT or BYTE for start/end interpretation.
         :return: Count of bits set to 1 in the (optionally ranged) value.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
 
         if start is not None and end is not None:
             command_arguments.append(start)
@@ -6585,7 +6650,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The key name.
         :return: :class:`~coredis.commands.bitfield.BitFieldOperation` for chained get/set/incr.
         """
-        return BitFieldOperation[AnyStr](self, key)
+        return BitFieldOperation[AnyStr](self, Key(key))
 
     def bitfield_ro(self, key: KeyT) -> BitFieldOperation[AnyStr]:
         """
@@ -6594,7 +6659,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The key name.
         :return: :class:`~coredis.commands.bitfield.BitFieldOperation` (read-only; write raises ReadOnlyError).
         """
-        return BitFieldOperation[AnyStr](self, key, readonly=True)
+        return BitFieldOperation[AnyStr](self, Key(key), readonly=True)
 
     @redis_command(
         CommandName.BITOP,
@@ -6612,7 +6677,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: Size in bytes of the result string.
         """
         return self.create_request(
-            CommandName.BITOP, operation, destkey, *keys, callback=IntCallback()
+            CommandName.BITOP,
+            operation,
+            Key(destkey),
+            *[Key(key) for key in keys],
+            callback=IntCallback(),
         )
 
     @redis_command(
@@ -6643,7 +6712,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         if bit not in (0, 1):
             raise RedisError("bit must be 0 or 1")
-        command_arguments: CommandArgList = [key, bit]
+        command_arguments: CommandArgList = [Key(key), bit]
 
         if start is not None:
             command_arguments.append(start)
@@ -6669,7 +6738,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param offset: Bit offset (0-based).
         :return: 0 or 1; 0 if key is missing or offset is beyond the string.
         """
-        return self.create_request(CommandName.GETBIT, key, offset, callback=IntCallback())
+        return self.create_request(CommandName.GETBIT, Key(key), offset, callback=IntCallback())
 
     @redis_command(CommandName.SETBIT, group=CommandGroup.BITMAP)
     def setbit(self, key: KeyT, offset: int, value: int) -> CommandRequest[int]:
@@ -6683,7 +6752,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         value = value and 1 or 0
 
-        return self.create_request(CommandName.SETBIT, key, offset, value, callback=IntCallback())
+        return self.create_request(
+            CommandName.SETBIT, Key(key), offset, value, callback=IntCallback()
+        )
 
     @redis_command(
         CommandName.PUBLISH,
@@ -6712,7 +6783,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param message: Message to send.
         :return: Number of shard subscribers that received the message (exact node only).
         """
-        return self.create_request(CommandName.SPUBLISH, channel, message, callback=IntCallback())
+        return self.create_request(
+            CommandName.SPUBLISH, Key(channel), message, callback=IntCallback()
+        )
 
     @redis_command(
         CommandName.PUBSUB_CHANNELS,
@@ -6832,7 +6905,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         _keys: list[KeyT] = list(keys) if keys else []
-        command_arguments: CommandArgList = [script, len(_keys), *_keys]
+        command_arguments: CommandArgList = [script, len(_keys), *[Key(key) for key in _keys]]
 
         if args:
             command_arguments.extend(args)
@@ -6892,7 +6965,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         args: Parameters[ValueT] | None = None,
     ) -> CommandRequest[ResponseType]:
         _keys: list[KeyT] = list(keys) if keys else []
-        command_arguments: CommandArgList = [sha1, len(_keys), *_keys]
+        command_arguments: CommandArgList = [sha1, len(_keys), *[Key(key) for key in _keys]]
 
         if args:
             command_arguments.extend(args)
@@ -7062,7 +7135,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments: CommandArgList = [
             function,
             len(_keys),
-            *_keys,
+            *[Key(key) for key in _keys],
             *(args or []),
         ]
 
@@ -7093,7 +7166,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments: CommandArgList = [
             function,
             len(_keys),
-            *_keys,
+            *[Key(key) for key in _keys],
             *(args or []),
         ]
 
@@ -7811,7 +7884,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: A mapping of debug attributes.
         """
 
-        return self.create_request(CommandName.DEBUG_OBJECT, key, callback=DebugCallback())
+        return self.create_request(CommandName.DEBUG_OBJECT, Key(key), callback=DebugCallback())
 
     @mutually_inclusive_parameters("host", "port")
     @versionadded(version="3.0.0")
@@ -8097,7 +8170,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         """
         command_arguments: CommandArgList = []
-        command_arguments.append(key)
+        command_arguments.append(Key(key))
 
         if samples is not None:
             command_arguments.extend([PrefixToken.SAMPLES, samples])
@@ -8916,7 +8989,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The key name.
         :return: One of string, list, set, zset, hash, stream, etc.; ``None`` if key does not exist.
         """
-        return self.create_request(CommandName.TYPE, key, callback=OptionalAnyStrCallback[AnyStr]())
+        return self.create_request(
+            CommandName.TYPE, Key(key), callback=OptionalAnyStrCallback[AnyStr]()
+        )
 
     @versionadded(version="5.0.0")
     @redis_command(CommandName.VADD, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
@@ -8949,7 +9024,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: ``True`` if the element was successfully added to the vector set
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if reduce is not None:
             command_arguments.extend([PureToken.REDUCE, reduce])
 
@@ -8984,7 +9059,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: ``True`` if the element was successfully deleted from the set
         """
 
-        return self.create_request(CommandName.VREM, key, element, callback=BoolCallback())
+        return self.create_request(CommandName.VREM, Key(key), element, callback=BoolCallback())
 
     @overload
     def vsim(
@@ -9102,7 +9177,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param nothread: execute the search in the main thread instead of a background thread
         :return: Matching elements; optionally with scores (if withscores) and/or attributes (if withattribs).
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if values is not None:
             if isinstance(values, bytes):
                 command_arguments.extend([PureToken.FP32, values])
@@ -9145,7 +9220,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The key containing the vector set
         :return: The dimensions of the vectors in the vector set
         """
-        return self.create_request(CommandName.VDIM, key, callback=IntCallback())
+        return self.create_request(CommandName.VDIM, Key(key), callback=IntCallback())
 
     @versionadded(version="5.0.0")
     @redis_command(CommandName.VCARD, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
@@ -9157,7 +9232,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: The number of elements in the vector set
 
         """
-        return self.create_request(CommandName.VCARD, key, callback=IntCallback())
+        return self.create_request(CommandName.VCARD, Key(key), callback=IntCallback())
 
     @overload
     def vemb(self, key: KeyT, element: StringT) -> CommandRequest[tuple[float, ...] | None]: ...
@@ -9180,7 +9255,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: Tuple of floats for the vector; if raw is True, VectorData with metadata.
         """
-        command_arguments: CommandArgList = [key, element]
+        command_arguments: CommandArgList = [Key(key), element]
         if raw:
             command_arguments.append(PureToken.RAW)
         return self.create_request(
@@ -9217,7 +9292,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: Tuple of layers, each a tuple of neighbours (or mapping to scores if withscores); last is lowest layer.
         """
-        command_arguments: CommandArgList = [key, element]
+        command_arguments: CommandArgList = [Key(key), element]
 
         if withscores:
             command_arguments.append(PureToken.WITHSCORES)
@@ -9237,7 +9312,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: mapping of attributes and values describing the vector set
 
         """
-        return self.create_request(CommandName.VINFO, key, callback=VInfoCallback[AnyStr]())
+        return self.create_request(CommandName.VINFO, Key(key), callback=VInfoCallback[AnyStr]())
 
     @versionadded(version="5.0.0")
     @redis_command(CommandName.VSETATTR, version_introduced="8.0.0", group=CommandGroup.VECTOR_SET)
@@ -9252,7 +9327,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: ``True`` if the attributes were successfully set
         """
-        command_arguments: CommandArgList = [key, element]
+        command_arguments: CommandArgList = [Key(key), element]
         command_arguments.append(json.dumps(attributes))
 
         return self.create_request(
@@ -9271,7 +9346,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: the attributes of the element or None if they don't
          exist.
         """
-        command_arguments: CommandArgList = [key, element]
+        command_arguments: CommandArgList = [Key(key), element]
         return self.create_request(
             CommandName.VGETATTR, *command_arguments, callback=JsonCallback()
         )
@@ -9296,7 +9371,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: A random element, or a tuple of elements if count is specified; negative count allows duplicates.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if count is not None:
             command_arguments.append(count)
 
@@ -9323,7 +9398,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: The elements in lexicographical order within the range
         """
-        command_arguments: CommandArgList = [key, start, end]
+        command_arguments: CommandArgList = [Key(key), start, end]
         if count is not None:
             command_arguments.append(count)
 
@@ -9346,7 +9421,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         return self.create_request(
             CommandName.VISMEMBER,
-            key,
+            Key(key),
             element,
             callback=BoolCallback(),
         )

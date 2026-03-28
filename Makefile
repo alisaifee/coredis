@@ -21,7 +21,6 @@ coverage-docs:
 templated-sources:
 	PYTHONPATH=${CURDIR} uv run python -m scripts.code_gen token-enum
 	PYTHONPATH=${CURDIR} uv run python -m scripts.code_gen command-constants
-	PYTHONPATH=${CURDIR} uv run python -m scripts.code_gen cluster-key-extraction
 
 benchmark:
 	./scripts/benchmark.sh

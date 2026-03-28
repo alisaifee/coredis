@@ -15,7 +15,6 @@ from coredis.typing import (
     StringT,
 )
 
-from ._key_spec import KeySpec
 from .constants import NodeFlag
 
 if TYPE_CHECKING:
@@ -127,7 +126,7 @@ class RandomStrategy(RoutingStrategy[CommandResponseT]):
             NodeExecution(
                 node=cluster_layout.random_node(not readonly),
                 original_request=command,
-                node_arguments=command.arguments,
+                node_arguments=command.serialized_arguments,
                 key_positions=(),
             )
         ]
@@ -174,7 +173,7 @@ class FanoutStrategy(RoutingStrategy[CommandResponseT]):
             NodeExecution(
                 node=node,
                 original_request=command,
-                node_arguments=command.arguments,
+                node_arguments=command.serialized_arguments,
                 key_positions=(),
             )
             for node in self.nodes(cluster_layout, not readonly)
@@ -206,7 +205,7 @@ class SlotRangeStrategy(RoutingStrategy[CommandResponseT]):
     ) -> list[NodeExecution[CommandResponseT]]:
         if slot_arguments_range := command.execution_parameters.get("slot_arguments_range", None):
             slot_start, slot_end = slot_arguments_range
-            arg_slots = command.arguments[slot_start : slot_end + 1]
+            arg_slots = command.serialized_arguments[slot_start : slot_end + 1]
             all_slots = list(int(k) for k in arg_slots)
             affected_nodes = cluster_layout.nodes_for_slots(*all_slots)
             node_slots: dict[ClusterNodeLocation, list[int]] = {node: [] for node in affected_nodes}
@@ -219,9 +218,9 @@ class SlotRangeStrategy(RoutingStrategy[CommandResponseT]):
                     node=node,
                     original_request=command,
                     node_arguments=(
-                        command.arguments[:slot_start]
+                        command.serialized_arguments[:slot_start]
                         + tuple(slots)
-                        + command.arguments[slot_end + 1 :]
+                        + command.serialized_arguments[slot_end + 1 :]
                     ),
                     key_positions=(),
                 )
@@ -245,18 +244,15 @@ class KeyRangeStrategy(RoutingStrategy[CommandResponseT]):
         command: CommandRequest[CommandResponseT],
         readonly: bool,
     ) -> list[NodeExecution[CommandResponseT]]:
-        _, key_range = KeySpec.extract_keys(
-            command.name, *command.arguments, readonly_command=readonly
+        key_range = (
+            (command.key_indices[0], command.key_indices[-1]) if command.key_indices else (0, 0)
         )
-        pre_arguments = command.arguments[: key_range[0]]
-        post_arguments = command.arguments[key_range[1] + 1 :]
-        slots_to_keys = KeySpec.slots_to_keys(
-            command.name, *command.arguments, readonly_command=readonly
-        )
+        pre_arguments = command.serialized_arguments[: key_range[0]]
+        post_arguments = command.serialized_arguments[key_range[1] + 1 :]
         # Track which original positions each node is responsible for
         node_keys: dict[tuple[int, ClusterNodeLocation], list[RedisValueT]] = {}
         node_key_positions: dict[tuple[int, ClusterNodeLocation], list[int]] = {}
-        for slot, sub_keys in slots_to_keys.items():
+        for slot, sub_keys in command.slots_to_keys.items():
             node = cluster_layout.node_for_slot(slot, primary=not readonly)
             for idx, key in sub_keys:
                 node_keys.setdefault((slot, node), []).append(key)
@@ -299,18 +295,17 @@ class PairStrategy(RoutingStrategy[CommandResponseT]):
         command: CommandRequest[CommandResponseT],
         readonly: bool,
     ) -> list[NodeExecution[CommandResponseT]]:
-        _, key_range = KeySpec.extract_keys(
-            command.name, *command.arguments, readonly_command=readonly
-        )
-        slots_to_keys = KeySpec.slots_to_keys(
-            command.name, *command.arguments, readonly_command=readonly
+        key_range = (
+            (command.key_indices[0], command.key_indices[-1]) if command.key_indices else (0, 0)
         )
         pre_arguments: tuple[RedisValueT, ...] = ()
         if not self.add_count:
-            pre_arguments = command.arguments[: key_range[0]]
-        post_arguments = command.arguments[key_range[1] * self.key_step + 2 :]
-        keys = command.arguments[key_range[0] : key_range[1] * self.key_step + 1 : self.key_step]
-        value_section = command.arguments[
+            pre_arguments = command.serialized_arguments[: key_range[0]]
+        post_arguments = command.serialized_arguments[key_range[1] * self.key_step + 2 :]
+        keys = command.serialized_arguments[
+            key_range[0] : key_range[1] * self.key_step + 1 : self.key_step
+        ]
+        value_section = command.serialized_arguments[
             key_range[0] + 1 : key_range[1] * self.key_step + self.key_step
         ]
         values = [
@@ -320,7 +315,7 @@ class PairStrategy(RoutingStrategy[CommandResponseT]):
         pairs = dict(zip(keys, values))
         node_pairs: dict[tuple[int, ClusterNodeLocation], list[RedisValueT]] = {}
         node_key_positions: dict[tuple[int, ClusterNodeLocation], list[int]] = {}
-        for slot, sub_keys in slots_to_keys.items():
+        for slot, sub_keys in command.slots_to_keys.items():
             node = cluster_layout.node_for_slot(slot, primary=not readonly)
             for idx, key in sub_keys:
                 node_pairs.setdefault((slot, node), []).extend([key, *pairs[key]])
@@ -382,7 +377,7 @@ class ExplicitSlotStrategy(RoutingStrategy[CommandResponseT]):
             NodeExecution(
                 node=node,
                 original_request=command,
-                node_arguments=command.arguments,
+                node_arguments=command.serialized_arguments,
                 key_positions=(),
             )
         ]

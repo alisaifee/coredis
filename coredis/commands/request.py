@@ -15,6 +15,7 @@ from coredis.typing import (
     Callable,
     ExecutionParameters,
     Generator,
+    Key,
     RedisValueT,
     ResponseType,
     Serializable,
@@ -24,7 +25,6 @@ from coredis.typing import (
     ValueT,
 )
 
-from ._key_spec import KeySpec
 from .constants import CommandFlag
 
 #: Covariant type used for generalizing :class:`~coredis.command.CommandRequest`
@@ -47,6 +47,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
         "client",
         "name",
         "arguments",
+        "serialized_arguments",
         "execution_parameters",
         "callback",
         "decode",
@@ -63,7 +64,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
         self,
         client: AbstractExecutor,
         name: bytes,
-        *arguments: ValueT,
+        *arguments: ValueT | Key,
         callback: Callable[..., CommandResponseT] = NoopCallback(),
         execution_parameters: ExecutionParameters,
         **kwargs: Any,
@@ -84,8 +85,14 @@ class CommandRequest(Awaitable[CommandResponseT]):
         self.callback = callback
         self.execution_parameters = execution_parameters or {}
         self.client: AbstractExecutor = client
-        self.arguments = tuple(
-            self.type_adapter.serialize(k) if isinstance(k, Serializable) else k for k in arguments
+        self.arguments = arguments
+        self.serialized_arguments = tuple(
+            self.type_adapter.serialize(k)
+            if isinstance(k, Serializable)
+            else k.key
+            if isinstance(k, Key)
+            else k
+            for k in arguments
         )
         self.blocking = CommandFlag.BLOCKING in COMMAND_FLAGS[name]
         self.readonly = name in READONLY_COMMANDS
@@ -97,17 +104,29 @@ class CommandRequest(Awaitable[CommandResponseT]):
     @property
     @cache
     def keys(self) -> tuple[RedisValueT, ...]:
-        return KeySpec.extract_keys(self.name, *self.arguments)[0]
+        return tuple([k.key for k in self.arguments if isinstance(k, Key)])
 
     @property
     @cache
     def affected_slots(self) -> tuple[int, ...]:
-        return tuple(KeySpec.affected_slots(self.name, *self.arguments))
+        return tuple({k.slot for k in self.arguments if isinstance(k, Key)})
 
     @property
     @cache
     def slots_to_keys(self) -> dict[int, list[tuple[int, RedisValueT]]]:
-        return KeySpec.slots_to_keys(self.name, *self.arguments)
+        mapping: dict[int, list[tuple[int, RedisValueT]]] = {}
+        for idx, k in enumerate([k for k in self.arguments if isinstance(k, Key)]):
+            mapping.setdefault(k.slot, []).append((idx, k.key))
+        return mapping
+
+    @property
+    @cache
+    def key_indices(self) -> tuple[int, ...]:
+        indices: list[int] = []
+        for idx, arg in enumerate(self.arguments):
+            if isinstance(arg, Key):
+                indices.append(idx)
+        return tuple(indices)
 
     @property
     @cache

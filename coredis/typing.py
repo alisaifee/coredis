@@ -21,6 +21,7 @@ from collections.abc import (
     Set,
     ValuesView,
 )
+from functools import cache
 from types import GenericAlias, ModuleType, UnionType
 from typing import (
     TYPE_CHECKING,
@@ -120,6 +121,25 @@ class ExecutionParameters(TypedDict):
 
 #: Represents the acceptable types of a redis key
 KeyT: TypeAlias = str | bytes
+
+
+class Key:
+    """
+    Light wrapper to be used to differentiate keys
+    from other arguments
+    """
+
+    __slots__ = ("key",)
+
+    def __init__(self, key: KeyT):
+        self.key = key
+
+    @property
+    @cache
+    def slot(self) -> int:
+        from coredis._utils import b, hash_slot
+
+        return hash_slot(b(self.key))
 
 
 class Serializable(Generic[R]):
@@ -485,7 +505,11 @@ StringT: TypeAlias = str | bytes
 #: as a parameter to allow any :class:`~coredis.typing.ValueT` as a key
 MappingKeyT = TypeVar("MappingKeyT", bound=ValueT)
 
-CommandArgList = list[ValueT]
+#: Used for dictionary keys for all commands that accept :class:`~typing.Mapping`
+#: as a parameter to allow any :class:`~coredis.typing.StringT` as a key
+MappingStringKeyT = TypeVar("MappingStringKeyT", bound=StringT)
+
+CommandArgList = list[ValueT | Key]
 
 #: Primitive types that we can expect to be sent to redis with
 #: simple serialization. The internals of coredis
@@ -570,6 +594,7 @@ __all__ = [
     "KeyT",
     "Literal",
     "MappingKeyT",
+    "MappingStringKeyT",
     "Mapping",
     "ModuleType",
     "MutableMapping",

@@ -27,6 +27,7 @@ from ..tokens import PrefixToken, PureToken
 from ..typing import (
     AnyStr,
     CommandArgList,
+    Key,
     KeyT,
     Literal,
     Mapping,
@@ -123,7 +124,7 @@ class Field:
     attributes: dict[StringT, ValueT] | None = None
 
     @property
-    def args(self) -> tuple[ValueT, ...]:
+    def args(self) -> tuple[ValueT | Key, ...]:
         args: CommandArgList = [self.name]
         if self.alias:
             args += [PrefixToken.AS, self.alias]
@@ -385,7 +386,7 @@ class Search(ModuleGroup[AnyStr]):
         :param indexall: If ``True`` maintains an inverted index of all document IDs to
          optimize wildcard queries in heavy update scenarios.
         """
-        command_arguments: CommandArgList = [index]
+        command_arguments: CommandArgList = [Key(index)]
         if on:
             command_arguments.extend([PrefixToken.ON, on])
 
@@ -446,7 +447,7 @@ class Search(ModuleGroup[AnyStr]):
         """
         return self.client.create_request(
             CommandName.FT_INFO,
-            index,
+            Key(index),
             callback=DictCallback[AnyStr, ResponseType](),
         )
 
@@ -467,7 +468,7 @@ class Search(ModuleGroup[AnyStr]):
         :param query: The query to explain.
         :param dialect: Query dialect to use.
         """
-        command_arguments: CommandArgList = [index, query]
+        command_arguments: CommandArgList = [Key(index), query]
         if dialect:
             command_arguments.extend([PrefixToken.DIALECT, dialect])
         return self.client.create_request(
@@ -496,7 +497,7 @@ class Search(ModuleGroup[AnyStr]):
         :param skipinitialscan: If ``True``, skip the initial scan and indexing.
 
         """
-        command_arguments: CommandArgList = [index]
+        command_arguments: CommandArgList = [Key(index)]
         if skipinitialscan:
             command_arguments.append(PureToken.SKIPINITIALSCAN)
         command_arguments.extend([PureToken.SCHEMA, PureToken.ADD, *field.args])
@@ -518,7 +519,7 @@ class Search(ModuleGroup[AnyStr]):
         :param index: The name of the index to delete.
         :param delete_docs: If ``True``, delete the documents associated with the index.
         """
-        command_arguments: CommandArgList = [index]
+        command_arguments: CommandArgList = [Key(index)]
         if delete_docs:
             command_arguments.append(PureToken.DELETE_DOCS)
 
@@ -543,7 +544,7 @@ class Search(ModuleGroup[AnyStr]):
         """
 
         return self.client.create_request(
-            CommandName.FT_ALIASADD, alias, index, callback=SimpleStringCallback()
+            CommandName.FT_ALIASADD, alias, Key(index), callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -561,7 +562,7 @@ class Search(ModuleGroup[AnyStr]):
         """
 
         return self.client.create_request(
-            CommandName.FT_ALIASUPDATE, alias, index, callback=SimpleStringCallback()
+            CommandName.FT_ALIASUPDATE, alias, Key(index), callback=SimpleStringCallback()
         )
 
     @module_command(
@@ -569,6 +570,7 @@ class Search(ModuleGroup[AnyStr]):
         module=MODULE,
         version_introduced="1.0.0",
         group=COMMAND_GROUP,
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
     )
     def aliasdel(self, alias: StringT) -> CommandRequest[bool]:
         """
@@ -596,7 +598,7 @@ class Search(ModuleGroup[AnyStr]):
         """
 
         return self.client.create_request(
-            CommandName.FT_TAGVALS, index, field_name, callback=SetCallback[AnyStr]()
+            CommandName.FT_TAGVALS, Key(index), field_name, callback=SetCallback[AnyStr]()
         )
 
     @module_command(
@@ -622,7 +624,7 @@ class Search(ModuleGroup[AnyStr]):
          update will be affected.
 
         """
-        command_arguments: CommandArgList = [index, synonym_group]
+        command_arguments: CommandArgList = [Key(index), synonym_group]
         if skipinitialscan:
             command_arguments.append(PureToken.SKIPINITIALSCAN)
         command_arguments.extend(terms)
@@ -647,7 +649,7 @@ class Search(ModuleGroup[AnyStr]):
 
         return self.client.create_request(
             CommandName.FT_SYNDUMP,
-            index,
+            Key(index),
             callback=DictCallback[AnyStr, list[AnyStr]](),
         )
 
@@ -677,7 +679,7 @@ class Search(ModuleGroup[AnyStr]):
         :param exclude: Specifies an exclusion of a custom dictionary
         :param dialect: The query dialect to use.
         """
-        command_arguments: CommandArgList = [index, query]
+        command_arguments: CommandArgList = [Key(index), query]
         if distance:
             command_arguments.extend([PrefixToken.DISTANCE, distance])
         if exclude:
@@ -709,7 +711,7 @@ class Search(ModuleGroup[AnyStr]):
         :param name: The name of the dictionary.
         :param terms: The terms to add to the dictionary.
         """
-        command_arguments: CommandArgList = [name, *terms]
+        command_arguments: CommandArgList = [Key(name), *terms]
 
         return self.client.create_request(
             CommandName.FT_DICTADD, *command_arguments, callback=IntCallback()
@@ -732,7 +734,7 @@ class Search(ModuleGroup[AnyStr]):
         :param name: The name of the dictionary.
         :param terms: The terms to delete from the dictionary.
         """
-        command_arguments: CommandArgList = [name, *terms]
+        command_arguments: CommandArgList = [Key(name), *terms]
 
         return self.client.create_request(
             CommandName.FT_DICTDEL, *command_arguments, callback=IntCallback()
@@ -752,7 +754,7 @@ class Search(ModuleGroup[AnyStr]):
         """
 
         return self.client.create_request(
-            CommandName.FT_DICTDUMP, name, callback=SetCallback[AnyStr]()
+            CommandName.FT_DICTDUMP, Key(name), callback=SetCallback[AnyStr]()
         )
 
     @module_command(
@@ -918,7 +920,7 @@ class Search(ModuleGroup[AnyStr]):
         :param dialect: The query dialect to use.
 
         """
-        command_arguments: CommandArgList = [index, query]
+        command_arguments: CommandArgList = [Key(index), query]
         if nocontent:
             command_arguments.append(PureToken.NOCONTENT)
         if verbatim:
@@ -1067,7 +1069,7 @@ class Search(ModuleGroup[AnyStr]):
         :return: Aggregated search results from the Redis index.
 
         """
-        command_arguments: CommandArgList = [index, query]
+        command_arguments: CommandArgList = [Key(index), query]
         if verbatim:
             command_arguments.append(PureToken.VERBATIM)
         if timeout:
@@ -1179,7 +1181,7 @@ class Search(ModuleGroup[AnyStr]):
         :param timeout: Maximum time to wait for the query to complete.
         :param parameters: Additional parameters to pass to the query.
         """
-        command_arguments: CommandArgList = [index]
+        command_arguments: CommandArgList = [Key(index)]
 
         # SEARCH
         command_arguments.extend([PureToken.SEARCH, search])
@@ -1289,7 +1291,7 @@ class Search(ModuleGroup[AnyStr]):
         Deletes a cursor
 
         """
-        command_arguments: CommandArgList = [index, cursor_id]
+        command_arguments: CommandArgList = [Key(index), cursor_id]
 
         return self.client.create_request(
             CommandName.FT_CURSOR_DEL,

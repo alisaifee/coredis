@@ -12,7 +12,7 @@ from coredis.typing import (
     AnyStr,
     CommandArgList,
     Generic,
-    KeyT,
+    Key,
     Literal,
     ResponseType,
 )
@@ -39,7 +39,7 @@ class BitFieldOperation(Generic[AnyStr]):
     Redis command documentation: `BITFIELD <https://redis.io/commands/bitfield>`__
     """
 
-    def __init__(self, redis_client: AbstractExecutor, key: KeyT, readonly: bool = False) -> None:
+    def __init__(self, redis_client: AbstractExecutor, key: Key, readonly: bool = False) -> None:
         self._command = CommandName.BITFIELD if not readonly else CommandName.BITFIELD_RO
         self._command_stack: CommandArgList = [key]
         self.redis = redis_client

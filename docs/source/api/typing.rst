@@ -13,6 +13,7 @@ for parameters to redis command wrappers.
 .. autodata:: coredis.typing.RedisValueT
 .. autodata:: coredis.typing.StringT
 .. autodata:: coredis.typing.MappingKeyT
+.. autodata:: coredis.typing.MappingStringKeyT
 
 .. autotype:: coredis.typing.JsonType
 

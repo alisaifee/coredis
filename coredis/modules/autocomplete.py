@@ -6,7 +6,7 @@ from ..commands.constants import CommandFlag, CommandGroup, CommandName
 from ..commands.request import CommandRequest
 from ..response._callbacks import BoolCallback, IntCallback
 from ..tokens import PrefixToken, PureToken
-from ..typing import AnyStr, CommandArgList, KeyT, StringT
+from ..typing import AnyStr, CommandArgList, Key, KeyT, StringT
 from .base import ModuleGroup, module_command
 from .response._callbacks.autocomplete import AutocompleteCallback
 from .response.types import AutocompleteSuggestion
@@ -43,7 +43,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
         :param payload: Saves an extra payload with the suggestion, that can be
          fetched when calling :meth:`sugget` by using :paramref:`sugget.withpayloads`
         """
-        command_arguments: CommandArgList = [key, string, score]
+        command_arguments: CommandArgList = [Key(key), string, score]
         if increment_score:
             command_arguments.append(PureToken.INCREMENT)
         if payload:
@@ -82,7 +82,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
         :param withpayloads: If True, returns optional payloads saved along with the suggestions.
         :param max_suggestions: Limits the results to a maximum of ``max_suggestions``
         """
-        command_arguments: CommandArgList = [key, prefix]
+        command_arguments: CommandArgList = [Key(key), prefix]
         if fuzzy:
             command_arguments.append(PureToken.FUZZY)
         if withscores:
@@ -113,7 +113,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
         :param string: The suggestion string to index.
 
         """
-        command_arguments: CommandArgList = [key, string]
+        command_arguments: CommandArgList = [Key(key), string]
 
         return self.client.create_request(
             CommandName.FT_SUGDEL, *command_arguments, callback=BoolCallback()
@@ -131,7 +131,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
 
         :param key: The key of the suggestion dictionary.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
 
         return self.client.create_request(
             CommandName.FT_SUGLEN, *command_arguments, callback=IntCallback()

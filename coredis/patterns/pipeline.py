@@ -45,6 +45,7 @@ from coredis.typing import (
     ExecutionParameters,
     Generator,
     Iterable,
+    Key,
     KeyT,
     ParamSpec,
     RedisValueT,
@@ -100,7 +101,7 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
         self,
         client: Pipeline[Any],
         name: bytes,
-        *arguments: ValueT,
+        *arguments: ValueT | Key,
         callback: Callable[..., CommandResponseT],
         execution_parameters: ExecutionParameters,
     ) -> None:
@@ -128,7 +129,7 @@ class ClusterPipelineCommandRequest(CommandRequest[CommandResponseT]):
         self,
         client: ClusterPipeline[Any],
         name: bytes,
-        *arguments: ValueT,
+        *arguments: ValueT | Key,
         callback: Callable[..., CommandResponseT],
         execution_parameters: ExecutionParameters,
     ) -> None:
@@ -307,7 +308,7 @@ class Pipeline(Client[AnyStr]):
     def create_request(
         self,
         name: bytes,
-        *arguments: ValueT,
+        *arguments: ValueT | Key,
         callback: Callable[..., T_co],
         execution_parameters: ExecutionParameters | None = None,
     ) -> CommandRequest[T_co]:
@@ -336,7 +337,9 @@ class Pipeline(Client[AnyStr]):
         self.watches.extend(keys)
         await self._immediate_execute_command(
             self.client.create_request(
-                CommandName.WATCH, *self.watches, callback=SimpleStringCallback()
+                CommandName.WATCH,
+                *[Key(watch) for watch in self.watches],
+                callback=SimpleStringCallback(),
             )
         )
         self.explicit_transaction = True
@@ -385,7 +388,9 @@ class Pipeline(Client[AnyStr]):
         """
         assert self._connection
         request = self._connection.create_request(
-            command.name, *command.arguments, decode=command.execution_parameters.get("decode")
+            command.name,
+            *command.serialized_arguments,
+            decode=command.execution_parameters.get("decode"),
         )
         return command.callback(await request)
 
@@ -429,7 +434,7 @@ class Pipeline(Client[AnyStr]):
                         f"Abnormal response in pipeline for command {cmd.name!r}: {resp!r}"
                     )
             except (RedisError, TimeoutError) as e:
-                self._annotate_exception(e, i + 1, cmd.name, cmd.arguments)
+                self._annotate_exception(e, i + 1, cmd.name, cmd.serialized_arguments)
                 errors.append((i + 1, e))
 
         try:
@@ -493,7 +498,9 @@ class Pipeline(Client[AnyStr]):
         assert isinstance(response, list)
         for i, r in enumerate(response):
             if isinstance(r, (RedisError, TimeoutError)):
-                self._annotate_exception(r, i + 1, commands[i].name, commands[i].arguments)
+                self._annotate_exception(
+                    r, i + 1, commands[i].name, commands[i].serialized_arguments
+                )
                 raise r
 
     def _annotate_exception(
@@ -612,7 +619,7 @@ class ClusterPipeline(Client[AnyStr]):
     def create_request(
         self,
         name: bytes,
-        *arguments: ValueT,
+        *arguments: ValueT | Key,
         callback: Callable[..., T_co],
         execution_parameters: ExecutionParameters | None = None,
     ) -> CommandRequest[T_co]:
@@ -637,7 +644,9 @@ class ClusterPipeline(Client[AnyStr]):
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
         self._watched_node = self.connection_pool.cluster_layout.node_for_request(
-            self.client.create_request(b"WATCH", *keys, callback=NoopCallback())
+            self.client.create_request(
+                b"WATCH", *[Key(key) for key in keys], callback=NoopCallback()
+            )
         )
         self.watches.extend(keys)
         async with self.connection_pool.acquire(
@@ -686,7 +695,7 @@ class ClusterPipeline(Client[AnyStr]):
             r = c.result
 
             if isinstance(r, (RedisError, TimeoutError)):
-                self._annotate_exception(r, c.position + 1, c.name, c.arguments)
+                self._annotate_exception(r, c.position + 1, c.name, c.serialized_arguments)
                 raise r
 
     def _annotate_exception(

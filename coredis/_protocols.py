@@ -5,6 +5,7 @@ from coredis.typing import (
     Awaitable,
     Callable,
     ExecutionParameters,
+    Key,
     Protocol,
     R,
     TypeVar,
@@ -27,7 +28,7 @@ class AbstractExecutor(Protocol):
     def create_request(
         self,
         name: bytes,
-        *arguments: ValueT,
+        *arguments: ValueT | Key,
         callback: Callable[..., R],
         execution_parameters: ExecutionParameters | None = None,
     ) -> CommandRequest[R]: ...

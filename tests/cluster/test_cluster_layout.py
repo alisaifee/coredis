@@ -10,6 +10,7 @@ from coredis.commands.request import CommandRequest
 from coredis.connection import TCPLocation
 from coredis.exceptions import ConnectionError, MovedError, RedisClusterError
 from coredis.response._callbacks import NoopCallback
+from coredis.typing import Key
 
 
 class TestClusterLayout:
@@ -239,16 +240,21 @@ class TestClusterLayout:
                 CommandRequest(
                     client,
                     b"MGET",
-                    "a{a}",
-                    "a{b}",
-                    "a{c}",
+                    Key("a{a}"),
+                    Key("a{b}"),
+                    Key("a{c}"),
                     callback=NoopCallback(),
                     execution_parameters={},
                 )
             )
         assert layout.node_for_request(
             CommandRequest(
-                client, b"MGET", "a{a}", "b{a}", callback=NoopCallback(), execution_parameters={}
+                client,
+                b"MGET",
+                Key("a{a}"),
+                Key("b{a}"),
+                callback=NoopCallback(),
+                execution_parameters={},
             )
         )
         with pytest.raises(RedisClusterError):

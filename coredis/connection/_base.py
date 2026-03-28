@@ -747,7 +747,7 @@ class BaseConnection(ABC):
             Request(
                 connection=self,
                 command=cmd.name,
-                args=cmd.arguments,
+                args=cmd.serialized_arguments,
                 decode=bool(cmd.decode) if cmd.decode is not None else self._decode_responses,
                 encoding=self._encoding,
                 raise_exceptions=raise_exceptions,

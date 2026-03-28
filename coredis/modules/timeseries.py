@@ -8,6 +8,7 @@ from deprecated.sphinx import versionadded
 from coredis.typing import (
     AnyStr,
     CommandArgList,
+    Key,
     KeyT,
     Literal,
     Mapping,
@@ -108,7 +109,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param labels: A dictionary of labels to be associated with the time series.
         :return: True if the time series was created successfully, False otherwise.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if retention is not None:
             command_arguments.extend([PrefixToken.RETENTION, normalized_milliseconds(retention)])
         if encoding:
@@ -150,7 +151,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         """
         return self.client.create_request(
             CommandName.TS_DEL,
-            key,
+            Key(key),
             normalized_timestamp(fromtimestamp),
             normalized_timestamp(totimestamp),
             callback=IntCallback(),
@@ -192,7 +193,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param duplicate_policy: Policy for handling multiple samples with identical timestamps.
         :return: True if executed correctly, False otherwise.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if labels:
             command_arguments.extend(
                 [
@@ -253,7 +254,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :return: Number of samples added to the time series.
         """
         command_arguments: CommandArgList = [
-            key,
+            Key(key),
             normalized_timestamp(timestamp),
             value,
         ]
@@ -293,7 +294,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
          to the server clock, and a numeric data value of the sample.
         :return: A tuple of integers representing the timestamp of each added sample
         """
-        command_arguments: CommandArgList = list(itertools.chain(*ktvs))
+        command_arguments: CommandArgList = list(
+            itertools.chain(*[(Key(ktv[0]), ktv[1], ktv[2]) for ktv in ktvs])
+        )
 
         return self.client.create_request(
             CommandName.TS_MADD, *command_arguments, callback=TupleCallback[int]()
@@ -335,7 +338,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
          Use it only if you are creating a new time series.
         :return: The timestamp of the upserted sample, or an error.
         """
-        command_arguments: CommandArgList = [key, value]
+        command_arguments: CommandArgList = [Key(key), value]
         if timestamp:
             command_arguments.extend([PrefixToken.TIMESTAMP, normalized_timestamp(timestamp)])
         if retention:
@@ -392,7 +395,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
          time series.
         :return: The timestamp of the upserted sample, or an error if the operation failed.
         """
-        command_arguments: CommandArgList = [key, value]
+        command_arguments: CommandArgList = [Key(key), value]
 
         if timestamp:
             command_arguments.extend([PrefixToken.TIMESTAMP, normalized_timestamp(timestamp)])
@@ -453,7 +456,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
          in milliseconds. The default value is 0 aligned with the epoch.
         :return: True if executed correctly, False otherwise.
         """
-        command_arguments: CommandArgList = [source, destination]
+        command_arguments: CommandArgList = [Key(source), Key(destination)]
         command_arguments.extend(
             [
                 PrefixToken.AGGREGATION,
@@ -485,7 +488,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
         .. warning:: This command does not delete the compacted series.
         """
-        command_arguments: CommandArgList = [source, destination]
+        command_arguments: CommandArgList = [Key(source), Key(destination)]
 
         return self.client.create_request(
             CommandName.TS_DELETERULE,
@@ -568,7 +571,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :return: A tuple of samples, where each sample is a tuple of timestamp and value.
         """
         command_arguments: CommandArgList = [
-            key,
+            Key(key),
             normalized_timestamp(fromtimestamp),
             normalized_timestamp(totimestamp),
         ]
@@ -672,7 +675,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :return: A tuple of timestamp-value pairs in reverse order.
         """
         command_arguments: CommandArgList = [
-            key,
+            Key(key),
             normalized_timestamp(fromtimestamp),
             normalized_timestamp(totimestamp),
         ]
@@ -1020,7 +1023,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :return: A tuple of (timestamp, value) of the sample with the highest timestamp,
          or an empty tuple if the time series is empty.
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if latest:
             command_arguments.append(b"LATEST")
         return self.client.create_request(
@@ -1099,7 +1102,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param debug: Optional flag to get a more detailed information about the chunks.
         :return: Dictionary with information about the time series (name-value pairs).
         """
-        command_arguments: CommandArgList = [key]
+        command_arguments: CommandArgList = [Key(key)]
         if debug:
             command_arguments.append(b"DEBUG")
         return self.client.create_request(
