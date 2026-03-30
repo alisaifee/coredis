@@ -546,6 +546,7 @@ class RedisCluster(
         cache: AbstractCache | None = ...,
         retry_policy: RetryPolicy = ...,
         type_adapter: TypeAdapter | None = ...,
+        pool_timeout: float | None = ...,
         **kwargs: Any,
     ) -> RedisCluster[bytes]: ...
 
@@ -565,6 +566,7 @@ class RedisCluster(
         cache: AbstractCache | None = ...,
         retry_policy: RetryPolicy = ...,
         type_adapter: TypeAdapter | None = ...,
+        pool_timeout: float | None = ...,
         **kwargs: Any,
     ) -> RedisCluster[str]: ...
 
@@ -593,6 +595,7 @@ class RedisCluster(
             ),
         ),
         type_adapter: TypeAdapter | None = None,
+        pool_timeout: float | None = None,
         **kwargs: Any,
     ) -> RedisClusterT:
         """
@@ -622,6 +625,7 @@ class RedisCluster(
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
+                    timeout=pool_timeout,
                     _cache=cache,
                     **kwargs,
                 ),
@@ -640,6 +644,7 @@ class RedisCluster(
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
+                    timeout=pool_timeout,
                     _cache=cache,
                     **kwargs,
                 ),

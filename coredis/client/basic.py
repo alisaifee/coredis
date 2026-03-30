@@ -784,6 +784,7 @@ class Redis(Client[AnyStr]):
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         cache: AbstractCache | None = ...,
+        pool_timeout: float | None = ...,
         **kwargs: Any,
     ) -> Redis[bytes]: ...
 
@@ -801,6 +802,7 @@ class Redis(Client[AnyStr]):
         notouch: bool = ...,
         retry_policy: RetryPolicy = ...,
         cache: AbstractCache | None = ...,
+        pool_timeout: float | None = ...,
         **kwargs: Any,
     ) -> Redis[str]: ...
 
@@ -820,6 +822,7 @@ class Redis(Client[AnyStr]):
         ),
         type_adapter: TypeAdapter | None = None,
         cache: AbstractCache | None = None,
+        pool_timeout: float | None = None,
         **kwargs: Any,
     ) -> RedisT:
         """
@@ -851,6 +854,7 @@ class Redis(Client[AnyStr]):
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
+                    timeout=pool_timeout,
                     _cache=cache,
                     **kwargs,
                 ),
@@ -869,6 +873,7 @@ class Redis(Client[AnyStr]):
                     noreply=noreply,
                     noevict=noevict,
                     notouch=notouch,
+                    timeout=pool_timeout,
                     _cache=cache,
                     **kwargs,
                 ),
