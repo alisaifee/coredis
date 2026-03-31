@@ -59,7 +59,7 @@ class TestRetryPolicies:
 
         assert before.await_count == 2
         assert call.await_count == 2
-        assert failure.await_count == 2
+        assert failure.await_count == 1
 
     @pytest.mark.parametrize(
         "policy",
@@ -82,7 +82,7 @@ class TestRetryPolicies:
             await policy.call_with_retries(call, failure_hook=failure)
 
         assert call.await_count == 2
-        assert failure[ArithmeticError].await_count == 2
+        assert failure[ArithmeticError].await_count == 1
 
     async def test_composite_retry(self):
         class Mock:
@@ -149,12 +149,12 @@ class TestRetryPolicies:
         with pytest.raises(ExceptionGroup):
             await policy.call_with_retries(group, failure_hook=failure)
         assert call.call_count == 3
-        assert failure[ArithmeticError].call_count == 3
+        assert failure[ArithmeticError].call_count == 2
 
         with pytest.raises(ExceptionGroup):
             await policy.call_with_retries(nested_group, failure_hook=failure)
         assert nested_call.call_count == 3
-        assert failure[ArithmeticError].call_count == 6
+        assert failure[ArithmeticError].call_count == 4
 
     @pytest.mark.parametrize(
         "policy, expected_delay",

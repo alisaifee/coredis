@@ -152,9 +152,10 @@ class CommandRequest(Awaitable[CommandResponseT]):
         """
 
         :param policy: Retry policy to use
-        :param failure_hook: Callable[..., Awaitable[Any]]
-                      | dict[type[BaseException], Callable[..., Awaitable[None]]]
-                      | None = None,
+        :param failure_hook: if provided and is a callable it will be
+         called after catching any retryable exception and before retrying. If it is a mapping
+         of exception types to callables, the first exception type that is a parent
+         of any encountered exception will be called.
         :return: A retryable version of the command object
 
         Calling ``retry`` is essentially the same as explicitly using
@@ -331,7 +332,7 @@ class RetryableCommandRequest(CommandRequest[CommandResponseT]):
         :param request: The original request to retry
         :param policy: The retry policy to use when executing the command
         :param failure_hook: if provided and is a callable it will be
-         called everytime a retryable exception is encountered. If it is a mapping
+         called after catching any retryable exception and before retrying. If it is a mapping
          of exception types to callables, the first exception type that is a parent
          of any encountered exception will be called.
         """

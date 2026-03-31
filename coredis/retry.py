@@ -80,7 +80,7 @@ class RetryPolicy(ABC):
          awaited when retrying if :paramref:`RetryPolicy.retryable_exceptions` is encountered.
         :param before_hook: if provided will be called on every attempt.
         :param failure_hook: if provided and is a callable it will be
-         called everytime a retryable exception is encountered. If it is a mapping
+         called after catching any retryable exception and before retrying. If it is a mapping
          of exception types to callables, the first exception type that is a parent
          of any encountered exception will be called.
         """
@@ -92,20 +92,20 @@ class RetryPolicy(ABC):
                 return await func()
             except BaseException as e:
                 if self.will_retry(e):
-                    logger.info(f"Retry attempt {attempt.attempt} due to error: {e}")
-                    if failure_hook:
-                        try:
-                            if isinstance(failure_hook, dict):
-                                for exc_type, hook in failure_hook.items():
-                                    if self._exception_matches(e, exc_type):
-                                        await hook(e)
-                                        break
-                            else:
-                                await failure_hook(e)
-                        except:  # noqa
-                            pass
                     last_error = e
+                    logger.info(f"Retry attempt {attempt.attempt} due to error: {e}")
                     if not attempt.final:
+                        if failure_hook:
+                            try:
+                                if isinstance(failure_hook, dict):
+                                    for exc_type, hook in failure_hook.items():
+                                        if self._exception_matches(e, exc_type):
+                                            await hook(e)
+                                            break
+                                else:
+                                    await failure_hook(e)
+                            except:  # noqa
+                                pass
                         await sleep(self.delay(attempt.attempt))
                 else:
                     raise
@@ -251,7 +251,7 @@ class CompositeRetryPolicy(RetryPolicy):
          awaited when retrying if :paramref:`RetryPolicy.retryable_exceptions` is encountered.
         :param before_hook: if provided will be called before every attempt.
         :param failure_hook: if provided and is a callable it will be
-         called everytime a retryable exception is encountered. If it is a mapping
+         called after catching any retryable exception and before retrying. If it is a mapping
          of exception types to callables, the first exception type that is a parent
          of any encountered exception will be called.
         """
@@ -275,16 +275,16 @@ class CompositeRetryPolicy(RetryPolicy):
                         except StopIteration:
                             pass  # This policy is exhausted
 
-                if failure_hook:
-                    if isinstance(failure_hook, dict):
-                        for exc_type, hook in failure_hook.items():
-                            if RetryPolicy._exception_matches(e, exc_type):
-                                await hook(e)
-                                break
-                    else:
-                        await failure_hook(e)
-
                 if retry_delays:
+                    if failure_hook:
+                        if isinstance(failure_hook, dict):
+                            for exc_type, hook in failure_hook.items():
+                                if RetryPolicy._exception_matches(e, exc_type):
+                                    await hook(e)
+                                    break
+                        else:
+                            await failure_hook(e)
+
                     logger.info(f"Retry attempt {total_attempts} due to error: {e}")
                     await sleep(max(retry_delays))
                     continue
