@@ -25,6 +25,9 @@ inputs:
   uvloop:
     required: false
     default: false
+  otel:
+    required: false
+    default: false
 runs:
   using: "composite"
   steps:
@@ -43,6 +46,7 @@ runs:
       run: uv run mypyc coredis/constants/ coredis/parser.py coredis/_packer.py coredis/_utils.py
     - name: Tests
       env:
+        COREDIS_OTEL_ENABLED: ${{ inputs.otel == 'true' && 'True' || 'False' }}
         COREDIS_UVLOOP: ${{ inputs.uvloop == 'true' && 'True' || 'False' }}
         COREDIS_ANYIO_BACKEND: ${{ inputs.anyio-backend }}
         HOST_OS: linux

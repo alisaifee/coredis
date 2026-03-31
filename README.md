@@ -29,11 +29,18 @@ Fast, async, fully-typed Redis client with support for cluster and sentinel
 - Convenient [Stream Consumers](https://coredis.readthedocs.org/en/latest/handbook/streams.html) implementation
 - Comprehensive documentation
 - Optional [runtime type validation](https://coredis.readthedocs.org/en/latest/handbook/typing.html#runtime-type-checking) (via [beartype](https://github.com/beartype/beartype))
+- Optional [observability with OpenTelemetry](https://coredis.readthedocs.org/en/latest/handbook/observability.html)
 
 ## Installation
 
 ```console
 $ pip install coredis
+```
+
+### Optional extras
+
+```console
+$ pip install "coredis[otel]"
 ```
 
 ## Getting started
@@ -126,8 +133,7 @@ coredis is additionally tested against:
 
 ## References
 
-- [Documentation (Stable)](http://coredis.readthedocs.org/en/stable)
-- [Documentation (Latest)](http://coredis.readthedocs.org/en/latest)
-- [Changelog](http://coredis.readthedocs.org/en/stable/release_notes.html)
-- [Project History](http://coredis.readthedocs.org/en/stable/history.html)
-
+- [Documentation (Stable)](https://coredis.readthedocs.org/en/stable)
+- [Documentation (Latest)](https://coredis.readthedocs.org/en/latest)
+- [Changelog](https://coredis.readthedocs.org/en/stable/release_notes.html)
+- [Project History](https://coredis.readthedocs.org/en/stable/history.html)
