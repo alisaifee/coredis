@@ -63,6 +63,12 @@ jobs:
             anyio-backend: "trio"
           - python-version: "3.14"
             redis-version: "latest"
+            test-params: "-m otel"
+            runtime-type-checks: true
+            otel: true
+            label: "OpenTelemetry"
+          - python-version: "3.14"
+            redis-version: "latest"
             test-params: "-m dragonfly"
             label: "Dragonfly"
           - python-version: "3.14"
@@ -88,6 +94,7 @@ jobs:
         runtime-type-checks: ${{ matrix.runtime-type-checks }}
         orjson: ${{ matrix.orjson }}
         uvloop: ${{ matrix.uvloop }}
+        otel: ${{ matrix.otel }}
   build:
     needs: [lint]
     name: "Build"

@@ -12,6 +12,7 @@ from anyio import (
 from anyio.abc import TaskStatus
 
 from coredis._concurrency import Queue
+from coredis._telemetry import TelemetryProvider, get_telemetry_provider
 from coredis.connection._base import (
     BaseConnectionParams,
     ConnectionT,
@@ -244,20 +245,24 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
         Gets or create a connection from the pool. Be careful to only release the
         connection AFTER all commands are sent, or race conditions are possible.
         """
-        with fail_after(self.timeout):
-            # if stack has a connection, use that
-            connection = await self._available_connections.get()
-            if connection is None or not connection.reusable:
-                # If the connection was in the pool but is "dirty" it should be
-                # invalidated (to avoid leaking) and discarded.
-                if connection:
-                    connection.invalidate()
-                connection = await self._construct_connection()
-                if err := await self.task_group.start(self.__wrap_connection, connection):
-                    self._available_connections.append_nowait(None)
-                    raise err
-                self._online_connections.add(connection)
-            return connection
+        with get_telemetry_provider().capture_connection_wait_time(self):
+            with fail_after(self.timeout):
+                # if stack has a connection, use that
+                connection = await self._available_connections.get()
+                if connection is None or not connection.reusable:
+                    # If the connection was in the pool but is "dirty" it should be
+                    # invalidated (to avoid leaking) and discarded.
+                    if connection:
+                        connection.invalidate()
+                    with get_telemetry_provider().capture_connection_create_time(self):
+                        connection = await self._construct_connection()
+                        if err := await self.task_group.start(self.__wrap_connection, connection):
+                            self._available_connections.append_nowait(None)
+                            raise err
+                    self.statistics.connection_created(connection)
+                    self._online_connections.add(connection)
+                self.statistics.connection_leased(connection)
+                return connection
 
     @asynccontextmanager
     async def acquire(self, **_: Any) -> AsyncGenerator[ConnectionT]:
@@ -277,6 +282,7 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
         """
         Checks connection for liveness and releases it back to the pool.
         """
+        self.statistics.connection_released(connection)
         if connection.usable:
             self._available_connections.put_nowait(connection)
 
@@ -291,6 +297,9 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
     def _reset(self) -> None:
         # TODO: seems like something should be cleared?
         pass
+
+    def telemetry_attributes(self, provider: TelemetryProvider) -> dict[str, str | int]:
+        return {"db.client.connection.pool.name": str(self.location)}
 
     async def _construct_connection(self) -> ConnectionT:
         assert self.location

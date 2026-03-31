@@ -140,7 +140,9 @@ class CommandRequest(Awaitable[CommandResponseT]):
     def retry(
         self,
         policy: RetryPolicy,
-        failure_hook: Callable[..., Awaitable[Any]] | None = None,
+        failure_hook: Callable[..., Awaitable[Any] | None]
+        | dict[type[BaseException], Callable[..., Awaitable[None] | None]]
+        | None = None,
     ) -> CommandRequest[CommandResponseT]:
         """
 
@@ -315,8 +317,8 @@ class RetryableCommandRequest(CommandRequest[CommandResponseT]):
         self,
         request: CommandRequest[CommandResponseT],
         policy: RetryPolicy,
-        failure_hook: Callable[..., Awaitable[Any]]
-        | dict[type[BaseException], Callable[..., Awaitable[None]]]
+        failure_hook: Callable[..., Awaitable[Any] | None]
+        | dict[type[BaseException], Callable[..., Awaitable[None] | None]]
         | None = None,
         **kwargs: Any,
     ) -> None:

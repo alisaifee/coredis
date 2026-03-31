@@ -5,6 +5,7 @@ import dataclasses
 from anyio import connect_unix, fail_after
 from anyio.abc import ByteStream
 
+from coredis._telemetry import TelemetryProvider
 from coredis.typing import Unpack
 
 from ._base import BaseConnection, BaseConnectionParams, Location
@@ -18,7 +19,7 @@ class UnixDomainSocketLocation(Location):
     path: str
 
     def __repr__(self) -> str:
-        return f"<path={self.path}>"
+        return f"{self.path}"
 
     async def check(self) -> bool:
         try:
@@ -48,3 +49,12 @@ class UnixDomainSocketConnection(BaseConnection):
 
     def describe(self) -> str:
         return f"UnixDomainSocketConnection<path={self.location.path},db={self._db}>"
+
+    def telemetry_attributes(self, provider: TelemetryProvider) -> dict[str, str | int]:
+        return {
+            **super().telemetry_attributes(provider),
+            **{
+                "network.peer.hostname": self.location.path,
+                "server.address": self.location.path,
+            },
+        }
