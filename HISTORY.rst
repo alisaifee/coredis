@@ -3,6 +3,20 @@
 Changelog
 =========
 
+v6.4.0
+------
+Release Date: 2026-04-01
+
+* Bug Fix
+
+  * Add missing ``pool_timeout`` argument in client ``from_url`` factory
+    methods
+  * Remove extra final call to ``failure_hook`` in retry policy
+
+* Compatibility
+
+  * Relax version constraint on ``packaging`` dependency
+
 v6.3.0
 ------
 Release Date: 2026-03-23
