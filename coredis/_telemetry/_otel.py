@@ -122,13 +122,11 @@ class OpenTelemetryProvider(TelemetryProvider):
             with self.tracer.start_as_current_span(
                 name, kind=SpanKind.CLIENT, attributes=attributes
             ) as span:
-                try:
-                    start = time.perf_counter()
-                    yield
-                    with contextlib.suppress(Exception):
-                        span.set_status(Status(StatusCode.OK))
-                finally:
+                start = time.perf_counter()
+                yield
+                if commands:
                     self._operation_duration.record(time.perf_counter() - start, attributes)
+                span.set_status(Status(StatusCode.OK))
         else:
             yield
 
