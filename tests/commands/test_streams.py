@@ -64,6 +64,21 @@ class TestStreams:
         )
         assert identifier == _s("12321-0")
 
+    async def test_xadd_with_minid(self, client, _s):
+        await client.xadd(
+            "test_stream",
+            field_values={"k1": "1"},
+        )
+        identifier = await client.xadd("test_stream", field_values={"k1": "2"})
+        await client.xadd(
+            "test_stream",
+            field_values={"k1": "3"},
+            trim_strategy=PureToken.MINID,
+            threshold=identifier,
+        )
+        length = await client.xlen("test_stream")
+        assert length == 2
+
     async def test_xadd_with_maxlen_accurately(self, client, _s):
         for idx in range(10):
             await client.xadd(

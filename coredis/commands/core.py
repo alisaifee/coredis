@@ -5879,7 +5879,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         idmpauto: StringT | None = None,
         idmp: tuple[StringT, StringT] | None = None,
         trim_strategy: Literal[PureToken.MAXLEN, PureToken.MINID] | None = None,
-        threshold: int | None = None,
+        threshold: ValueT | None = None,
         trim_operator: Literal[PureToken.EQUAL, PureToken.APPROXIMATELY] | None = None,
         limit: int | None = None,
         condition: Literal[PureToken.KEEPREF, PureToken.DELREF, PureToken.ACKED] | None = None,
@@ -5913,7 +5913,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.append(PrefixToken.IDMP)
             command_arguments.extend(idmp)
 
-        if trim_strategy == PureToken.MAXLEN:
+        if trim_strategy is not None:
             command_arguments.append(trim_strategy)
 
             if trim_operator:
