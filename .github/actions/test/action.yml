@@ -37,10 +37,6 @@ runs:
       shell: bash
       run: |
         uv sync --locked --all-extras --group ci
-    - name: Compile with mypyc
-      if: ${{ inputs.compiled == 'true' }}
-      shell: bash
-      run: uv run mypyc coredis/constants/ coredis/parser.py coredis/_packer.py coredis/_utils.py
     - name: Tests
       env:
         COREDIS_UVLOOP: ${{ inputs.uvloop == 'true' && 'True' || 'False' }}
@@ -50,6 +46,7 @@ runs:
         COREDIS_REDIS_VERSION: ${{inputs.redis-version}}
         COREDIS_RUNTIME_CHECKS: ${{inputs.runtime-type-checks == 'true' && 'True' || 'False'}}
         COMPOSE_PARALLEL_LIMIT: 1
+        HATCH_BUILD_HOOKS_ENABLE: ${{inputs.compiled == 'true' && '1' || '0'}}
         UV_GROUP: ${{ inputs.orjson == 'true' && 'orjson' || 'dev' }}
       shell: bash
       run: |
