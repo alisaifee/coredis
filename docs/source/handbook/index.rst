@@ -20,6 +20,7 @@ Handbook
     connections
     encoding
     optimization
+    observability
     typing
     response
     development
@@ -62,6 +63,7 @@ Performance
 - :ref:`handbook/pipelines:pipelines`
 - :ref:`handbook/noreply:no reply mode`
 - :ref:`handbook/optimization:optimized mode`
+- :ref:`handbook/observability:observability`
 
 Reliability
 -----------

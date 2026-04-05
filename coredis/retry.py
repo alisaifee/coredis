@@ -70,9 +70,9 @@ class RetryPolicy(ABC):
     async def call_with_retries(
         self,
         func: Callable[..., Awaitable[R]],
-        before_hook: Callable[..., Awaitable[Any]] | None = None,
-        failure_hook: Callable[..., Awaitable[Any]]
-        | dict[type[BaseException], Callable[..., Awaitable[None]]]
+        before_hook: Callable[..., Awaitable[Any] | None] | None = None,
+        failure_hook: Callable[..., Awaitable[Any] | None]
+        | dict[type[BaseException], Callable[..., Awaitable[Any] | None]]
         | None = None,
     ) -> R:
         """
@@ -88,7 +88,8 @@ class RetryPolicy(ABC):
         for attempt in self.attempts():
             try:
                 if before_hook:
-                    await before_hook()
+                    if cb := before_hook():
+                        await cb
                 return await func()
             except BaseException as e:
                 if self.will_retry(e):
@@ -100,10 +101,12 @@ class RetryPolicy(ABC):
                                 if isinstance(failure_hook, dict):
                                     for exc_type, hook in failure_hook.items():
                                         if self._exception_matches(e, exc_type):
-                                            await hook(e)
+                                            if cb := hook(e):
+                                                await cb
                                             break
                                 else:
-                                    await failure_hook(e)
+                                    if cb := failure_hook(e):
+                                        await cb
                             except:  # noqa
                                 pass
                         await sleep(self.delay(attempt.attempt))
@@ -237,10 +240,11 @@ class CompositeRetryPolicy(RetryPolicy):
     async def call_with_retries(
         self,
         func: Callable[..., Awaitable[R]],
-        before_hook: Callable[..., Awaitable[Any]] | None = None,
+        before_hook: Callable[..., Awaitable[Any] | None] | None = None,
         failure_hook: None
         | (
-            Callable[..., Awaitable[Any]] | dict[type[BaseException], Callable[..., Awaitable[Any]]]
+            Callable[..., Awaitable[Any] | None]
+            | dict[type[BaseException], Callable[..., Awaitable[Any] | None]]
         ) = None,
     ) -> R:
         """
@@ -262,7 +266,8 @@ class CompositeRetryPolicy(RetryPolicy):
             try:
                 total_attempts += 1
                 if before_hook:
-                    await before_hook()
+                    if cb := before_hook():
+                        await cb
                 return await func()
             except BaseException as e:
                 retry_delays = []
@@ -280,10 +285,12 @@ class CompositeRetryPolicy(RetryPolicy):
                         if isinstance(failure_hook, dict):
                             for exc_type, hook in failure_hook.items():
                                 if RetryPolicy._exception_matches(e, exc_type):
-                                    await hook(e)
+                                    if cb := hook(e):
+                                        await cb
                                     break
                         else:
-                            await failure_hook(e)
+                            if cb := failure_hook(e):
+                                await cb
 
                     logger.info(f"Retry attempt {total_attempts} due to error: {e}")
                     await sleep(max(retry_delays))
@@ -293,7 +300,9 @@ class CompositeRetryPolicy(RetryPolicy):
 
 def retryable(
     policy: RetryPolicy,
-    failure_hook: Callable[..., Awaitable[Any]] | None = None,
+    failure_hook: Callable[..., Awaitable[Any] | None]
+    | dict[type[BaseException], Callable[..., Awaitable[Any] | None]]
+    | None = None,
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """
     Decorator to be used to apply a retry policy to a coroutine

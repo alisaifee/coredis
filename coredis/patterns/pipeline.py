@@ -6,6 +6,7 @@ from typing import Any, cast
 from anyio import AsyncContextManagerMixin
 from deprecated.sphinx import versionchanged
 
+from coredis._telemetry import get_telemetry_provider
 from coredis._utils import nativestr
 from coredis.client import Client, RedisCluster
 from coredis.cluster._node import ClusterNodeLocation
@@ -543,24 +544,28 @@ class Pipeline(Client[AnyStr]):
             return None
         if not self._connection:
             self._connection = await self.client.connection_pool.get_connection()
+        with get_telemetry_provider().start_span(
+            tuple(self.command_stack),
+            self._connection,
+            name="MULTI" if self._transaction else "PIPELINE",
+        ):
+            if self.scripts:
+                await self._load_scripts()
+            if self._transaction or self.explicit_transaction:
+                exec = self._execute_transaction
+            else:
+                exec = self._execute_pipeline
 
-        if self.scripts:
-            await self._load_scripts()
-        if self._transaction or self.explicit_transaction:
-            exec = self._execute_transaction
-        else:
-            exec = self._execute_pipeline
-
-        try:
-            return await exec(self._connection, self.command_stack)
-        except (ConnectionError, TimeoutError) as e:
-            if self.watches:
-                raise WatchError(
-                    "A connection error occurred while watching one or more keys"
-                ) from e
-            raise
-        finally:
-            await self._clear()
+            try:
+                return await exec(self._connection, self.command_stack)
+            except (ConnectionError, TimeoutError) as e:
+                if self.watches:
+                    raise WatchError(
+                        "A connection error occurred while watching one or more keys"
+                    ) from e
+                raise
+            finally:
+                await self._clear()
 
 
 @versionchanged(
@@ -717,20 +722,25 @@ class ClusterPipeline(Client[AnyStr]):
         """
         if not self.command_stack:
             return
-        if self.scripts:
-            await self._load_scripts()
-        use_primary = not (
-            self.client.connection_pool.read_from_replicas
-            and all(cmd.readonly for cmd in self.command_stack)
-        )
-        if self._transaction or self.explicit_transaction:
-            execute = self._send_cluster_transaction
-        else:
-            execute = self._send_cluster_commands
-        try:
-            await execute(self._raise_on_error, use_primary)
-        finally:
-            await self._clear()
+        with get_telemetry_provider().start_span(
+            tuple(self.command_stack),
+            self.client.connection_pool,
+            name="MULTI" if self._transaction else "PIPELINE",
+        ):
+            if self.scripts:
+                await self._load_scripts()
+            use_primary = not (
+                self.client.connection_pool.read_from_replicas
+                and all(cmd.readonly for cmd in self.command_stack)
+            )
+            if self._transaction or self.explicit_transaction:
+                execute = self._send_cluster_transaction
+            else:
+                execute = self._send_cluster_commands
+            try:
+                await execute(self._raise_on_error, use_primary)
+            finally:
+                await self._clear()
 
     def _get_slot_for_command(self, command: ClusterPipelineCommandRequest[Any]) -> int | None:
         affected_slots = command.affected_slots

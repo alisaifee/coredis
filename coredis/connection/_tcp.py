@@ -6,6 +6,7 @@ import socket
 from anyio import connect_tcp, fail_after
 from anyio.abc import ByteStream, SocketAttribute
 
+from coredis._telemetry import TelemetryProvider
 from coredis.typing import Unpack
 
 from ._base import BaseConnection, BaseConnectionParams, Location
@@ -21,7 +22,7 @@ class TCPLocation(Location):
     port: int
 
     def __repr__(self) -> str:
-        return f"<host={self.host},port={self.port}>"
+        return f"{self.host}:{self.port}"
 
     async def check(self) -> bool:
         try:
@@ -73,3 +74,14 @@ class TCPConnection(BaseConnection):
 
     def describe(self) -> str:
         return f"Connection<host={self.location.host},port={self.location.port},db={self._db}>"
+
+    def telemetry_attributes(self, provider: TelemetryProvider) -> dict[str, str | int]:
+        return {
+            **super().telemetry_attributes(provider),
+            **{
+                "network.peer.hostname": self.location.host,
+                "network.peer.port": self.location.port,
+                "server.address": self.location.host,
+                "server.port": self.location.port,
+            },
+        }

@@ -12,6 +12,7 @@ from deprecated.sphinx import versionadded
 from exceptiongroup import catch
 from packaging.version import InvalidVersion, Version
 
+from coredis._telemetry import get_telemetry_provider
 from coredis._utils import logger, nativestr
 from coredis.commands import CommandRequest
 from coredis.commands._validators import (
@@ -892,9 +893,13 @@ class Redis(Client[AnyStr]):
         Executes a command with configured retries and returns
         the parsed response
         """
-        return await self.retry_policy.call_with_retries(
-            lambda: self._execute_command(command),
-        )
+        with get_telemetry_provider().start_span((command,)):
+            return await self.retry_policy.call_with_retries(
+                lambda: self._execute_command(command),
+                failure_hook=lambda err: get_telemetry_provider().emit_event(
+                    "retry", exception=err
+                ),
+            )
 
     async def _execute_command(
         self,
