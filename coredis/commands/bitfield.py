@@ -101,8 +101,7 @@ class BitFieldOperation(Generic[AnyStr]):
     def exc(self) -> CommandRequest[ResponseType]:
         """execute commands in command stack"""
 
-        return CommandRequest(
-            self.redis,
+        return self.redis.create_request(
             self._command,
             *self._command_stack,
             callback=NoopCallback(),
