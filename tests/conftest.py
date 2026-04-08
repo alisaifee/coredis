@@ -814,6 +814,7 @@ def fake_redis():
 
         def __init__(self):
             self.cache = None
+            self.type_adapter = None
 
         async def initialize(self):
             pass
@@ -839,6 +840,7 @@ def fake_redis_cluster():
 
         def __init__(self):
             self.cache = None
+            self.type_adapter = None
 
         async def initialize(self):
             pass

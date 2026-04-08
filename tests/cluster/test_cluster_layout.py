@@ -233,12 +233,9 @@ class TestClusterLayout:
     async def test_node_for_request(self, redis_cluster_server, discovery_service, mocker):
         layout = ClusterLayout(discovery_service, error_threshold=1, maximum_staleness=1)
         await layout.initialize()
-        client = mocker.Mock()
-
         with pytest.raises(RedisClusterError, match="don't hash to the same slot"):
             layout.node_for_request(
                 CommandRequest(
-                    client,
                     b"MGET",
                     Key("a{a}"),
                     Key("a{b}"),
@@ -249,7 +246,6 @@ class TestClusterLayout:
             )
         assert layout.node_for_request(
             CommandRequest(
-                client,
                 b"MGET",
                 Key("a{a}"),
                 Key("b{a}"),
@@ -260,7 +256,6 @@ class TestClusterLayout:
         with pytest.raises(RedisClusterError):
             layout.node_for_request(
                 CommandRequest(
-                    client,
                     b"DEL",
                     "a{a}",
                     "b{b}",

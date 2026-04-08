@@ -77,6 +77,13 @@ P = ParamSpec("P")
 T_co = TypeVar("T_co", covariant=True)
 R = TypeVar("R")
 
+try:
+    from mypy_extensions import mypyc_attr
+except ImportError:
+
+    def mypyc_attr(*attrs, **kwattrs):  # type: ignore
+        return lambda x: x
+
 
 def safe_beartype(func: Callable[P, R]) -> Callable[P, R]:
     return beartype(func)
@@ -600,6 +607,7 @@ __all__ = [
     "MutableMapping",
     "MutableSet",
     "MutableSequence",
+    "mypyc_attr",
     "NamedTuple",
     "Node",
     "NotRequired",

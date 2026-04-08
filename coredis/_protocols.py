@@ -32,3 +32,7 @@ class AbstractExecutor(Protocol):
         callback: Callable[..., R],
         execution_parameters: ExecutionParameters | None = None,
     ) -> CommandRequest[R]: ...
+
+
+class CommandResolver(Protocol):
+    def __call__(self, command: CommandRequest[R]) -> Awaitable[R]: ...

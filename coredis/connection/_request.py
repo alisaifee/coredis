@@ -2,30 +2,55 @@ from __future__ import annotations
 
 import dataclasses
 from _weakref import ProxyType, proxy
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from anyio import Event, get_cancelled_exc_class, move_on_after
 
 from coredis._utils import nativestr
-from coredis.typing import Generator, RedisValueT, ResponseType
+from coredis.typing import Generator, ResponseType
 
 if TYPE_CHECKING:
     from ._base import BaseConnection
 
 
-@dataclasses.dataclass(slots=True)
-class Request:
+@dataclasses.dataclass
+class BaseRequest(ABC):
     connection: dataclasses.InitVar[BaseConnection]
+    disconnect_on_cancellation: bool = False
+    response_timeout: float | None = None
+    _connection: ProxyType[BaseConnection] = dataclasses.field(init=False)
+
+    @property
+    @abstractmethod
+    def complete(self) -> bool: ...
+
+    @property
+    @abstractmethod
+    def current_decode(self) -> bool: ...
+
+    @property
+    @abstractmethod
+    def current_encoding(self) -> str | None: ...
+
+    @abstractmethod
+    def consume(self, response: ResponseType | BaseException) -> None: ...
+
+    @abstractmethod
+    def fail(self, error: BaseException) -> None: ...
+
+    def _handle_response_cancellation(self, reason: str) -> None:
+        if self._connection and self.disconnect_on_cancellation:
+            self._connection.invalidate(reason)
+
+
+@dataclasses.dataclass(kw_only=True)
+class Request(BaseRequest):
     command: bytes
-    args: tuple[RedisValueT, ...]
     decode: bool
     encoding: str | None = None
     raise_exceptions: bool = True
-    response_timeout: float | None = None
-    disconnect_on_cancellation: bool = False
     expects_response: bool = True
-
-    _connection: ProxyType[BaseConnection] = dataclasses.field(init=False)
     _event: Event = dataclasses.field(init=False, default_factory=Event)
     _exc: BaseException | None = dataclasses.field(init=False, default=None)
     _result: ResponseType | None = dataclasses.field(init=False, default=None)
@@ -40,13 +65,11 @@ class Request:
         return self.get_result().__await__()
 
     def resolve(self, response: ResponseType) -> None:
-        self._connection.statistics.request_resolved()
         self._result = response
         self._event.set()
 
     def fail(self, error: BaseException) -> None:
         if not self._event.is_set():
-            self._connection.statistics.request_resolved()
             self._exc = error
             self._event.set()
 
@@ -66,13 +89,101 @@ class Request:
                 raise
         return self._result_or_exc()
 
-    def _handle_response_cancellation(self, reason: str) -> None:
-        if self._connection and self.disconnect_on_cancellation:
-            self._connection.invalidate(reason)
-
     def _result_or_exc(self) -> ResponseType:
         if self._exc is not None:
             if self.raise_exceptions:
                 raise self._exc
             return self._exc  # type: ignore
         return self._result
+
+    @property
+    def complete(self) -> bool:
+        return self._event.is_set()
+
+    @property
+    def current_decode(self) -> bool:
+        return self.decode
+
+    @property
+    def current_encoding(self) -> str | None:
+        return self.encoding
+
+    def consume(self, response: ResponseType | BaseException) -> None:
+        self._connection.statistics.request_resolved()
+        if isinstance(response, BaseException):
+            self.fail(response)
+        else:
+            self.resolve(response)
+
+
+@dataclasses.dataclass(kw_only=True)
+class RequestBatch(BaseRequest):
+    commands: tuple[bytes, ...]
+    decode: tuple[bool, ...]
+    encoding: tuple[str | None, ...]
+    _event: Event = dataclasses.field(init=False, default_factory=Event)
+    _progress_event: Event = dataclasses.field(init=False, default_factory=Event)
+    _cursor: int = dataclasses.field(init=False, default=0)
+    _results: list[ResponseType | BaseException | None] = dataclasses.field(init=False)
+
+    def __post_init__(self, connection: BaseConnection) -> None:
+        self._connection = proxy(connection)
+        self._results = [None] * len(self.commands)
+        self._connection.statistics.request_created(len(self.commands))
+        if not self.commands:
+            self._event.set()
+
+    @property
+    def complete(self) -> bool:
+        return self._cursor == len(self.commands)
+
+    @property
+    def current_decode(self) -> bool:
+        return self.decode[self._cursor]
+
+    @property
+    def current_encoding(self) -> str | None:
+        return self.encoding[self._cursor]
+
+    def consume(self, response: ResponseType | BaseException) -> None:
+        self._results[self._cursor] = response
+        self._cursor += 1
+        self._progress_event.set()
+        self._connection.statistics.request_resolved()
+        if self.complete:
+            self._event.set()
+
+    def fail(self, error: BaseException) -> None:
+        while not self.complete:
+            self._results[self._cursor] = error
+            self._cursor += 1
+        self._event.set()
+
+    def __await__(self) -> Generator[Any, None, list[ResponseType | BaseException | None]]:
+        return self.get_result().__await__()
+
+    async def get_result(self) -> list[ResponseType | BaseException | None]:
+        if not self._event.is_set():
+            if self.response_timeout is None:
+                await self._event.wait()
+            else:
+                try:
+                    while not self.complete:
+                        with move_on_after(self.response_timeout) as scope:
+                            await self._progress_event.wait()
+                        if scope.cancelled_caught and not self.complete:
+                            reason = (
+                                f"{nativestr(self.commands[self._cursor])} timed out after "
+                                f"{self.response_timeout} seconds"
+                            )
+                            while not self.complete:
+                                self._results[self._cursor] = TimeoutError(reason)
+                                self._cursor += 1
+                            self._handle_response_cancellation(reason)
+                            self._event.set()
+                            break
+                        if not self.complete and self._progress_event.is_set():
+                            self._progress_event = Event()
+                except get_cancelled_exc_class():
+                    self._handle_response_cancellation("Batch was cancelled")
+        return self._results
