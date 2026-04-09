@@ -145,11 +145,12 @@ class RequestBatch(BaseRequest):
         return self.encoding[self._cursor]
 
     def consume(self, response: ResponseType | BaseException) -> None:
-        self._results[self._cursor] = response
-        self._cursor += 1
-        self._connection.statistics.request_resolved()
-        if self.complete:
-            self._event.set()
+        if not self.complete:
+            self._results[self._cursor] = response
+            self._cursor += 1
+            self._connection.statistics.request_resolved()
+            if self.complete:
+                self._event.set()
 
     def fail(self, error: BaseException) -> None:
         while not self.complete:

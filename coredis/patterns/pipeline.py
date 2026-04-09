@@ -188,7 +188,7 @@ class NodeCommands(AsyncContextManagerMixin):
         try:
             if self.in_transaction:
                 self.multi_cmd = connection.create_request(CommandName.MULTI, timeout=self.timeout)
-            self.request_batch = connection.create_pipeline_batch(
+            self.request_batch = connection.create_request_batch(
                 commands,
                 timeout=self.timeout,
             )
@@ -391,7 +391,7 @@ class Pipeline(Client[AnyStr]):
     ) -> None:
 
         multi_request = connection.create_request(CommandName.MULTI, timeout=self.timeout)
-        queued_batch = connection.create_pipeline_batch(commands, timeout=self.timeout)
+        queued_batch = connection.create_request_batch(commands, timeout=self.timeout)
         exec_request = connection.create_request(CommandName.EXEC, timeout=self.timeout)
         errors: list[tuple[int, RedisError | TimeoutError | None]] = []
         # parse off the response for MULTI
@@ -448,7 +448,7 @@ class Pipeline(Client[AnyStr]):
     async def _execute_pipeline(
         self, connection: BaseConnection, commands: list[PipelineCommandRequest[Any]]
     ) -> None:
-        request_batch = connection.create_pipeline_batch(commands, timeout=self.timeout)
+        request_batch = connection.create_request_batch(commands, timeout=self.timeout)
         results: list[Any] = []
         for cmd, response in zip(commands, await request_batch):
             try:

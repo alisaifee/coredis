@@ -709,7 +709,7 @@ class BaseConnection(ABC):
         return request
 
     @_ensure_usable
-    def create_pipeline_batch(
+    def create_request_batch(
         self,
         commands: Sequence[CommandRequest[Any]],
         timeout: float | None = None,
