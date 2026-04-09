@@ -122,7 +122,6 @@ class RequestBatch(BaseRequest):
     decode: tuple[bool, ...]
     encoding: tuple[str | None, ...]
     _event: Event = dataclasses.field(init=False, default_factory=Event)
-    _progress_event: Event = dataclasses.field(init=False, default_factory=Event)
     _cursor: int = dataclasses.field(init=False, default=0)
     _results: list[ResponseType | BaseException | None] = dataclasses.field(init=False)
 
@@ -148,7 +147,6 @@ class RequestBatch(BaseRequest):
     def consume(self, response: ResponseType | BaseException) -> None:
         self._results[self._cursor] = response
         self._cursor += 1
-        self._progress_event.set()
         self._connection.statistics.request_resolved()
         if self.complete:
             self._event.set()
@@ -164,26 +162,19 @@ class RequestBatch(BaseRequest):
 
     async def get_result(self) -> list[ResponseType | BaseException | None]:
         if not self._event.is_set():
-            if self.response_timeout is None:
-                await self._event.wait()
-            else:
-                try:
+            try:
+                with move_on_after(self.response_timeout) as scope:
+                    await self._event.wait()
+                if scope.cancelled_caught and not self.complete:
                     while not self.complete:
-                        with move_on_after(self.response_timeout) as scope:
-                            await self._progress_event.wait()
-                        if scope.cancelled_caught and not self.complete:
-                            reason = (
-                                f"{nativestr(self.commands[self._cursor])} timed out after "
-                                f"{self.response_timeout} seconds"
-                            )
-                            while not self.complete:
-                                self._results[self._cursor] = TimeoutError(reason)
-                                self._cursor += 1
-                            self._handle_response_cancellation(reason)
-                            self._event.set()
-                            break
-                        if not self.complete and self._progress_event.is_set():
-                            self._progress_event = Event()
-                except get_cancelled_exc_class():
-                    self._handle_response_cancellation("Batch was cancelled")
+                        reason = (
+                            f"{nativestr(self.commands[self._cursor])} timed out after "
+                            f"{self.response_timeout} seconds"
+                        )
+                        self._results[self._cursor] = TimeoutError(reason)
+                        self._cursor += 1
+                    self._event.set()
+                    self._handle_response_cancellation(reason)
+            except get_cancelled_exc_class():
+                self._handle_response_cancellation("Batch was cancelled")
         return self._results
