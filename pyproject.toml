@@ -6,7 +6,6 @@ requires = [
   "hatch-mypyc>=0.1.0",
   "hatch-vcs>=0.4.0",
   "mypy==1.20.0",
-  "mypy-extensions==1.1.0",
   "types-deprecated",
   "beartype>=0.20",
 ]
@@ -97,7 +96,6 @@ dev = [
   "inflect>=6.0.0",
   "Jinja2==3.1.5",
   "mypy==1.20.0; implementation_name != 'pypy'",
-  "mypy-extensions==1.1.0",
   "ruff",
   "types-deprecated",
   "ipython",
@@ -162,7 +160,6 @@ enable-by-default = false
 dependencies = [
   "hatch-mypyc>=0.16.0",
   "mypy==1.20.0",
-  "mypy-extensions==1.1.0",
 ]
 require-runtime-dependencies = true
 include = [
