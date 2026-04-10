@@ -167,6 +167,7 @@ class RequestBatch(BaseRequest):
                 with move_on_after(self.response_timeout) as scope:
                     await self._event.wait()
                 if scope.cancelled_caught and not self.complete:
+                    reason = ""
                     while not self.complete:
                         reason = (
                             f"{nativestr(self.commands[self._cursor])} timed out after "
