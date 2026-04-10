@@ -33,11 +33,12 @@ class NodeExecution(CommandRequest[CommandResponseT]):
         key_positions: tuple[int, ...],
     ) -> None:
         super().__init__(
-            original_request.client,
             original_request.name,
             *node_arguments,
             callback=original_request.callback,
             execution_parameters=original_request.execution_parameters,
+            resolver=original_request.resolver,
+            type_adapter=original_request.type_adapter,
         )
         self.node = node
         self.key_positions = key_positions

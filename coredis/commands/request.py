@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import copy
 import functools
-from functools import cache
 from types import GenericAlias
 from typing import Any, cast, get_origin
 
-from coredis._protocols import AbstractExecutor
+from coredis._protocols import CommandResolver
 from coredis.globals import COMMAND_FLAGS, READONLY_COMMANDS, ROUTING_STRATEGIES
 from coredis.response._callbacks import NoopCallback
 from coredis.retry import RetryPolicy
@@ -44,17 +43,19 @@ def is_type_like(obj: object) -> TypeIs[type[Any]]:
 
 class CommandRequest(Awaitable[CommandResponseT]):
     __slots__ = (
-        "client",
         "name",
         "arguments",
         "serialized_arguments",
         "execution_parameters",
+        "executor",
         "callback",
         "decode",
         "blocking",
         "readonly",
         "noreply",
         "routing_strategy",
+        "resolver",
+        "type_adapter",
         "kwargs",
         "_response",
     )
@@ -62,11 +63,12 @@ class CommandRequest(Awaitable[CommandResponseT]):
 
     def __init__(
         self,
-        client: AbstractExecutor,
         name: bytes,
         *arguments: ValueT | Key,
         callback: Callable[..., CommandResponseT] = NoopCallback(),
         execution_parameters: ExecutionParameters,
+        resolver: CommandResolver | None = None,
+        type_adapter: TypeAdapter = empty_adapter,
         **kwargs: Any,
     ) -> None:
         """
@@ -84,8 +86,15 @@ class CommandRequest(Awaitable[CommandResponseT]):
         self.name = name
         self.callback = callback
         self.execution_parameters = execution_parameters or {}
-        self.client: AbstractExecutor = client
         self.arguments = arguments
+        self.blocking = CommandFlag.BLOCKING in COMMAND_FLAGS[name]
+        self.readonly = name in READONLY_COMMANDS
+        self.noreply = execution_parameters.get("noreply", False)
+        self.decode = execution_parameters.get("decode", None)
+        self.routing_strategy = ROUTING_STRATEGIES.get(name)
+        self.type_adapter = type_adapter
+        self.resolver = resolver
+        self.kwargs = kwargs
         self.serialized_arguments = tuple(
             self.type_adapter.serialize(k)
             if isinstance(k, Serializable)
@@ -94,25 +103,19 @@ class CommandRequest(Awaitable[CommandResponseT]):
             else k
             for k in arguments
         )
-        self.blocking = CommandFlag.BLOCKING in COMMAND_FLAGS[name]
-        self.readonly = name in READONLY_COMMANDS
-        self.noreply = execution_parameters.get("noreply", False)
-        self.decode = execution_parameters.get("decode", None)
-        self.routing_strategy = ROUTING_STRATEGIES.get(name)
-        self.kwargs = kwargs
 
     @property
-    @cache
+    @functools.cache
     def keys(self) -> tuple[RedisValueT, ...]:
         return tuple([k.key for k in self.arguments if isinstance(k, Key)])
 
     @property
-    @cache
+    @functools.cache
     def affected_slots(self) -> tuple[int, ...]:
         return tuple({k.slot for k in self.arguments if isinstance(k, Key)})
 
     @property
-    @cache
+    @functools.cache
     def slots_to_keys(self) -> dict[int, list[tuple[int, RedisValueT]]]:
         mapping: dict[int, list[tuple[int, RedisValueT]]] = {}
         for idx, k in enumerate([k for k in self.arguments if isinstance(k, Key)]):
@@ -120,7 +123,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
         return mapping
 
     @property
-    @cache
+    @functools.cache
     def key_indices(self) -> tuple[int, ...]:
         indices: list[int] = []
         for idx, arg in enumerate(self.arguments):
@@ -128,20 +131,10 @@ class CommandRequest(Awaitable[CommandResponseT]):
                 indices.append(idx)
         return tuple(indices)
 
-    @property
-    @cache
-    def type_adapter(self) -> TypeAdapter:
-        from coredis.client import Client
-
-        if isinstance(self.client, Client):
-            return self.client.type_adapter
-
-        return empty_adapter
-
     def run(self) -> Awaitable[CommandResponseT]:
+        assert self.resolver
         if not hasattr(self, "_response"):
-            self._response = self.client.execute_command(self)
-
+            self._response = self.resolver(self)
         return self._response
 
     def retry(
@@ -238,7 +231,6 @@ class CommandRequest(Awaitable[CommandResponseT]):
                assert "OK" == await client.set("fubar", 1).raw(decode_response=True)
         """
         return CommandRequest(
-            self.client,
             self.name,
             *self.arguments,
             execution_parameters=(
@@ -246,6 +238,8 @@ class CommandRequest(Awaitable[CommandResponseT]):
                 if decode_response is None
                 else {**self.execution_parameters, **{"decode": decode_response}}
             ),
+            resolver=self.resolver,
+            type_adapter=self.type_adapter,
         )
 
     def route(self, by: bytes | str | int) -> CommandRequest[CommandResponseT]:
@@ -291,10 +285,10 @@ class TransformedCommandRequest(CommandRequest[TransformedResponse]):
          and returns the transformed response.
         """
         super().__init__(
-            parent.client,
             parent.name,
             *parent.arguments,
             execution_parameters=parent.execution_parameters,
+            type_adapter=parent.type_adapter,
         )
 
         self.parent = parent
@@ -339,12 +333,13 @@ class RetryableCommandRequest(CommandRequest[CommandResponseT]):
         self.policy = policy
         self.failure_hook = failure_hook
         super().__init__(
-            request.client,
             request.name,
             *request.arguments,
             callback=request.callback,
             execution_parameters=request.execution_parameters,
+            resolver=request.resolver,
             policy=self.policy,
+            type_adapter=request.type_adapter,
             failure_hook=self.failure_hook,
             **kwargs,
         )

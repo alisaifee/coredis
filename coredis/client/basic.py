@@ -147,7 +147,6 @@ class Client(
         :return: An instance of a command request bound to this client.
         """
         return CommandRequest(
-            self,
             name,
             *arguments,
             callback=callback,
@@ -155,6 +154,8 @@ class Client(
                 **(execution_parameters or {}),
                 **{"noreply": self.noreply},
             },
+            resolver=self.execute_command,
+            type_adapter=self.type_adapter,
         )
 
     @property

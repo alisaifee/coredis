@@ -52,6 +52,7 @@ from coredis.typing import (
     ResponseType,
     Self,
     T_co,
+    TypeAdapter,
     TypeVar,
     ValueT,
 )
@@ -95,20 +96,6 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
     """
 
     __slots__ = ()
-    client: Pipeline[Any]
-
-    def __init__(
-        self,
-        client: Pipeline[Any],
-        name: bytes,
-        *arguments: ValueT | Key,
-        callback: Callable[..., CommandResponseT],
-        execution_parameters: ExecutionParameters,
-    ) -> None:
-        super().__init__(
-            client, name, *arguments, callback=callback, execution_parameters=execution_parameters
-        )
-        client._pipeline_execute_command(self)
 
     def __await__(self) -> Generator[None, None, CommandResponseT]:
         if hasattr(self, "_response"):
@@ -123,22 +110,23 @@ class ClusterPipelineCommandRequest(CommandRequest[CommandResponseT]):
 
     __slots__ = ("position", "result")
 
-    client: ClusterPipeline[Any]
-
     def __init__(
         self,
-        client: ClusterPipeline[Any],
         name: bytes,
         *arguments: ValueT | Key,
         callback: Callable[..., CommandResponseT],
         execution_parameters: ExecutionParameters,
+        type_adapter: TypeAdapter,
     ) -> None:
         super().__init__(
-            client, name, *arguments, callback=callback, execution_parameters=execution_parameters
+            name,
+            *arguments,
+            callback=callback,
+            execution_parameters=execution_parameters,
+            type_adapter=type_adapter,
         )
         self.position: int = 0
         self.result: Any = None
-        client._pipeline_execute_command(self)
 
     def __await__(self) -> Generator[None, None, CommandResponseT]:
         if hasattr(self, "_response"):
@@ -171,6 +159,7 @@ class NodeCommands(AsyncContextManagerMixin):
         self._raise_on_error = raise_on_error
         self.multi_cmd: Request | None = None
         self.exec_cmd: Request | None = None
+        self.request_batch: Awaitable[list[ResponseType | BaseException | None]] | None = None
 
     def extend(self, c: list[ClusterPipelineCommandRequest[Any]]) -> None:
         self.commands.extend(c)
@@ -199,14 +188,12 @@ class NodeCommands(AsyncContextManagerMixin):
         try:
             if self.in_transaction:
                 self.multi_cmd = connection.create_request(CommandName.MULTI, timeout=self.timeout)
-            requests = connection.create_requests(
+            self.request_batch = connection.create_request_batch(
                 commands,
                 timeout=self.timeout,
             )
             if self.in_transaction:
                 self.exec_cmd = connection.create_request(CommandName.EXEC, timeout=self.timeout)
-            for i, cmd in enumerate(commands):
-                cmd._response = requests[i]
         except (ConnectionError, TimeoutError) as e:
             for c in commands:
                 c.result = e
@@ -217,15 +204,16 @@ class NodeCommands(AsyncContextManagerMixin):
         if self.multi_cmd:
             multi_result = await self.multi_cmd
             success = multi_result in {b"OK", "OK"}
-        for c in self.commands:
-            if c.result is None:
-                try:
-                    c.result = await c._response if c._response else None
-                except ExecAbortError:
-                    raise
-                except (ConnectionError, TimeoutError, RedisError) as e:
-                    success = False
-                    c.result = e
+        if self.request_batch:
+            try:
+                responses = await self.request_batch
+                for command, response in zip(self.commands, responses):
+                    command.result = response
+                    command._response = PipelineResult(response)
+                    if isinstance(response, (ConnectionError, TimeoutError, RedisError)):
+                        success = False
+            except ExecAbortError:
+                raise
         if self.in_transaction and self.exec_cmd:
             if success:
                 res = await self.exec_cmd
@@ -315,13 +303,15 @@ class Pipeline(Client[AnyStr]):
         """
         :meta private:
         """
-        return PipelineCommandRequest(
-            self,
+        command = PipelineCommandRequest(
             name,
             *arguments,
             callback=callback,
             execution_parameters=execution_parameters or {},
+            type_adapter=self.type_adapter,
         )
+        self.command_stack.append(command)
+        return command
 
     @asynccontextmanager
     async def watch(self, *keys: KeyT) -> AsyncGenerator[None]:
@@ -394,51 +384,39 @@ class Pipeline(Client[AnyStr]):
         )
         return command.callback(await request)
 
-    def _pipeline_execute_command(
-        self,
-        command: PipelineCommandRequest[R],
-    ) -> None:
-        """
-        Queue a command for execution
-
-        :meta private:
-        """
-        self.command_stack.append(command)
-
     async def _execute_transaction(
         self,
         connection: BaseConnection,
         commands: list[PipelineCommandRequest[Any]],
     ) -> None:
 
-        requests = [
-            connection.create_request(CommandName.MULTI, timeout=self.timeout),
-            *connection.create_requests(commands, timeout=self.timeout),
-            connection.create_request(CommandName.EXEC, timeout=self.timeout),
-        ]
+        multi_request = connection.create_request(CommandName.MULTI, timeout=self.timeout)
+        queued_batch = connection.create_request_batch(commands, timeout=self.timeout)
+        exec_request = connection.create_request(CommandName.EXEC, timeout=self.timeout)
         errors: list[tuple[int, RedisError | TimeoutError | None]] = []
         # parse off the response for MULTI
         # NOTE: we need to handle ResponseErrors here and continue
         # so that we read all the additional command messages from
         # the socket
         try:
-            await requests[0]
+            await multi_request
         except (RedisError, TimeoutError) as e:
             errors.append((0, e))
 
         # and all the other commands
-        for i, cmd in enumerate(commands):
-            try:
-                if (resp := await requests[i + 1]) not in self.QUEUED_RESPONSES:
-                    raise Exception(
-                        f"Abnormal response in pipeline for command {cmd.name!r}: {resp!r}"
-                    )
-            except (RedisError, TimeoutError) as e:
-                self._annotate_exception(e, i + 1, cmd.name, cmd.serialized_arguments)
-                errors.append((i + 1, e))
+        for i, (cmd, queued_response) in enumerate(zip(commands, await queued_batch)):
+            if isinstance(queued_response, (RedisError, TimeoutError)):
+                self._annotate_exception(queued_response, i + 1, cmd.name, cmd.serialized_arguments)
+                errors.append((i + 1, queued_response))
+            if isinstance(queued_response, BaseException):
+                raise queued_response
+            if queued_response not in self.QUEUED_RESPONSES:
+                raise Exception(
+                    f"Abnormal response in pipeline for command {cmd.name!r}: {queued_response!r}"
+                )
 
         try:
-            response = cast(list[ResponseType] | None, await requests[-1])
+            response = cast(list[ResponseType] | None, await exec_request)
         except (ExecAbortError, ResponseError, TimeoutError) as e:
             if errors and errors[0][1]:
                 raise errors[0][1] from e
@@ -470,27 +448,24 @@ class Pipeline(Client[AnyStr]):
     async def _execute_pipeline(
         self, connection: BaseConnection, commands: list[PipelineCommandRequest[Any]]
     ) -> None:
-        # build up all commands into a single request to increase network perf
-        requests = connection.create_requests(commands, timeout=self.timeout)
-        for i, cmd in enumerate(commands):
-            cmd._response = requests[i]
-
-        response: list[Any] = []
-        for cmd in commands:
+        request_batch = connection.create_request_batch(commands, timeout=self.timeout)
+        results: list[Any] = []
+        for cmd, response in zip(commands, await request_batch):
             try:
-                res = await cmd._response if cmd._response else None
+                if isinstance(response, BaseException):
+                    raise response
                 resp = cmd.callback(
-                    res,
+                    response,
                     **cmd.execution_parameters,
                 )
                 cmd._response = PipelineResult(resp)
-                response.append(resp)
+                results.append(resp)
             except (ResponseError, TimeoutError) as re:
                 cmd._response = PipelineResult(re)
-                response.append(re)
-        self._results = tuple(response)
+                results.append(re)
+        self._results = tuple(results)
         if self._raise_on_error:
-            self._raise_first_error(commands, response)
+            self._raise_first_error(commands, results)
 
     def _raise_first_error(
         self, commands: list[PipelineCommandRequest[Any]], response: ResponseType
@@ -626,13 +601,16 @@ class ClusterPipeline(Client[AnyStr]):
         """
         :meta private:
         """
-        return ClusterPipelineCommandRequest(
-            self,
+        command = ClusterPipelineCommandRequest(
             name,
             *arguments,
             callback=callback,
             execution_parameters=execution_parameters or {},
+            type_adapter=self.type_adapter,
         )
+        command.position = len(self.command_stack)
+        self.command_stack.append(command)
+        return command
 
     @asynccontextmanager
     async def watch(self, *keys: KeyT) -> AsyncGenerator[None]:
@@ -682,13 +660,6 @@ class ClusterPipeline(Client[AnyStr]):
         self.scripts.clear()
         self.watches.clear()
         self.explicit_transaction = False
-
-    def _pipeline_execute_command(
-        self,
-        command: ClusterPipelineCommandRequest[Any],
-    ) -> None:
-        command.position = len(self.command_stack)
-        self.command_stack.append(command)
 
     def _raise_first_error(self) -> None:
         for c in self.command_stack:

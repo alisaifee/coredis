@@ -397,8 +397,8 @@ inflection_engine = inflect.engine()
 
 
 def format_file_in_place(path: str) -> None:
-    subprocess.check_output(["ruff", "format", path])
-    subprocess.check_output(["ruff", "check", "--fix", path])
+    subprocess.check_output(["uv", "run", "ruff", "check", "--select", "I", "--fix", path])
+    subprocess.check_output(["uv", "run", "ruff", "format", path])
 
 
 def command_enum(command_name) -> str:
@@ -2019,10 +2019,7 @@ from __future__ import annotations
 
 import enum
 
-from coredis._enum import CaseAndEncodingInsensitiveEnum
-from coredis.typing import Final
-
-class CommandName(CaseAndEncodingInsensitiveEnum):
+class CommandName(bytes, enum.Enum):
     \"\"\"
     Enum for listing all redis commands
     \"\"\"

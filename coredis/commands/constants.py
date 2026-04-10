@@ -8,10 +8,8 @@ from __future__ import annotations
 
 import enum
 
-from coredis._enum import CaseAndEncodingInsensitiveEnum
 
-
-class CommandName(CaseAndEncodingInsensitiveEnum):
+class CommandName(bytes, enum.Enum):
     """
     Enum for listing all redis commands
     """

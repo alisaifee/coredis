@@ -65,10 +65,10 @@ class ConnectionStatistics:
         self.bytes_written += num_bytes
         self.last_byte_written_at = now
 
-    def request_created(self) -> None:
+    def request_created(self, count: int = 1) -> None:
         now = time.perf_counter()
         self.last_request_created_at = now
-        self.requests_created += 1
+        self.requests_created += count
 
     def request_resolved(self) -> None:
         now = time.perf_counter()
