@@ -8,6 +8,7 @@ from coredis.exceptions import CommandSyntaxError
 from coredis.typing import (
     Callable,
     Iterable,
+    Mapping,
     ParamSpec,
     TypeVar,
 )
@@ -50,6 +51,45 @@ class MutuallyInclusiveParametersMissing(CommandSyntaxError):
         super().__init__(arguments, message)
 
 
+class ParameterAvailability:
+    def __init__(self, sig: inspect.Signature, names: set[str]):
+        self.sig = sig
+        self.positional_indexes = {
+            name: idx
+            for idx, (name, parameter) in enumerate(sig.parameters.items())
+            if parameter.kind
+            in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+        }
+        self.defaults = {name: self._get_parameter_default(name) for name in names}
+
+    def _get_parameter_default(self, name: str) -> object:
+        parameter = self.sig.parameters.get(name)
+        return parameter.default if parameter else None
+
+    def is_provided(
+        self,
+        name: str,
+        args: tuple[object, ...],
+        kwargs: Mapping[str, object],
+    ) -> bool:
+        if name in kwargs:
+            value = kwargs[name]
+        elif (position := self.positional_indexes.get(name)) is not None and position < len(args):
+            value = args[position]
+        else:
+            value = None
+
+        return value != self.defaults.get(name)
+
+    def provided_parameters(
+        self,
+        names: Iterable[str],
+        args: tuple[object, ...],
+        kwargs: Mapping[str, object],
+    ) -> set[str]:
+        return {name for name in names if self.is_provided(name, args, kwargs)}
+
+
 def mutually_exclusive_parameters(
     *exclusive_params: str | Iterable[str],
     details: str | None = None,
@@ -62,25 +102,18 @@ def mutually_exclusive_parameters(
         func: Callable[P, R],
     ) -> Callable[P, R]:
         sig = inspect.signature(func)
+        tracker = ParameterAvailability(sig, primary.union(*secondary) if secondary else primary)
 
         @functools.wraps(func)
         def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             if not Config.optimized:
-                call_args = sig.bind_partial(*args, **kwargs)
-                params = {
-                    k
-                    for k in primary
-                    if not call_args.arguments.get(k) == getattr(sig.parameters.get(k), "default")
-                }
-
-                if params:
+                if params := tracker.provided_parameters(primary, args, kwargs):
                     for group in secondary:
-                        for k in group:
-                            if not call_args.arguments.get(k) == getattr(
-                                sig.parameters.get(k), "default"
-                            ):
-                                params.add(k)
-
+                        for parameter in group:
+                            if parameter in params:
+                                break
+                            if tracker.is_provided(parameter, args, kwargs):
+                                params.add(parameter)
                                 break
 
                 if len(params) > 1:
@@ -107,16 +140,13 @@ def mutually_inclusive_parameters(
         func: Callable[P, R],
     ) -> Callable[P, R]:
         sig = inspect.signature(func)
+        tracked_params = _inclusive_params | _leaders
+        tracker = ParameterAvailability(sig, tracked_params)
 
         @functools.wraps(func)
         def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             if not Config.optimized:
-                call_args = sig.bind_partial(*args, **kwargs)
-                params = {
-                    k
-                    for k in _inclusive_params | _leaders
-                    if not call_args.arguments.get(k) == getattr(sig.parameters.get(k), "default")
-                }
+                params = tracker.provided_parameters(tracked_params, args, kwargs)
                 if _leaders and _leaders & params != _leaders and len(params) > 0:
                     raise MutuallyInclusiveParametersMissing(_inclusive_params, _leaders, details)
                 elif not _leaders and params and len(params) != len(_inclusive_params):
