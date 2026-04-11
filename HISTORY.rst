@@ -3,6 +3,16 @@
 Changelog
 =========
 
+v6.5.1
+------
+Release Date: 2026-04-11
+
+* Bug Fix
+
+  * Fix regression introduced in 6.5.0 that results in batch
+    request cancellations being suppressed.
+
+
 v6.5.0
 ------
 Release Date: 2026-04-10
