@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v6.5.0
+------
+Release Date: 2026-04-10
+
+* Feature
+
+  * Add OpenTelemetry Support
+
+* Performance
+
+  * Pipeline performance optimization for large pipeline batches
+    by collapsing request resolution into a single await.
+
 v6.4.0
 ------
 Release Date: 2026-04-01
