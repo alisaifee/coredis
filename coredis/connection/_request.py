@@ -181,4 +181,5 @@ class RequestBatch(BaseRequest):
                     self._handle_response_cancellation(reason)
             except get_cancelled_exc_class():
                 self._handle_response_cancellation("Batch was cancelled")
+                raise
         return self._results
