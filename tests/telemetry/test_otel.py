@@ -150,6 +150,7 @@ class TestSpanAttributes:
         assert telemetry_capture.spans[0].name == name
         assert telemetry_capture.spans[0].attributes == {
             "db.system.name": "redis",
+            "db.client.connection.pool.name": "localhost:6379",
             "network.peer.hostname": "localhost",
             "network.peer.port": 6379,
             "server.address": "localhost",

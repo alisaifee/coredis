@@ -522,6 +522,7 @@ class Pipeline(Client[AnyStr]):
         with get_telemetry_provider().start_span(
             tuple(self.command_stack),
             self._connection,
+            self.client.connection_pool,
             name="MULTI" if self._transaction else "PIPELINE",
         ):
             if self.scripts:

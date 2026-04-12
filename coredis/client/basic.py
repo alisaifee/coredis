@@ -894,7 +894,7 @@ class Redis(Client[AnyStr]):
         Executes a command with configured retries and returns
         the parsed response
         """
-        with get_telemetry_provider().start_span((command,)):
+        with get_telemetry_provider().start_span((command,), self.connection_pool):
             return await self.retry_policy.call_with_retries(
                 lambda: self._execute_command(command),
                 failure_hook=lambda err: get_telemetry_provider().emit_event(
