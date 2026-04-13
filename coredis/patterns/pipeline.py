@@ -395,45 +395,39 @@ class Pipeline(Client[AnyStr]):
         queued_batch = connection.create_request_batch(commands, timeout=self.timeout)
         exec_request = connection.create_request(CommandName.EXEC, timeout=self.timeout)
         errors: list[tuple[int, RedisError | TimeoutError | None]] = []
-        # parse off the response for MULTI
-        # NOTE: we need to handle ResponseErrors here and continue
-        # so that we read all the additional command messages from
-        # the socket
         try:
             await multi_request
         except (RedisError, TimeoutError) as e:
             errors.append((0, e))
-
-        # and all the other commands
         for i, (cmd, queued_response) in enumerate(zip(commands, await queued_batch)):
-            if isinstance(queued_response, (RedisError, TimeoutError)):
-                self._annotate_exception(queued_response, i + 1, cmd.name, cmd.serialized_arguments)
-                errors.append((i + 1, queued_response))
-            if isinstance(queued_response, BaseException):
-                raise queued_response
             if queued_response not in self.QUEUED_RESPONSES:
-                raise Exception(
-                    f"Abnormal response in pipeline for command {cmd.name!r}: {queued_response!r}"
-                )
-
+                if isinstance(queued_response, (RedisError, TimeoutError)):
+                    self._annotate_exception(
+                        queued_response, i + 1, cmd.name, cmd.serialized_arguments
+                    )
+                    errors.append((i + 1, queued_response))
+                elif isinstance(queued_response, BaseException):
+                    raise queued_response
+                else:
+                    raise Exception(
+                        f"Abnormal response in pipeline for command {cmd.name!r}: {queued_response!r}"
+                    )
         try:
             response = cast(list[ResponseType] | None, await exec_request)
-        except (ExecAbortError, ResponseError, TimeoutError) as e:
+        except Exception as exec_err:
             if errors and errors[0][1]:
-                raise errors[0][1] from e
+                raise errors[0][1] from exec_err
             raise
 
         if response is None:
             raise WatchError("Watched variable changed.")
 
-        # put any parse errors into the response
-        for i, e in errors:  # type: ignore
-            response.insert(i, cast(ResponseType, e))
+        for i, batch_err in errors:
+            response.insert(i, cast(ResponseType, batch_err))
 
         if len(response) != len(commands):
             raise ResponseError("Wrong number of response items from pipeline execution")
 
-        # We have to run response callbacks manually
         data: list[Any] = []
         for r, cmd in zip(response, commands):
             if not isinstance(r, Exception):
@@ -442,7 +436,6 @@ class Pipeline(Client[AnyStr]):
             data.append(r)
 
         self._results = tuple(data)
-        # find any errors in the response and raise if necessary
         if self._raise_on_error:
             self._raise_first_error(commands, response)
 
