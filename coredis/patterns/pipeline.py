@@ -513,7 +513,7 @@ class Pipeline(Client[AnyStr]):
         if not self._connection:
             self._connection = await self.client.connection_pool.get_connection()
         with get_telemetry_provider().start_span(
-            tuple(self.command_stack),
+            self.command_stack,
             self._connection,
             self.client.connection_pool,
             name="MULTI" if self._transaction else "PIPELINE",
@@ -688,7 +688,7 @@ class ClusterPipeline(Client[AnyStr]):
         if not self.command_stack:
             return
         with get_telemetry_provider().start_span(
-            tuple(self.command_stack),
+            self.command_stack,
             self.client.connection_pool,
             name="MULTI" if self._transaction else "PIPELINE",
         ):

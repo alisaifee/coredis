@@ -10,7 +10,7 @@ import coredis
 from coredis._utils import nativestr
 from coredis.commands.constants import CommandName
 from coredis.config import Config
-from coredis.typing import ClassVar, Iterable, Iterator
+from coredis.typing import ClassVar, Iterable, Iterator, Sequence
 
 from ._base import TelemetryAttributeProvider, TelemetryProvider
 
@@ -110,7 +110,7 @@ class OpenTelemetryProvider(TelemetryProvider):
     @contextlib.contextmanager
     def start_span(
         self,
-        commands: tuple[CommandRequest[Any], ...],
+        commands: Sequence[CommandRequest[Any]],
         *attribute_providers: TelemetryAttributeProvider,
         name: str | None = None,
     ) -> Iterator[None]:
@@ -152,7 +152,7 @@ class OpenTelemetryProvider(TelemetryProvider):
 
     def _default_attributes(
         self,
-        commands: tuple[CommandRequest[Any], ...],
+        commands: Sequence[CommandRequest[Any]],
         *attribute_providers: TelemetryAttributeProvider,
     ) -> dict[str, str | int]:
         attributes: dict[str, str | int] = {
@@ -238,10 +238,7 @@ class OpenTelemetryProvider(TelemetryProvider):
             _default_attributes = self._default_attributes((), pool)
             yield Observation(pool.max_connections, _default_attributes)
 
-    def _command_span_enabled(
-        self,
-        commands: tuple[CommandRequest[Any], ...],
-    ) -> bool:
+    def _command_span_enabled(self, commands: Sequence[CommandRequest[Any]]) -> bool:
         if len(commands) == 1 and commands[0].name in self.disabled_commands:
             return False
         return True

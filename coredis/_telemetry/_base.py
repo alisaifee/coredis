@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from coredis._utils import nativestr
 from coredis.tokens import PrefixToken, PureToken
-from coredis.typing import Iterator, Key
+from coredis.typing import Iterator, Key, Sequence
 
 if TYPE_CHECKING:
     from coredis.commands.request import CommandRequest
@@ -45,7 +45,7 @@ class TelemetryProvider(ABC):
     @contextlib.contextmanager
     def start_span(
         self,
-        commands: tuple[CommandRequest[Any], ...],
+        commands: Sequence[CommandRequest[Any]],
         *attribute_providers: TelemetryAttributeProvider,
         name: str | None = None,
     ) -> Iterator[None]: ...

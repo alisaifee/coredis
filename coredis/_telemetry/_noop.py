@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING, Any
 
-from coredis.typing import Iterator
+from coredis.typing import Iterator, Sequence
 
 from ._base import TelemetryAttributeProvider, TelemetryProvider
 
@@ -34,7 +34,7 @@ class NoopTelemetryProvider(TelemetryProvider):
     @contextlib.contextmanager
     def start_span(
         self,
-        commands: tuple[CommandRequest[Any], ...],
+        commands: Sequence[CommandRequest[Any]],
         *attribute_providers: TelemetryAttributeProvider,
         name: str | None = None,
     ) -> Iterator[None]:
