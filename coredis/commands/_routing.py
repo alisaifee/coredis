@@ -37,7 +37,6 @@ class NodeExecution(CommandRequest[CommandResponseT]):
             *node_arguments,
             callback=original_request.callback,
             execution_parameters=original_request.execution_parameters,
-            resolver=original_request.resolver,
             type_adapter=original_request.type_adapter,
         )
         self.node = node
