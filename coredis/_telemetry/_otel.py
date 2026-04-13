@@ -24,7 +24,6 @@ from opentelemetry.metrics import (
     CallbackOptions,
     Counter,
     Histogram,
-    Instrument,
     Meter,
     Observation,
 )
@@ -59,7 +58,6 @@ class OpenTelemetryProvider(TelemetryProvider):
     def __init__(self) -> None:
         self.meter = metrics.get_meter("coredis", coredis.__version__)
         self.tracer = trace.get_tracer("coredis", coredis.__version__)
-        self.instruments: dict[str, Instrument] = {}
         self.observed_connections: weakref.WeakSet[BaseConnection] = weakref.WeakSet()
         self.observed_pools: weakref.WeakSet[BaseConnectionPool[Any]] = weakref.WeakSet()
         self.pending_requests_observer = self.meter.create_observable_up_down_counter(
