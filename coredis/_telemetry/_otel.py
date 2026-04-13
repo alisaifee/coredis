@@ -6,6 +6,7 @@ import time
 import weakref
 from typing import TYPE_CHECKING, Any
 
+import coredis
 from coredis._utils import nativestr
 from coredis.commands.constants import CommandName
 from coredis.config import Config
@@ -56,8 +57,8 @@ class OpenTelemetryProvider(TelemetryProvider):
     warned_missing_deps: ClassVar[bool] = False
 
     def __init__(self) -> None:
-        self.meter = metrics.get_meter("coredis")
-        self.tracer = trace.get_tracer("coredis")
+        self.meter = metrics.get_meter("coredis", coredis.__version__)
+        self.tracer = trace.get_tracer("coredis", coredis.__version__)
         self.instruments: dict[str, Instrument] = {}
         self.observed_connections: weakref.WeakSet[BaseConnection] = weakref.WeakSet()
         self.observed_pools: weakref.WeakSet[BaseConnectionPool[Any]] = weakref.WeakSet()
