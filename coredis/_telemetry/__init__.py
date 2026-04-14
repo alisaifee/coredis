@@ -9,12 +9,12 @@ from ._noop import NoopTelemetryProvider
 
 _noop_provider = NoopTelemetryProvider()
 _otel_provider = None
-_warning_issued = False
+_otel_unavailable = False
 
 
 def get_telemetry_provider() -> TelemetryProvider:
-    global _noop_provider, _otel_provider, _warning_issued
-    if not Config.otel_enabled or _warning_issued:
+    global _noop_provider, _otel_unavailable, _otel_provider
+    if _otel_unavailable or not Config.otel_enabled:
         return _noop_provider
     try:
         if not _otel_provider:
@@ -27,7 +27,7 @@ def get_telemetry_provider() -> TelemetryProvider:
             "OpenTelemetry support was configured but could not be enabled due to missing dependencies",
             stacklevel=2,
         )
-        _warning_issued = True
+        _otel_unavailable = True
         return _noop_provider
 
 
