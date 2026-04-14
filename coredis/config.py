@@ -4,7 +4,9 @@ import os
 
 
 def _env_truthy(name: str) -> bool:
-    return os.environ.get(name, "").lower() in ["1", "true", "t"]
+    if var := os.environ.get(name):
+        return var.lower() in ["1", "true", "t"]
+    return False
 
 
 class __Config:
