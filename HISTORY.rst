@@ -3,6 +3,21 @@
 Changelog
 =========
 
+v6.6.0
+------
+Release Date: 2026-04-14
+
+* Bug Fix
+
+  * Fix memory leak due to incorrect property caching of command request objects
+    introduced in ``6.4.0``
+  * Remove incorrectly added ``opentelemetry-api`` dependency
+
+* Telemetry
+  * Ensure connection pool name is always added to operation
+    duration metric
+  * Add library version to opentelemetry attributes
+
 v6.5.1
 ------
 Release Date: 2026-04-11
@@ -73,7 +88,7 @@ Release Date: 2026-03-07
     * :rediscommand:`JSON.MGET`
     * :rediscommand:`JSON.MSET`
 
-* Compatibility
+  * Compatibility
 
   * Add ``GEOSHAPE`` index type for search
 
