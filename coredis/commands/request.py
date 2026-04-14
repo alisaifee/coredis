@@ -42,23 +42,6 @@ def is_type_like(obj: object) -> TypeIs[type[Any]]:
 
 
 class CommandRequest(Awaitable[CommandResponseT]):
-    __slots__ = (
-        "name",
-        "arguments",
-        "serialized_arguments",
-        "execution_parameters",
-        "executor",
-        "callback",
-        "decode",
-        "blocking",
-        "readonly",
-        "noreply",
-        "routing_strategy",
-        "resolver",
-        "type_adapter",
-        "kwargs",
-        "_response",
-    )
     _response: Awaitable[CommandResponseT]
 
     def __init__(
@@ -104,26 +87,22 @@ class CommandRequest(Awaitable[CommandResponseT]):
             for k in arguments
         )
 
-    @property
-    @functools.cache
+    @functools.cached_property
     def keys(self) -> tuple[RedisValueT, ...]:
         return tuple([k.key for k in self.arguments if isinstance(k, Key)])
 
-    @property
-    @functools.cache
+    @functools.cached_property
     def affected_slots(self) -> tuple[int, ...]:
         return tuple({k.slot for k in self.arguments if isinstance(k, Key)})
 
-    @property
-    @functools.cache
+    @functools.cached_property
     def slots_to_keys(self) -> dict[int, list[tuple[int, RedisValueT]]]:
         mapping: dict[int, list[tuple[int, RedisValueT]]] = {}
         for idx, k in enumerate([k for k in self.arguments if isinstance(k, Key)]):
             mapping.setdefault(k.slot, []).append((idx, k.key))
         return mapping
 
-    @property
-    @functools.cache
+    @functools.cached_property
     def key_indices(self) -> tuple[int, ...]:
         indices: list[int] = []
         for idx, arg in enumerate(self.arguments):
