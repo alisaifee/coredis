@@ -4,7 +4,7 @@ import functools
 import inspect
 import itertools
 import weakref
-from typing import Any, ClassVar, cast, get_args, overload
+from typing import Any, cast, get_args, overload
 
 from deprecated.sphinx import versionadded
 
@@ -16,6 +16,8 @@ from coredis.typing import (
     TYPE_CHECKING,
     AnyStr,
     Callable,
+    ClassVar,
+    Concatenate,
     Generator,
     Generic,
     KeyT,
@@ -146,7 +148,10 @@ def wraps(
     runtime_checks: bool = ...,
     readonly: bool = ...,
     verify_existence: bool = ...,
-) -> Callable[[Callable[P, CommandRequest[R]]], Callable[P, CommandRequest[R]]]: ...
+) -> Callable[
+    [Callable[Concatenate[LibraryT, P], CommandRequest[R]]],
+    Callable[Concatenate[LibraryT, P], CommandRequest[R]],
+]: ...
 
 
 @overload
@@ -158,7 +163,8 @@ def wraps(
     readonly: bool = ...,
     verify_existence: bool = ...,
 ) -> Callable[
-    [Callable[P, CommandRequest[Any]]], Callable[P, CommandRequest[CommandResponseT]]
+    [Callable[Concatenate[LibraryT, P], CommandRequest[Any]]],
+    Callable[Concatenate[LibraryT, P], CommandRequest[CommandResponseT]],
 ]: ...
 
 
@@ -170,7 +176,10 @@ def wraps(
     runtime_checks: bool = False,
     readonly: bool = False,
     verify_existence: bool = True,
-) -> Callable[[Callable[P, CommandRequest[Any]]], Callable[P, CommandRequest[Any]]]:
+) -> Callable[
+    [Callable[Concatenate[LibraryT, P], CommandRequest[Any]]],
+    Callable[Concatenate[LibraryT, P], CommandRequest[Any]],
+]:
     """
     Decorator for wrapping methods of subclasses of :class:`Library`
     as entry points to the functions contained in the library. This allows
@@ -298,10 +307,9 @@ def wraps(
     """
 
     def wrapper(
-        func: Callable[P, CommandRequest[Any]],
-    ) -> Callable[P, CommandRequest[CommandResponseT]]:
+        func: Callable[Concatenate[LibraryT, P], CommandRequest[Any]],
+    ) -> Callable[Concatenate[LibraryT, P], CommandRequest[CommandResponseT]]:
         sig = inspect.signature(func)
-        first_arg: str = list(sig.parameters.keys())[0]
         runtime_check_wrapper = add_runtime_checks if not runtime_checks else safe_beartype
         key_params = [
             n
@@ -327,37 +335,30 @@ def wraps(
         }
 
         def split_args(
-            *a: P.args, **k: P.kwargs
-        ) -> tuple[Library[AnyStr], Parameters[KeyT], Parameters[ValueT]]:
-            bound_arguments = sig.bind(*a, **k)
+            instance: LibraryT, *a: P.args, **k: P.kwargs
+        ) -> tuple[Parameters[KeyT], Parameters[ValueT]]:
+            bound_arguments = sig.bind(instance, *a, **k)
             bound_arguments.apply_defaults()
             arguments: dict[str, Any] = bound_arguments.arguments
-            instance = arguments.pop(first_arg)
-            if not isinstance(instance, Library):
-                raise RuntimeError(
-                    f"{instance.__class__.__name__} is not a subclass of"
-                    " coredis.commands.function.Library therefore it's methods cannot be bound "
-                    " to a redis library using ``coredis.commands.function.wrap``."
-                    " Please refer to the documentation at https://coredis.readthedocs.org/"
-                    " for instructions on how to bind a class to a redis library."
-                )
             keys: list[KeyT] = []
             args: list[ValueT] = []
-            for name in sig.parameters:
-                if name == first_arg:
+            for idx, name in enumerate(sig.parameters):
+                if idx == 0:
                     continue
                 values = arg_fetch[name](arguments[name])
                 if name in key_params:
                     keys.extend(values)
                 else:
                     args.extend(values)
-            return instance, keys, args
+            return keys, args
 
         @runtime_check_wrapper
         @functools.wraps(func)
-        def _inner(*args: P.args, **kwargs: P.kwargs) -> CommandRequest[CommandResponseT]:
+        def _inner(
+            instance: LibraryT, /, *args: P.args, **kwargs: P.kwargs
+        ) -> CommandRequest[CommandResponseT]:
             name = function_name or func.__name__
-            instance, keys, arguments = split_args(*args, **kwargs)
+            keys, arguments = split_args(instance, *args, **kwargs)
             if (fn := instance.functions.get(name, None)) is None:
                 if verify_existence:
                     raise AttributeError(
