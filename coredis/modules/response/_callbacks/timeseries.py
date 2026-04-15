@@ -2,16 +2,12 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from coredis._utils import EncodingInsensitiveDict
 from coredis.response._callbacks import (
     ClusterMergeMapping,
     ResponseCallback,
 )
-from coredis.response._utils import flat_pairs_to_dict
 from coredis.typing import (
     AnyStr,
-    ResponsePrimitive,
-    ResponseType,
     StringT,
 )
 
@@ -42,21 +38,6 @@ class SamplesCallback(
         if response:
             return tuple(cast(tuple[int, float], SampleCallback().transform(r)) for r in response)
         return ()
-
-
-class TimeSeriesInfoCallback(
-    ResponseCallback[dict[ResponsePrimitive, ResponseType], dict[AnyStr, ResponseType]]
-):
-    def transform(
-        self,
-        response: dict[ResponsePrimitive, ResponseType],
-    ) -> dict[AnyStr, ResponseType]:
-        dct = EncodingInsensitiveDict(response)
-        if "labels" in dct:
-            dct["labels"] = dict(dct["labels"])
-        if "Chunks" in dct:
-            dct["Chunks"] = [flat_pairs_to_dict(chunk) for chunk in dct["Chunks"]]
-        return dict(dct)
 
 
 class TimeSeriesCallback(

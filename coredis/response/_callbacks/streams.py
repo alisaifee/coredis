@@ -4,7 +4,7 @@ from typing import cast
 
 from coredis._utils import EncodingInsensitiveDict
 from coredis.response._callbacks import ResponseCallback
-from coredis.response._utils import flat_pairs_to_dict, flat_pairs_to_ordered_dict
+from coredis.response._utils import flat_pairs_to_ordered_dict
 from coredis.response.types import (
     StreamEntry,
     StreamInfo,
@@ -147,11 +147,13 @@ class StreamInfoCallback(ResponseCallback[dict[StringT, ResponseType], StreamInf
             if groups:
                 normalized_groups = []
                 for group in groups:
-                    g = EncodingInsensitiveDict(flat_pairs_to_dict(group))
+                    print(group)
+                    g = EncodingInsensitiveDict(group)
                     consumers = g["consumers"]
                     normalized_consumers = []
                     for consumer in consumers:
-                        normalized_consumers.append(flat_pairs_to_dict(consumer))
+                        print(consumer)
+                        normalized_consumers.append(consumer)
                     g["consumers"] = normalized_consumers
                     normalized_groups.append(g)
                 res["groups"] = normalized_groups

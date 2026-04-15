@@ -4,7 +4,6 @@ from typing import Any, cast
 
 from coredis._utils import EncodingInsensitiveDict
 from coredis.response._callbacks import ResponseCallback
-from coredis.response._utils import flat_pairs_to_dict
 from coredis.response.types import LibraryDefinition
 from coredis.typing import (
     AnyStr,
@@ -32,7 +31,7 @@ class FunctionListCallback(
             lib_name = library["library_name"]
             functions = EncodingInsensitiveDict({})
             for function in library.get("functions", []):
-                function_definition = EncodingInsensitiveDict(flat_pairs_to_dict(function))
+                function_definition = EncodingInsensitiveDict(function)
                 functions[function_definition["name"]] = function_definition
                 functions[function_definition["name"]]["flags"] = set(function_definition["flags"])
             library["functions"] = functions

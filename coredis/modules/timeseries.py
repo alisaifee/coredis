@@ -32,6 +32,7 @@ from ..commands.constants import CommandFlag, CommandGroup, CommandName, NodeFla
 from ..commands.request import CommandRequest
 from ..response._callbacks import (
     ClusterMergeSets,
+    DictCallback,
     IntCallback,
     SetCallback,
     SimpleStringCallback,
@@ -44,7 +45,6 @@ from .response._callbacks.timeseries import (
     SampleCallback,
     SamplesCallback,
     TimeSeriesCallback,
-    TimeSeriesInfoCallback,
     TimeSeriesMultiCallback,
 )
 
@@ -1108,7 +1108,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         return self.client.create_request(
             CommandName.TS_INFO,
             *command_arguments,
-            callback=TimeSeriesInfoCallback[AnyStr](),
+            callback=DictCallback[AnyStr, ResponseType](),
         )
 
     @module_command(
