@@ -97,13 +97,13 @@ class MultiStreamRangeCallback(
 
 class PendingCallback(
     ResponseCallback[
-        list[StringT | int | list[StringT | int | list[StringT]] | None],
+        list[StringT | int | list[StringT | int | list[StringT | int]] | None],
         StreamPending | tuple[StreamPendingExt, ...],
     ]
 ):
     def transform(
         self,
-        response: list[StringT | int | list[StringT | int | list[StringT]] | None],
+        response: list[StringT | int | list[StringT | int | list[StringT | int]] | None],
     ) -> StreamPending | tuple[StreamPendingExt, ...]:
         if not self.options.get("count"):
             consumers = [(r[0], int(r[1])) for r in cast(list[list[StringT]], response[3] or [])]
