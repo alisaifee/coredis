@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v6.6.1
+------
+Release Date: 2026-04-14
+
+* Bug Fix
+
+  * Revert backward incompatible changes in compilation units.
+
 v6.6.0
 ------
 Release Date: 2026-04-14
