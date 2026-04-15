@@ -96,8 +96,6 @@ class PipelineCommandRequest(CommandRequest[CommandResponseT]):
     Command request returned by a pipeline command
     """
 
-    __slots__ = ()
-
     def __await__(self) -> Generator[None, None, CommandResponseT]:
         if hasattr(self, "_response"):
             return self._response.__await__()
@@ -108,8 +106,6 @@ class ClusterPipelineCommandRequest(CommandRequest[CommandResponseT]):
     """
     Command request for cluster pipelines, tracks position and result for cluster routing.
     """
-
-    __slots__ = ("position", "result")
 
     def __init__(
         self,
