@@ -369,14 +369,78 @@ class TestPubSubMessages:
             message = await wait_for_message(p)
             assert message == make_message("message", "foo", "test message")
 
-    @pytest.mark.parametrize(
-        "pubsub_arguments",
-        [({"read_from_replicas": False}), ({"read_from_replicas": True})],
-    )
-    async def test_published_message_to_sharded_channel(self, redis_cluster, pubsub_arguments):
+    async def test_read_from_replicas_explicit(self, redis_cluster):
+        async with redis_cluster.pubsub(
+            ignore_subscribe_messages=True, read_from_replicas=True
+        ) as pubsub:
+            await pubsub.subscribe("topic")
+            await redis_cluster.publish("topic", "test")
+            message = await wait_for_message(pubsub)
+            assert message["data"] == "test"
+            assert pubsub.connection.location in {
+                r.connection_pool.location for r in redis_cluster.replicas
+            }
+
+    @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
+    async def test_read_from_replicas_implicit(self, redis_cluster, client_arguments):
+        async with redis_cluster.pubsub(ignore_subscribe_messages=True) as pubsub:
+            await pubsub.subscribe("topic")
+            await redis_cluster.publish("topic", "test")
+            message = await wait_for_message(pubsub)
+            assert message["data"] == "test"
+            assert pubsub.connection.location in {
+                r.connection_pool.location for r in redis_cluster.replicas
+            }
+
+        async with redis_cluster.pubsub(
+            ignore_subscribe_messages=True, read_from_replicas=False
+        ) as pubsub:
+            await pubsub.subscribe("topic")
+            await redis_cluster.publish("topic", "test")
+            message = await wait_for_message(pubsub)
+            assert message["data"] == "test"
+            assert pubsub.connection.location in {
+                r.connection_pool.location for r in redis_cluster.primaries
+            }
+
+    async def test_sharded_read_from_replicas_explicit(self, redis_cluster):
+        async with redis_cluster.sharded_pubsub(
+            ignore_subscribe_messages=True, read_from_replicas=True
+        ) as pubsub:
+            await pubsub.subscribe("topic")
+            await redis_cluster.spublish("topic", "test")
+            message = await wait_for_message(pubsub)
+            assert message["data"] == "test"
+            assert {c.location for c in pubsub.shard_connections.values()} == {
+                r.connection_pool.location for r in redis_cluster.replicas
+            }
+
+    @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
+    async def test_sharded_read_from_replicas_implicit(self, redis_cluster, client_arguments):
+        async with redis_cluster.sharded_pubsub(ignore_subscribe_messages=True) as pubsub:
+            await pubsub.subscribe("topic")
+            await redis_cluster.spublish("topic", "test")
+            message = await wait_for_message(pubsub)
+            assert message["data"] == "test"
+            assert {c.location for c in pubsub.shard_connections.values()} == {
+                r.connection_pool.location for r in redis_cluster.replicas
+            }
+
+        async with redis_cluster.sharded_pubsub(
+            ignore_subscribe_messages=True, read_from_replicas=False
+        ) as pubsub:
+            await pubsub.subscribe("topic")
+            await redis_cluster.spublish("topic", "test")
+            message = await wait_for_message(pubsub)
+            assert message["data"] == "test"
+            assert {c.location for c in pubsub.shard_connections.values()} == {
+                r.connection_pool.location for r in redis_cluster.primaries
+            }
+
+    async def test_published_message_to_sharded_channel(self, redis_cluster):
         shards = {"a", "b", "c"}
         async with redis_cluster.sharded_pubsub(
-            ignore_subscribe_messages=True, **pubsub_arguments
+            ignore_subscribe_messages=True,
         ) as p:
             for shard in shards:
                 await p.subscribe(f"foo{{{shard}}}")

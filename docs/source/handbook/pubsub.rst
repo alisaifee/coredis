@@ -165,7 +165,9 @@ without worrying about sharding as the :rediscommand:`PUBLISH` command in cluste
 in messages being broadcasted to every node in the cluster.
 
 On the consumer side of the equation **coredis** simply picks a random node and consumes the messages from all
-subscribed topics.
+subscribed topics. If the client was configured with :paramref:`coredis.RedisCluster.read_from_replicas`
+or :paramref:`coredis.RedisCluster.pubsub.read_from_replicas` is explicitly set to ``True``
+the node used for receiving messages will be a replica.
 
 This approach, though functional does pose limited opportunity for horizontal scaling as all the nodes
 in the cluster will have to process the published messages for all channels.

@@ -41,6 +41,7 @@ from coredis.retry import (
 )
 from coredis.typing import (
     AnyStr,
+    AsyncContextManager,
     AsyncGenerator,
     Awaitable,
     Callable,
@@ -138,6 +139,9 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
         self.channels = {}
         self.patterns = {}
 
+    def acquire_connection(self) -> AsyncContextManager[BaseConnection]:
+        return self.connection_pool.acquire()
+
     @property
     def connection(self) -> BaseConnection:
         if not self._connection:
@@ -179,7 +183,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
         async def _run() -> None:
             nonlocal started
-            async with self.connection_pool.acquire() as self._connection:
+            async with self.acquire_connection() as self._connection:
                 try:
                     async with create_task_group() as tg:
                         self._current_scope = tg.cancel_scope
@@ -544,6 +548,71 @@ class ClusterPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
 
     """
 
+    def __init__(
+        self,
+        connection_pool: coredis.pool.ClusterConnectionPool,
+        ignore_subscribe_messages: bool = False,
+        read_from_replicas: bool | None = None,
+        retry_policy: RetryPolicy | None = CompositeRetryPolicy(
+            ExponentialBackoffRetryPolicy(
+                (ConnectionError,), retries=None, base_delay=0.1, max_delay=16, jitter=True
+            ),
+            ConstantRetryPolicy((TimeoutError,), retries=2, delay=0.1),
+        ),
+        channels: Parameters[StringT] | None = None,
+        channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        patterns: Parameters[StringT] | None = None,
+        pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
+        subscription_timeout: float = 1,
+        unsubscription_timeout: float = 0.1,
+        max_idle_seconds: float = 15,
+    ):
+        """
+        :param connection_pool: Connection pool used to acquire
+         a connection to use for the pubsub consumer
+        :param ignore_subscribe_messages: Whether to skip subscription
+         acknowledgement messages
+        :param retry_policy: An explicit retry policy to use in the subscriber.
+        :param channels: channels that the constructed Pubsub instance should
+         automatically subscribe to
+        :param channel_handlers: Mapping of channels to automatically subscribe to
+         and the associated handlers that will be invoked when a message is received
+         on the specific channel.
+        :param patterns: patterns that the constructed Pubsub instance should
+         automatically subscribe to
+        :param pattern_handlers: Mapping of patterns to automatically subscribe to
+         and the associated handlers that will be invoked when a message is received
+         on channel matching the pattern.
+        :param subscription_timeout: Maximum amount of time in seconds to wait for
+         acknowledgement of subscriptions.
+        :param unsubscription_timeout: Maximum amount of time in seconds to wait for
+         acknowledgement of unsubscriptions.
+        :param max_idle_seconds: Maximum duration (in seconds) to tolerate no
+         messages from the server before performing a keepalive check with a
+         ``PING``.
+        """
+
+        super().__init__(
+            connection_pool=connection_pool,
+            ignore_subscribe_messages=ignore_subscribe_messages,
+            retry_policy=retry_policy,
+            channels=channels,
+            channel_handlers=channel_handlers,
+            patterns=patterns,
+            pattern_handlers=pattern_handlers,
+            subscription_timeout=subscription_timeout,
+            unsubscription_timeout=unsubscription_timeout,
+            max_idle_seconds=max_idle_seconds,
+        )
+        self._read_from_replicas = (
+            read_from_replicas
+            if read_from_replicas is not None
+            else connection_pool.read_from_replicas
+        )
+
+    def acquire_connection(self) -> AsyncContextManager[BaseConnection]:
+        return self.connection_pool.acquire(primary=not self._read_from_replicas)
+
 
 @versionchanged(
     version="6.0.0",
@@ -603,16 +672,16 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         """
         self.shard_connections: dict[str, BaseConnection] = {}
         self._node_channel_mapping: dict[str, list[StringT]] = {}
-        self.read_from_replicas = (
+        self._read_from_replicas = (
             read_from_replicas
             if read_from_replicas is not None
             else connection_pool.read_from_replicas
         )
         self._last_checkins: dict[TCPLocation, float] = defaultdict(lambda: 0)
         super().__init__(
-            connection_pool,
-            ignore_subscribe_messages,
-            retry_policy,
+            connection_pool=connection_pool,
+            ignore_subscribe_messages=ignore_subscribe_messages,
+            retry_policy=retry_policy,
             channels=channels,
             channel_handlers=channel_handlers,
             subscription_timeout=subscription_timeout,
@@ -703,7 +772,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
             stack = AsyncExitStack()
             nodes = (
                 self.connection_pool.cluster_layout.primaries
-                if not self.read_from_replicas
+                if not self._read_from_replicas
                 else self.connection_pool.cluster_layout.replicas
             )
             self.shard_connections = {
@@ -745,7 +814,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         channel = nativestr(args[0])
         slot = hash_slot(b(channel))
         node = self.connection_pool.cluster_layout.node_for_slot(
-            slot, primary=not self.read_from_replicas
+            slot, primary=not self._read_from_replicas
         )
         if node and node.node_id:
             key = node.node_id

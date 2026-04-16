@@ -922,6 +922,7 @@ class RedisCluster(
         patterns: Parameters[StringT] | None = None,
         pattern_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         ignore_subscribe_messages: bool = False,
+        read_from_replicas: bool | None = None,
         retry_policy: RetryPolicy | None = CompositeRetryPolicy(
             ExponentialBackoffRetryPolicy(
                 (ConnectionError,), retries=None, base_delay=0.1, max_delay=16, jitter=True
@@ -947,6 +948,7 @@ class RedisCluster(
          on channel matching the pattern.
         :param ignore_subscribe_messages: Whether to skip subscription
          acknowledgement messages
+        :param read_from_replicas: Whether to read messages from replica nodes
         :param retry_policy: An explicit retry policy to use in the subscriber.
         :param subscription_timeout: Maximum amount of time in seconds to wait for
          acknowledgement of subscriptions.
@@ -957,6 +959,7 @@ class RedisCluster(
         return ClusterPubSub[AnyStr](
             self.connection_pool,
             ignore_subscribe_messages=ignore_subscribe_messages,
+            read_from_replicas=read_from_replicas,
             retry_policy=retry_policy,
             channels=channels,
             channel_handlers=channel_handlers,

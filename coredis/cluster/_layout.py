@@ -139,9 +139,9 @@ class ClusterLayout:
 
     def random_node(self, primary: bool = True) -> ClusterNodeLocation:
         if primary:
-            return random.choice(list(self.primaries))
+            return random.choice(self.primaries)
         else:
-            return random.choice(list(self.nodes))
+            return random.choice(self.replicas or self.nodes)
 
     def _handle_moved_error(
         self,
