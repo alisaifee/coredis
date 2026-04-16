@@ -575,7 +575,7 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         connection_pool: coredis.pool.ClusterConnectionPool,
         ignore_subscribe_messages: bool = False,
         retry_policy: RetryPolicy | None = None,
-        read_from_replicas: bool = False,
+        read_from_replicas: bool | None = None,
         channels: Parameters[StringT] | None = None,
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         subscription_timeout: float = 1,
@@ -603,7 +603,11 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         """
         self.shard_connections: dict[str, BaseConnection] = {}
         self._node_channel_mapping: dict[str, list[StringT]] = {}
-        self.read_from_replicas = read_from_replicas
+        self.read_from_replicas = (
+            read_from_replicas
+            if read_from_replicas is not None
+            else connection_pool.read_from_replicas
+        )
         self._last_checkins: dict[TCPLocation, float] = defaultdict(lambda: 0)
         super().__init__(
             connection_pool,
@@ -697,11 +701,16 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         async def _run() -> None:
             nonlocal started
             stack = AsyncExitStack()
+            nodes = (
+                self.connection_pool.cluster_layout.primaries
+                if not self.read_from_replicas
+                else self.connection_pool.cluster_layout.replicas
+            )
             self.shard_connections = {
                 node.node_id: await stack.enter_async_context(
                     self.connection_pool.acquire(node=node)
                 )
-                for node in self.connection_pool.cluster_layout.primaries
+                for node in nodes
                 if node.node_id
             }
             try:
@@ -735,7 +744,9 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         assert isinstance(args[0], (bytes, str))
         channel = nativestr(args[0])
         slot = hash_slot(b(channel))
-        node = self.connection_pool.cluster_layout.node_for_slot(slot)
+        node = self.connection_pool.cluster_layout.node_for_slot(
+            slot, primary=not self.read_from_replicas
+        )
         if node and node.node_id:
             key = node.node_id
             self.shard_connections[key].send_command(command, *args)

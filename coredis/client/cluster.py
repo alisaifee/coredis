@@ -974,7 +974,7 @@ class RedisCluster(
         channels: Parameters[StringT] | None = None,
         channel_handlers: Mapping[StringT, SubscriptionCallback] | None = None,
         ignore_subscribe_messages: bool = False,
-        read_from_replicas: bool = False,
+        read_from_replicas: bool | None = None,
         retry_policy: RetryPolicy | None = CompositeRetryPolicy(
             ExponentialBackoffRetryPolicy(
                 (ConnectionError,), retries=None, base_delay=0.1, max_delay=16, jitter=True
