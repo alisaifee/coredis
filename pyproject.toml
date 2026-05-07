@@ -125,7 +125,7 @@ docs = [
   "sphinx-copybutton==0.5.2",
   "sphinx-design>=0.6.1",
   "sphinx-inline-tabs==2025.12.21.14",
-  "sphinx-issues==5.0.1",
+  "sphinx-issues==6.0.0",
   "sphinx-paramlinks==0.6.0",
   "sphinx-sitemap==2.8.0",
   "sphinx-toolbox>=4.1.2,<5",
