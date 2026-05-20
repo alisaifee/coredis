@@ -122,11 +122,12 @@ class Lock(Generic[AnyStr], AsyncContextManagerMixin):
 
     @contextlib.asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        if await self.acquire():
-            yield self
-            await self.release()
-        else:
+        if not await self.acquire():
             raise LockAcquisitionError("Could not acquire lock")
+        try:
+            yield self
+        finally:
+            await self.release()
 
     async def acquire(
         self,
