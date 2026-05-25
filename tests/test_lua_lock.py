@@ -166,3 +166,11 @@ class TestLock:
         await client.set(lock_name, "a")
         with pytest.raises(LockError):
             await lock.extend(10)
+
+    async def test_lock_release_on_exception(self, client, lock_name):
+        lock = Lock(client, lock_name, blocking=True)
+        await client.flushdb()
+        with pytest.raises(RuntimeError):
+            async with lock:
+                raise RuntimeError("oh no!")
+        assert not await client.get(lock_name)
