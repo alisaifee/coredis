@@ -96,7 +96,7 @@ test = [
 ]
 
 dev = [
-  "click==8.1.2",
+  "click==8.4.1",
   "hatch>=1.14.0",
   "hatch-mypyc>=0.1.0",
   "inflect>=6.0.0",

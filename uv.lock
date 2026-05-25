@@ -689,14 +689,14 @@ wheels = [
 
 [[package]]
 name = "click"
-version = "8.1.2"
+version = "8.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/42/e1/4cb2d3a2416bcd871ac93f12b5616f7755a6800bccae05e5a99d3673eb69/click-8.1.2.tar.gz", hash = "sha256:479707fe14d9ec9a0757618b7a100a0ae4c4e236fac5b7f80ca68028141a1a72", size = 330315, upload-time = "2022-03-31T20:52:52.48Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9b/98/518d8e5081007684232226f475082b30087d0f585e8457db087298259f49/click-8.4.1.tar.gz", hash = "sha256:918b5633eddf6b41c32d4f454bf0de810065c74e3f7dbf8ee5452f8be88d3e96", size = 353007, upload-time = "2026-05-22T04:08:37.769Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a0/66/c8196ad693d62384d8e800e5bd27434a64c0057fe169b61c69a73f1614a8/click-8.1.2-py3-none-any.whl", hash = "sha256:24e1a4a9ec5bf6299411369b208c1df2188d9eb8d916302fe6bf03faed227f1e", size = 96570, upload-time = "2022-03-31T20:52:50.525Z" },
+    { url = "https://files.pythonhosted.org/packages/c7/0d/67e5b4109ea4a837e80daa87c2c696711955e40449a97e8926672534def2/click-8.4.1-py3-none-any.whl", hash = "sha256:482be17c6991b8c19c5429a1e995d9b0efdbb63172824c41f99965dc0ade8ec2", size = 116639, upload-time = "2026-05-22T04:08:35.26Z" },
 ]
 
 [[package]]
@@ -898,7 +898,7 @@ ci = [
     { name = "aiobotocore", specifier = ">=2.15.2" },
     { name = "asyncache", specifier = ">=0.3.1" },
     { name = "beartype" },
-    { name = "click", specifier = "==8.1.2" },
+    { name = "click", specifier = "==8.4.1" },
     { name = "coverage" },
     { name = "hatch", specifier = ">=1.14.0" },
     { name = "hatch-mypyc", specifier = ">=0.1.0" },
@@ -934,7 +934,7 @@ dev = [
     { name = "aiobotocore", specifier = ">=2.15.2" },
     { name = "asyncache", specifier = ">=0.3.1" },
     { name = "beartype" },
-    { name = "click", specifier = "==8.1.2" },
+    { name = "click", specifier = "==8.4.1" },
     { name = "coverage" },
     { name = "hatch", specifier = ">=1.14.0" },
     { name = "hatch-mypyc", specifier = ">=0.1.0" },
@@ -969,7 +969,7 @@ docs = [
     { name = "beartype", marker = "python_full_version >= '3.12'" },
     { name = "botocore", marker = "python_full_version >= '3.12'" },
     { name = "cachetools", marker = "python_full_version >= '3.12'" },
-    { name = "click", marker = "python_full_version >= '3.12'", specifier = "==8.1.2" },
+    { name = "click", marker = "python_full_version >= '3.12'", specifier = "==8.4.1" },
     { name = "coverage", marker = "python_full_version >= '3.12'" },
     { name = "furo", marker = "python_full_version >= '3.12'", specifier = ">=2025.9.25" },
     { name = "hatch", marker = "python_full_version >= '3.12'", specifier = ">=1.14.0" },
@@ -1856,10 +1856,10 @@ name = "jsonschema"
 version = "4.26.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "attrs" },
-    { name = "jsonschema-specifications" },
-    { name = "referencing" },
-    { name = "rpds-py" },
+    { name = "attrs", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "jsonschema-specifications", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "referencing", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "rpds-py", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b3/fc/e067678238fa451312d4c62bf6e6cf5ec56375422aee02f9cb5f909b3047/jsonschema-4.26.0.tar.gz", hash = "sha256:0c26707e2efad8aa1bfc5b7ce170f3fccc2e4918ff85989ba9ffa9facb2be326", size = 366583, upload-time = "2026-01-07T13:41:07.246Z" }
 wheels = [
@@ -1871,7 +1871,7 @@ name = "jsonschema-specifications"
 version = "2025.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "referencing" },
+    { name = "referencing", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/19/74/a633ee74eb36c44aa6d1095e7cc5569bebf04342ee146178e2d36600708b/jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d", size = 32855, upload-time = "2025-09-08T01:34:59.186Z" }
 wheels = [
@@ -1986,7 +1986,7 @@ name = "linkify-it-py"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "uc-micro-py" },
+    { name = "uc-micro-py", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2e/c9/06ea13676ef354f0af6169587ae292d3e2406e212876a413bf9eece4eb23/linkify_it_py-2.1.0.tar.gz", hash = "sha256:43360231720999c10e9328dc3691160e27a718e280673d444c38d7d3aaa3b98b", size = 29158, upload-time = "2026-03-01T07:48:47.683Z" }
 wheels = [
@@ -2017,7 +2017,7 @@ wheels = [
 
 [package.optional-dependencies]
 linkify = [
-    { name = "linkify-it-py" },
+    { name = "linkify-it-py", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 
 [[package]]
@@ -2122,7 +2122,7 @@ name = "mdit-py-plugins"
 version = "0.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "markdown-it-py" },
+    { name = "markdown-it-py", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/59/fc/f8d0863f8862f25602c0404d75568e89fb6b4109804645e5cdfb1be5cf56/mdit_py_plugins-0.6.1.tar.gz", hash = "sha256:a2bca0f039f39dbd35fb74ae1b5f998608c437463371f0ff7f49a19a17a114d0", size = 56114, upload-time = "2026-05-13T09:03:38.91Z" }
 wheels = [
@@ -2143,9 +2143,9 @@ name = "memray"
 version = "1.19.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "jinja2" },
-    { name = "rich" },
-    { name = "textual" },
+    { name = "jinja2", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "rich", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "textual", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/96/04/5b886a36df947599e0f37cd46e6e44e565299815f044e2303ab2ae9f8870/memray-1.19.3.tar.gz", hash = "sha256:4e0fb29ff0a50c0ec9dc84294d8f2c83419feba561a37628b304c2ae4fe73d03", size = 2417089, upload-time = "2026-04-08T18:49:32.409Z" }
 wheels = [
@@ -3128,8 +3128,8 @@ name = "pytest-memray"
 version = "1.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "memray" },
-    { name = "pytest" },
+    { name = "memray", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "pytest", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3d/28/f67963efed56d847d028d0bb939f26cdeb32c4de474b3befc9da43bf18f9/pytest_memray-1.8.0.tar.gz", hash = "sha256:c0c706ef81941a7aa7064f2b3b8b5cdc0cea72b5277c6a6a09b113ca9ab30bdb", size = 240608, upload-time = "2025-08-18T17:32:47.329Z" }
 wheels = [
@@ -3153,15 +3153,15 @@ name = "pytest-mypy-plugins"
 version = "4.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "decorator" },
-    { name = "jinja2" },
-    { name = "jsonschema" },
-    { name = "mypy" },
-    { name = "packaging" },
-    { name = "pytest" },
-    { name = "pyyaml" },
-    { name = "regex" },
-    { name = "tomlkit" },
+    { name = "decorator", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "jinja2", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "jsonschema", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "mypy", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "packaging", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "pytest", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "pyyaml", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "regex", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "tomlkit", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/41/38/519349835619e0441c12f37e000e999adc7d57c50e7745d432ed5b4548d4/pytest_mypy_plugins-4.0.3.tar.gz", hash = "sha256:bfe491a363dfa7d183e1a9d19615d8aaff79262eea2bc3dca87b4f8223cfe7e8", size = 30583, upload-time = "2026-05-14T07:43:23.834Z" }
 wheels = [
@@ -3348,9 +3348,9 @@ name = "referencing"
 version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "attrs" },
-    { name = "rpds-py" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "attrs", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "rpds-py", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "typing-extensions", marker = "(python_full_version < '3.13' and implementation_name != 'pypy') or (python_full_version < '3.12' and implementation_name == 'pypy')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/22/f5/df4e9027acead3ecc63e50fe1e36aca1523e1719559c499951bb4b53188f/referencing-0.37.0.tar.gz", hash = "sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8", size = 78036, upload-time = "2025-10-13T15:30:48.871Z" }
 wheels = [
@@ -4150,12 +4150,12 @@ name = "textual"
 version = "8.2.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "markdown-it-py", extra = ["linkify"] },
-    { name = "mdit-py-plugins" },
-    { name = "platformdirs" },
-    { name = "pygments" },
-    { name = "rich" },
-    { name = "typing-extensions" },
+    { name = "markdown-it-py", extra = ["linkify"], marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "mdit-py-plugins", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "platformdirs", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "pygments", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "rich", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9b/7a/c519db0aba5024f86e71e9631810bfdd6866ed2c8695bd7fa34b90e7ef59/textual-8.2.7.tar.gz", hash = "sha256:658f568ff81e30ed43890c3e07520390e5cf1b4763822006e060656b0a88f105", size = 1859249, upload-time = "2026-05-19T10:52:49.531Z" }
 wheels = [
