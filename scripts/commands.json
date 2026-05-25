@@ -402,6 +402,1122 @@
             "fast"
         ]
     },
+    "ARCOUNT": {
+        "summary": "Returns the number of non-empty elements in an array.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@read",
+            "@array",
+            "@fast"
+        ],
+        "arity": 2,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            }
+        ],
+        "command_flags": [
+            "readonly",
+            "fast"
+        ]
+    },
+    "ARDEL": {
+        "summary": "Deletes elements at the specified indices in an array.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(N) where N is the number of indices to delete",
+        "acl_categories": [
+            "@write",
+            "@array",
+            "@fast"
+        ],
+        "arity": -3,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "delete": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "index",
+                "type": "integer",
+                "display_text": "index",
+                "multiple": true
+            }
+        ],
+        "command_flags": [
+            "write",
+            "fast"
+        ]
+    },
+    "ARDELRANGE": {
+        "summary": "Deletes elements in one or more ranges.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "Proportional to the number of existing elements / slices touched, not to the numeric span of the requested ranges",
+        "acl_categories": [
+            "@write",
+            "@array",
+            "@slow"
+        ],
+        "arity": -4,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "delete": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "range",
+                "type": "block",
+                "multiple": true,
+                "arguments": [
+                    {
+                        "name": "start",
+                        "type": "integer",
+                        "display_text": "start"
+                    },
+                    {
+                        "name": "end",
+                        "type": "integer",
+                        "display_text": "end"
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "write"
+        ]
+    },
+    "ARGET": {
+        "summary": "Gets the value at an index in an array.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@read",
+            "@array",
+            "@fast"
+        ],
+        "arity": 3,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "index",
+                "type": "integer",
+                "display_text": "index"
+            }
+        ],
+        "command_flags": [
+            "readonly",
+            "fast"
+        ]
+    },
+    "ARGETRANGE": {
+        "summary": "Gets values in a range of indices.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(N) where N is the range length",
+        "acl_categories": [
+            "@read",
+            "@array",
+            "@slow"
+        ],
+        "arity": 4,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "start",
+                "type": "integer",
+                "display_text": "start"
+            },
+            {
+                "name": "end",
+                "type": "integer",
+                "display_text": "end"
+            }
+        ],
+        "command_flags": [
+            "readonly"
+        ]
+    },
+    "ARGREP": {
+        "summary": "Searches array elements in a range using textual predicates.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(P * C) where P is the number of visited positions in touched slices and C is the cost of evaluating the predicates on one existing element.",
+        "acl_categories": [
+            "@read",
+            "@array",
+            "@slow"
+        ],
+        "arity": -6,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "start",
+                "type": "string",
+                "display_text": "start"
+            },
+            {
+                "name": "end",
+                "type": "string",
+                "display_text": "end"
+            },
+            {
+                "name": "predicate",
+                "type": "oneof",
+                "multiple": true,
+                "arguments": [
+                    {
+                        "name": "exact",
+                        "type": "block",
+                        "arguments": [
+                            {
+                                "name": "exact",
+                                "type": "pure-token",
+                                "display_text": "exact",
+                                "token": "EXACT"
+                            },
+                            {
+                                "name": "string",
+                                "type": "string",
+                                "display_text": "string"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "match",
+                        "type": "block",
+                        "arguments": [
+                            {
+                                "name": "match",
+                                "type": "pure-token",
+                                "display_text": "match",
+                                "token": "MATCH"
+                            },
+                            {
+                                "name": "string",
+                                "type": "string",
+                                "display_text": "string"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "glob",
+                        "type": "block",
+                        "arguments": [
+                            {
+                                "name": "glob",
+                                "type": "pure-token",
+                                "display_text": "glob",
+                                "token": "GLOB"
+                            },
+                            {
+                                "name": "pattern",
+                                "type": "string",
+                                "display_text": "pattern"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "re",
+                        "type": "block",
+                        "arguments": [
+                            {
+                                "name": "re",
+                                "type": "pure-token",
+                                "display_text": "re",
+                                "token": "RE"
+                            },
+                            {
+                                "name": "pattern",
+                                "type": "string",
+                                "display_text": "pattern"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "options",
+                "type": "oneof",
+                "optional": true,
+                "multiple": true,
+                "arguments": [
+                    {
+                        "name": "and",
+                        "type": "pure-token",
+                        "display_text": "and",
+                        "token": "AND"
+                    },
+                    {
+                        "name": "or",
+                        "type": "pure-token",
+                        "display_text": "or",
+                        "token": "OR"
+                    },
+                    {
+                        "name": "limit",
+                        "type": "integer",
+                        "display_text": "limit",
+                        "token": "LIMIT"
+                    },
+                    {
+                        "name": "withvalues",
+                        "type": "pure-token",
+                        "display_text": "withvalues",
+                        "token": "WITHVALUES"
+                    },
+                    {
+                        "name": "nocase",
+                        "type": "pure-token",
+                        "display_text": "nocase",
+                        "token": "NOCASE"
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "readonly"
+        ]
+    },
+    "ARINFO": {
+        "summary": "Returns metadata about an array.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(1), or O(N) with FULL option where N is the number of slices.",
+        "acl_categories": [
+            "@read",
+            "@array",
+            "@slow"
+        ],
+        "arity": -2,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "full",
+                "type": "pure-token",
+                "display_text": "full",
+                "token": "FULL",
+                "optional": true
+            }
+        ],
+        "command_flags": [
+            "readonly"
+        ]
+    },
+    "ARINSERT": {
+        "summary": "Inserts one or more values at consecutive indices.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(N) where N is the number of values",
+        "acl_categories": [
+            "@write",
+            "@array",
+            "@fast"
+        ],
+        "arity": -3,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "value",
+                "type": "string",
+                "display_text": "value",
+                "multiple": true
+            }
+        ],
+        "command_flags": [
+            "write",
+            "denyoom",
+            "fast"
+        ]
+    },
+    "ARLASTITEMS": {
+        "summary": "Returns the most recently inserted elements.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(N) where N is the count",
+        "acl_categories": [
+            "@read",
+            "@array",
+            "@slow"
+        ],
+        "arity": -3,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "count",
+                "type": "integer",
+                "display_text": "count"
+            },
+            {
+                "name": "rev",
+                "type": "pure-token",
+                "display_text": "rev",
+                "token": "REV",
+                "optional": true
+            }
+        ],
+        "command_flags": [
+            "readonly"
+        ]
+    },
+    "ARLEN": {
+        "summary": "Returns the length of an array (max index + 1).",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@read",
+            "@array",
+            "@fast"
+        ],
+        "arity": 2,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            }
+        ],
+        "command_flags": [
+            "readonly",
+            "fast"
+        ]
+    },
+    "ARMGET": {
+        "summary": "Gets values at multiple indices in an array.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(N) where N is the number of indices",
+        "acl_categories": [
+            "@read",
+            "@array",
+            "@fast"
+        ],
+        "arity": -3,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "index",
+                "type": "integer",
+                "display_text": "index",
+                "multiple": true
+            }
+        ],
+        "command_flags": [
+            "readonly",
+            "fast"
+        ]
+    },
+    "ARMSET": {
+        "summary": "Sets multiple index-value pairs in an array.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(N) where N is the number of pairs",
+        "acl_categories": [
+            "@write",
+            "@array",
+            "@fast"
+        ],
+        "arity": -4,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "data",
+                "type": "block",
+                "multiple": true,
+                "arguments": [
+                    {
+                        "name": "index",
+                        "type": "integer",
+                        "display_text": "index"
+                    },
+                    {
+                        "name": "value",
+                        "type": "string",
+                        "display_text": "value"
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "write",
+            "denyoom",
+            "fast"
+        ]
+    },
+    "ARNEXT": {
+        "summary": "Returns the next index ARINSERT would use.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@read",
+            "@array",
+            "@fast"
+        ],
+        "arity": 2,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            }
+        ],
+        "command_flags": [
+            "readonly",
+            "fast"
+        ]
+    },
+    "AROP": {
+        "summary": "Performs aggregate operations on array elements in a range.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(P) where P is visited positions in touched slices (dense scanned slots + sparse entries), with worst-case O(|end-start|+1) and typical case close to O(N), where N is the number of existing elements in range.",
+        "acl_categories": [
+            "@read",
+            "@array",
+            "@slow"
+        ],
+        "arity": -5,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "start",
+                "type": "integer",
+                "display_text": "start"
+            },
+            {
+                "name": "end",
+                "type": "integer",
+                "display_text": "end"
+            },
+            {
+                "name": "operation",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "sum",
+                        "type": "pure-token",
+                        "display_text": "sum",
+                        "token": "SUM"
+                    },
+                    {
+                        "name": "min",
+                        "type": "pure-token",
+                        "display_text": "min",
+                        "token": "MIN"
+                    },
+                    {
+                        "name": "max",
+                        "type": "pure-token",
+                        "display_text": "max",
+                        "token": "MAX"
+                    },
+                    {
+                        "name": "and",
+                        "type": "pure-token",
+                        "display_text": "and",
+                        "token": "AND"
+                    },
+                    {
+                        "name": "or",
+                        "type": "pure-token",
+                        "display_text": "or",
+                        "token": "OR"
+                    },
+                    {
+                        "name": "xor",
+                        "type": "pure-token",
+                        "display_text": "xor",
+                        "token": "XOR"
+                    },
+                    {
+                        "name": "match",
+                        "type": "block",
+                        "arguments": [
+                            {
+                                "name": "match",
+                                "type": "pure-token",
+                                "display_text": "match",
+                                "token": "MATCH"
+                            },
+                            {
+                                "name": "value",
+                                "type": "string",
+                                "display_text": "value"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "used",
+                        "type": "pure-token",
+                        "display_text": "used",
+                        "token": "USED"
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "readonly"
+        ]
+    },
+    "ARRING": {
+        "summary": "Inserts values into a ring buffer of specified size, wrapping and truncating as needed.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(M) normally, O(N+M) on ring resize, where N is the maximum of the old and new ring size and M is the number of inserted values",
+        "acl_categories": [
+            "@write",
+            "@array",
+            "@slow"
+        ],
+        "arity": -4,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "size",
+                "type": "integer",
+                "display_text": "size"
+            },
+            {
+                "name": "value",
+                "type": "string",
+                "display_text": "value",
+                "multiple": true
+            }
+        ],
+        "command_flags": [
+            "write",
+            "denyoom"
+        ]
+    },
+    "ARSCAN": {
+        "summary": "Iterates existing elements in a range, returning index-value pairs.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(P) where P is visited positions in touched slices (dense scanned slots + sparse entries), with worst-case O(|end-start|+1) and typical case close to O(N), where N is the number of existing elements in range.",
+        "acl_categories": [
+            "@read",
+            "@array",
+            "@slow"
+        ],
+        "arity": -4,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "start",
+                "type": "integer",
+                "display_text": "start"
+            },
+            {
+                "name": "end",
+                "type": "integer",
+                "display_text": "end"
+            },
+            {
+                "name": "limit",
+                "type": "integer",
+                "display_text": "limit",
+                "token": "LIMIT",
+                "optional": true
+            }
+        ],
+        "command_flags": [
+            "readonly"
+        ]
+    },
+    "ARSEEK": {
+        "summary": "Sets the ARINSERT / ARRING cursor to a specific index.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@write",
+            "@array",
+            "@fast"
+        ],
+        "arity": 3,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "index",
+                "type": "integer",
+                "display_text": "index"
+            }
+        ],
+        "command_flags": [
+            "write",
+            "fast"
+        ]
+    },
+    "ARSET": {
+        "summary": "Sets one or more contiguous values starting at an index in an array.",
+        "since": "8.8.0",
+        "group": "array",
+        "complexity": "O(N) where N is the number of values",
+        "acl_categories": [
+            "@write",
+            "@array",
+            "@fast"
+        ],
+        "arity": -4,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "index",
+                "type": "integer",
+                "display_text": "index"
+            },
+            {
+                "name": "value",
+                "type": "string",
+                "display_text": "value",
+                "multiple": true
+            }
+        ],
+        "command_flags": [
+            "write",
+            "denyoom",
+            "fast"
+        ]
+    },
     "ASKING": {
         "summary": "Signals that a cluster client is following an -ASK redirect.",
         "since": "3.0.0",
@@ -2533,6 +3649,7 @@
         ],
         "command_flags": [
             "admin",
+            "loading",
             "stale"
         ],
         "hints": [
@@ -2751,6 +3868,7 @@
         ],
         "arity": 2,
         "command_flags": [
+            "loading",
             "stale"
         ],
         "hints": [
@@ -2774,6 +3892,7 @@
             }
         ],
         "command_flags": [
+            "loading",
             "stale"
         ]
     },
@@ -2787,6 +3906,7 @@
         ],
         "arity": 2,
         "command_flags": [
+            "loading",
             "stale"
         ],
         "hints": [
@@ -2928,6 +4048,7 @@
         ],
         "arity": 2,
         "command_flags": [
+            "loading",
             "stale"
         ]
     },
@@ -2941,6 +4062,7 @@
         ],
         "arity": 2,
         "command_flags": [
+            "loading",
             "stale"
         ],
         "hints": [
@@ -2957,6 +4079,7 @@
         ],
         "arity": 2,
         "command_flags": [
+            "loading",
             "stale"
         ],
         "hints": [
@@ -2983,6 +4106,7 @@
         ],
         "command_flags": [
             "admin",
+            "loading",
             "stale"
         ],
         "hints": [
@@ -3185,6 +4309,7 @@
         ],
         "command_flags": [
             "admin",
+            "loading",
             "stale"
         ],
         "doc_flags": [
@@ -8269,6 +9394,20 @@
             "response_policy:special"
         ]
     },
+    "HOTKEYS HELP": {
+        "summary": "Return helpful text about HOTKEYS command parameters.",
+        "since": "8.6.1",
+        "group": "server",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@slow"
+        ],
+        "arity": 2,
+        "command_flags": [
+            "loading",
+            "stale"
+        ]
+    },
     "HOTKEYS RESET": {
         "summary": "Release the resources used for hotkey tracking.",
         "since": "8.6.0",
@@ -9468,6 +10607,159 @@
                 "name": "increment",
                 "type": "double",
                 "display_text": "increment"
+            }
+        ],
+        "command_flags": [
+            "write",
+            "denyoom",
+            "fast"
+        ]
+    },
+    "INCREX": {
+        "summary": "Increments the numeric value of a key by a number and sets its expiration time. Uses 0 as initial value if the key doesn't exist.",
+        "since": "8.8.0",
+        "group": "string",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@write",
+            "@string",
+            "@fast"
+        ],
+        "arity": -2,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "access": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "increment",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "float",
+                        "type": "double",
+                        "display_text": "float",
+                        "token": "BYFLOAT"
+                    },
+                    {
+                        "name": "integer",
+                        "type": "integer",
+                        "display_text": "integer",
+                        "token": "BYINT"
+                    }
+                ]
+            },
+            {
+                "name": "overflow-block",
+                "type": "oneof",
+                "token": "OVERFLOW",
+                "summary": "Out-of-bounds policy; defaults to FAIL. Missing LBOUND/UBOUND default to the type limits (LLONG_MIN/LLONG_MAX for BYINT, -LDBL_MAX/LDBL_MAX for BYFLOAT).",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "fail",
+                        "type": "pure-token",
+                        "display_text": "fail",
+                        "token": "FAIL"
+                    },
+                    {
+                        "name": "sat",
+                        "type": "pure-token",
+                        "display_text": "sat",
+                        "token": "SAT"
+                    },
+                    {
+                        "name": "reject",
+                        "type": "pure-token",
+                        "display_text": "reject",
+                        "token": "REJECT"
+                    }
+                ]
+            },
+            {
+                "name": "lowerbound",
+                "type": "string",
+                "display_text": "lowerbound",
+                "token": "LBOUND",
+                "summary": "Integer when used with BYINT, floating-point when used with BYFLOAT.",
+                "optional": true
+            },
+            {
+                "name": "upperbound",
+                "type": "string",
+                "display_text": "upperbound",
+                "token": "UBOUND",
+                "summary": "Integer when used with BYINT, floating-point when used with BYFLOAT.",
+                "optional": true
+            },
+            {
+                "name": "expiration",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "seconds",
+                        "type": "integer",
+                        "display_text": "seconds",
+                        "token": "EX"
+                    },
+                    {
+                        "name": "milliseconds",
+                        "type": "integer",
+                        "display_text": "milliseconds",
+                        "token": "PX"
+                    },
+                    {
+                        "name": "unix-time-seconds",
+                        "type": "unix-time",
+                        "display_text": "unix-time-seconds",
+                        "token": "EXAT"
+                    },
+                    {
+                        "name": "unix-time-milliseconds",
+                        "type": "unix-time",
+                        "display_text": "unix-time-milliseconds",
+                        "token": "PXAT"
+                    },
+                    {
+                        "name": "persist",
+                        "type": "pure-token",
+                        "display_text": "persist",
+                        "token": "PERSIST"
+                    }
+                ]
+            },
+            {
+                "name": "enx",
+                "type": "pure-token",
+                "display_text": "enx",
+                "token": "ENX",
+                "summary": "Only set the expiration if the key currently has no TTL. Requires one of EX/PX/EXAT/PXAT; cannot be combined with PERSIST.",
+                "optional": true
             }
         ],
         "command_flags": [
@@ -12292,6 +13584,7 @@
             }
         ],
         "command_flags": [
+            "denyoom",
             "pubsub",
             "noscript",
             "loading",
@@ -15474,6 +16767,7 @@
             }
         ],
         "command_flags": [
+            "denyoom",
             "pubsub",
             "noscript",
             "loading",
@@ -15542,6 +16836,7 @@
             }
         ],
         "command_flags": [
+            "denyoom",
             "pubsub",
             "noscript",
             "loading",
@@ -16465,12 +17760,14 @@
             {
                 "name": "idmp",
                 "type": "oneof",
+                "since": "8.6.0",
                 "optional": true,
                 "arguments": [
                     {
                         "name": "pid",
-                        "token": "IDMPAUTO",
-                        "type": "string"
+                        "type": "string",
+                        "display_text": "pid",
+                        "token": "IDMPAUTO"
                     },
                     {
                         "name": "idmp",
@@ -16720,15 +18017,17 @@
             },
             {
                 "name": "idmp-duration",
+                "type": "integer",
+                "display_text": "idmp-duration",
                 "token": "IDMP-DURATION",
-                "optional": true,
-                "type": "integer"
+                "optional": true
             },
             {
                 "name": "idmp-maxsize",
+                "type": "integer",
+                "display_text": "idmp-maxsize",
                 "token": "IDMP-MAXSIZE",
-                "optional": true,
-                "type": "integer"
+                "optional": true
             }
         ],
         "command_flags": [
@@ -17327,6 +18626,66 @@
             "write"
         ]
     },
+    "XIDMPRECORD": {
+        "summary": "An internal command for setting IDMP metadata on an existing stream message.",
+        "since": "8.6.2",
+        "group": "stream",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@write",
+            "@stream",
+            "@fast"
+        ],
+        "arity": 5,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "pid",
+                "type": "string",
+                "display_text": "pid"
+            },
+            {
+                "name": "iid",
+                "type": "string",
+                "display_text": "iid"
+            },
+            {
+                "name": "stream-id",
+                "type": "string",
+                "display_text": "stream-id"
+            }
+        ],
+        "command_flags": [
+            "write",
+            "denyoom",
+            "fast"
+        ]
+    },
     "XINFO": {
         "summary": "A container for stream introspection commands.",
         "since": "5.0.0",
@@ -17479,6 +18838,10 @@
             [
                 "8.6.0",
                 "Added the `idmp-duration`, `idmp-maxsize`, `pids-tracked`, `iids-tracked`, `iids-added` and `iids-duplicates` fields for IDMP tracking."
+            ],
+            [
+                "8.8.0",
+                "Added the `nacked-count` field to consumer groups in `FULL` output."
             ]
         ],
         "acl_categories": [
@@ -17579,6 +18942,111 @@
         ],
         "command_flags": [
             "readonly",
+            "fast"
+        ]
+    },
+    "XNACK": {
+        "summary": "Releases claimed messages back to the group's PEL without acknowledging them, making them available for re-delivery.",
+        "since": "8.8.0",
+        "group": "stream",
+        "complexity": "O(1) for each message ID processed.",
+        "acl_categories": [
+            "@write",
+            "@stream",
+            "@fast"
+        ],
+        "arity": -7,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "group",
+                "type": "string",
+                "display_text": "group"
+            },
+            {
+                "name": "mode",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "silent",
+                        "type": "pure-token",
+                        "display_text": "silent",
+                        "token": "SILENT"
+                    },
+                    {
+                        "name": "fail",
+                        "type": "pure-token",
+                        "display_text": "fail",
+                        "token": "FAIL"
+                    },
+                    {
+                        "name": "fatal",
+                        "type": "pure-token",
+                        "display_text": "fatal",
+                        "token": "FATAL"
+                    }
+                ]
+            },
+            {
+                "name": "ids",
+                "type": "block",
+                "token": "IDS",
+                "arguments": [
+                    {
+                        "name": "numids",
+                        "type": "integer",
+                        "display_text": "numids"
+                    },
+                    {
+                        "name": "id",
+                        "type": "string",
+                        "display_text": "id",
+                        "multiple": true
+                    }
+                ]
+            },
+            {
+                "name": "count",
+                "type": "integer",
+                "display_text": "count",
+                "token": "RETRYCOUNT",
+                "optional": true
+            },
+            {
+                "name": "force",
+                "type": "pure-token",
+                "display_text": "force",
+                "token": "FORCE",
+                "optional": true
+            }
+        ],
+        "command_flags": [
+            "write",
             "fast"
         ]
     },
@@ -18619,6 +20087,12 @@
         "since": "6.2.0",
         "group": "sorted-set",
         "complexity": "O(N*K)+O(M*log(M)) worst case with N being the smallest input sorted set, K being the number of input sorted sets and M being the number of elements in the resulting sorted set.",
+        "history": [
+            [
+                "8.8.0",
+                "Added `COUNT` aggregate option."
+            ]
+        ],
         "acl_categories": [
             "@read",
             "@sortedset",
@@ -18689,6 +20163,13 @@
                         "type": "pure-token",
                         "display_text": "max",
                         "token": "MAX"
+                    },
+                    {
+                        "name": "count",
+                        "type": "pure-token",
+                        "display_text": "count",
+                        "token": "COUNT",
+                        "since": "8.8.0"
                     }
                 ]
             },
@@ -18767,6 +20248,12 @@
         "since": "2.0.0",
         "group": "sorted-set",
         "complexity": "O(N*K)+O(M*log(M)) worst case with N being the smallest input sorted set, K being the number of input sorted sets and M being the number of elements in the resulting sorted set.",
+        "history": [
+            [
+                "8.8.0",
+                "Added `COUNT` aggregate option."
+            ]
+        ],
         "acl_categories": [
             "@write",
             "@sortedset",
@@ -18861,6 +20348,13 @@
                         "type": "pure-token",
                         "display_text": "max",
                         "token": "MAX"
+                    },
+                    {
+                        "name": "count",
+                        "type": "pure-token",
+                        "display_text": "count",
+                        "token": "COUNT",
+                        "since": "8.8.0"
                     }
                 ]
             }
@@ -20307,6 +21801,12 @@
         "since": "6.2.0",
         "group": "sorted-set",
         "complexity": "O(N)+O(M*log(M)) with N being the sum of the sizes of the input sorted sets, and M being the number of elements in the resulting sorted set.",
+        "history": [
+            [
+                "8.8.0",
+                "Added `COUNT` aggregate option."
+            ]
+        ],
         "acl_categories": [
             "@read",
             "@sortedset",
@@ -20377,6 +21877,13 @@
                         "type": "pure-token",
                         "display_text": "max",
                         "token": "MAX"
+                    },
+                    {
+                        "name": "count",
+                        "type": "pure-token",
+                        "display_text": "count",
+                        "token": "COUNT",
+                        "since": "8.8.0"
                     }
                 ]
             },
@@ -20398,6 +21905,12 @@
         "since": "2.0.0",
         "group": "sorted-set",
         "complexity": "O(N)+O(M log(M)) with N being the sum of the sizes of the input sorted sets, and M being the number of elements in the resulting sorted set.",
+        "history": [
+            [
+                "8.8.0",
+                "Added `COUNT` aggregate option."
+            ]
+        ],
         "acl_categories": [
             "@write",
             "@sortedset",
@@ -20492,6 +22005,13 @@
                         "type": "pure-token",
                         "display_text": "max",
                         "token": "MAX"
+                    },
+                    {
+                        "name": "count",
+                        "type": "pure-token",
+                        "display_text": "count",
+                        "token": "COUNT",
+                        "since": "8.8.0"
                     }
                 ]
             }
