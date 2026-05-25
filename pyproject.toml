@@ -5,7 +5,7 @@ requires = [
   "hatchling>=1.14.0",
   "hatch-mypyc>=0.1.0",
   "hatch-vcs>=0.4.0",
-  "mypy==1.20.0",
+  "mypy==2.1.0",
   "types-deprecated",
   "beartype>=0.20",
   "opentelemetry-sdk>=1.0.0",
@@ -102,7 +102,7 @@ dev = [
   "inflect>=6.0.0",
   "Jinja2==3.1.5",
   "memray; implementation_name != 'pypy'",
-  "mypy==1.20.0; implementation_name != 'pypy'",
+  "mypy==2.1.0; implementation_name != 'pypy'",
   "ruff",
   "types-deprecated",
   "ipython",
@@ -166,7 +166,7 @@ version-file = "coredis/_version.py"
 enable-by-default = false
 dependencies = [
   "hatch-mypyc>=0.16.0",
-  "mypy==1.20.0",
+  "mypy==2.1.0",
 ]
 require-runtime-dependencies = true
 include = [
