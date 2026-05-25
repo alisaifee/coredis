@@ -1003,7 +1003,7 @@ docs = [
     { name = "sphinx-inline-tabs", marker = "python_full_version >= '3.12'", specifier = "==2025.12.21.14" },
     { name = "sphinx-issues", marker = "python_full_version >= '3.12'", specifier = "==5.0.1" },
     { name = "sphinx-paramlinks", marker = "python_full_version >= '3.12'", specifier = "==0.6.0" },
-    { name = "sphinx-sitemap", marker = "python_full_version >= '3.12'", specifier = "==2.8.0" },
+    { name = "sphinx-sitemap", marker = "python_full_version >= '3.12'", specifier = "==2.9.0" },
     { name = "sphinx-toolbox", marker = "python_full_version >= '3.12'", specifier = ">=4.1.2,<5" },
     { name = "sphinxcontrib-programoutput", marker = "python_full_version >= '3.12'", specifier = "==0.18" },
     { name = "sphinxext-opengraph", marker = "python_full_version >= '3.12'", specifier = "==0.13.0" },
@@ -1856,10 +1856,10 @@ name = "jsonschema"
 version = "4.26.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "attrs" },
-    { name = "jsonschema-specifications" },
-    { name = "referencing" },
-    { name = "rpds-py" },
+    { name = "attrs", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "jsonschema-specifications", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "referencing", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "rpds-py", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b3/fc/e067678238fa451312d4c62bf6e6cf5ec56375422aee02f9cb5f909b3047/jsonschema-4.26.0.tar.gz", hash = "sha256:0c26707e2efad8aa1bfc5b7ce170f3fccc2e4918ff85989ba9ffa9facb2be326", size = 366583, upload-time = "2026-01-07T13:41:07.246Z" }
 wheels = [
@@ -1871,7 +1871,7 @@ name = "jsonschema-specifications"
 version = "2025.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "referencing" },
+    { name = "referencing", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/19/74/a633ee74eb36c44aa6d1095e7cc5569bebf04342ee146178e2d36600708b/jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d", size = 32855, upload-time = "2025-09-08T01:34:59.186Z" }
 wheels = [
@@ -1986,7 +1986,7 @@ name = "linkify-it-py"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "uc-micro-py" },
+    { name = "uc-micro-py", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2e/c9/06ea13676ef354f0af6169587ae292d3e2406e212876a413bf9eece4eb23/linkify_it_py-2.1.0.tar.gz", hash = "sha256:43360231720999c10e9328dc3691160e27a718e280673d444c38d7d3aaa3b98b", size = 29158, upload-time = "2026-03-01T07:48:47.683Z" }
 wheels = [
@@ -2017,7 +2017,7 @@ wheels = [
 
 [package.optional-dependencies]
 linkify = [
-    { name = "linkify-it-py" },
+    { name = "linkify-it-py", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 
 [[package]]
@@ -2122,7 +2122,7 @@ name = "mdit-py-plugins"
 version = "0.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "markdown-it-py" },
+    { name = "markdown-it-py", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/59/fc/f8d0863f8862f25602c0404d75568e89fb6b4109804645e5cdfb1be5cf56/mdit_py_plugins-0.6.1.tar.gz", hash = "sha256:a2bca0f039f39dbd35fb74ae1b5f998608c437463371f0ff7f49a19a17a114d0", size = 56114, upload-time = "2026-05-13T09:03:38.91Z" }
 wheels = [
@@ -2143,9 +2143,9 @@ name = "memray"
 version = "1.19.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "jinja2" },
-    { name = "rich" },
-    { name = "textual" },
+    { name = "jinja2", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "rich", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "textual", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/96/04/5b886a36df947599e0f37cd46e6e44e565299815f044e2303ab2ae9f8870/memray-1.19.3.tar.gz", hash = "sha256:4e0fb29ff0a50c0ec9dc84294d8f2c83419feba561a37628b304c2ae4fe73d03", size = 2417089, upload-time = "2026-04-08T18:49:32.409Z" }
 wheels = [
@@ -3128,8 +3128,8 @@ name = "pytest-memray"
 version = "1.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "memray" },
-    { name = "pytest" },
+    { name = "memray", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "pytest", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3d/28/f67963efed56d847d028d0bb939f26cdeb32c4de474b3befc9da43bf18f9/pytest_memray-1.8.0.tar.gz", hash = "sha256:c0c706ef81941a7aa7064f2b3b8b5cdc0cea72b5277c6a6a09b113ca9ab30bdb", size = 240608, upload-time = "2025-08-18T17:32:47.329Z" }
 wheels = [
@@ -3153,15 +3153,15 @@ name = "pytest-mypy-plugins"
 version = "4.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "decorator" },
-    { name = "jinja2" },
-    { name = "jsonschema" },
-    { name = "mypy" },
-    { name = "packaging" },
-    { name = "pytest" },
-    { name = "pyyaml" },
-    { name = "regex" },
-    { name = "tomlkit" },
+    { name = "decorator", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "jinja2", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "jsonschema", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "mypy", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "packaging", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "pytest", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "pyyaml", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "regex", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "tomlkit", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/41/38/519349835619e0441c12f37e000e999adc7d57c50e7745d432ed5b4548d4/pytest_mypy_plugins-4.0.3.tar.gz", hash = "sha256:bfe491a363dfa7d183e1a9d19615d8aaff79262eea2bc3dca87b4f8223cfe7e8", size = 30583, upload-time = "2026-05-14T07:43:23.834Z" }
 wheels = [
@@ -3348,9 +3348,9 @@ name = "referencing"
 version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "attrs" },
-    { name = "rpds-py" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "attrs", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "rpds-py", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "typing-extensions", marker = "(python_full_version < '3.13' and implementation_name != 'pypy') or (python_full_version < '3.12' and implementation_name == 'pypy')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/22/f5/df4e9027acead3ecc63e50fe1e36aca1523e1719559c499951bb4b53188f/referencing-0.37.0.tar.gz", hash = "sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8", size = 78036, upload-time = "2025-10-13T15:30:48.871Z" }
 wheels = [
@@ -3969,14 +3969,14 @@ wheels = [
 
 [[package]]
 name = "sphinx-sitemap"
-version = "2.8.0"
+version = "2.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "sphinx-last-updated-by-git", marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/36/0e/e249fdd17c0530c8260191f0020556862b243fa718cf0e6b28d956eafb2c/sphinx_sitemap-2.8.0.tar.gz", hash = "sha256:749d7184a0c7b73d486a232b54b5c1b38a0e2d6f18cf19fb1b033b8162b44a82", size = 6829, upload-time = "2025-08-12T04:54:24.51Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/61/17/56fe0f65e3567f829b2b4153a622be1d4b222b781e0d90d7db5a7738f30f/sphinx_sitemap-2.9.0.tar.gz", hash = "sha256:70f97bcdf444e3d68e118355cf82a1f54c4d3c03d651cd17fe87398b26e25e21", size = 6978, upload-time = "2025-10-06T00:24:00.036Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c6/ab/3bc6f9ee09b5fd5ae2e5ae1febf41a2ed2bdde452a41c06e78fec0296b5c/sphinx_sitemap-2.8.0-py3-none-any.whl", hash = "sha256:332042cd5b9385f61ec2861dfd550d9bccbdfcff86f6b68c7072cf40c9f16363", size = 6167, upload-time = "2025-08-12T04:54:23.479Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/94/3c57e8b1985e755c48972e2ecd59526d4bf0b52a1fe805bc52a8e98cb92d/sphinx_sitemap-2.9.0-py3-none-any.whl", hash = "sha256:f1f1d3a9ad012ba17a7ef0b560d303bff2d0db26647567d6e810bcc754466664", size = 6218, upload-time = "2025-10-06T00:23:58.778Z" },
 ]
 
 [[package]]
@@ -4150,12 +4150,12 @@ name = "textual"
 version = "8.2.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "markdown-it-py", extra = ["linkify"] },
-    { name = "mdit-py-plugins" },
-    { name = "platformdirs" },
-    { name = "pygments" },
-    { name = "rich" },
-    { name = "typing-extensions" },
+    { name = "markdown-it-py", extra = ["linkify"], marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "mdit-py-plugins", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "platformdirs", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "pygments", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "rich", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12' or implementation_name != 'pypy'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9b/7a/c519db0aba5024f86e71e9631810bfdd6866ed2c8695bd7fa34b90e7ef59/textual-8.2.7.tar.gz", hash = "sha256:658f568ff81e30ed43890c3e07520390e5cf1b4763822006e060656b0a88f105", size = 1859249, upload-time = "2026-05-19T10:52:49.531Z" }
 wheels = [
