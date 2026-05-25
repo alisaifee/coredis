@@ -31,6 +31,8 @@ SERVER_TYPES = {}
 MODULE_VERSIONS = {}
 PY_IMPLEMENTATION = platform.python_implementation()
 PY_VERSION = version.Version(platform.python_version())
+
+
 DOCKER_TAG_MAPPING = {
     "7.0": {
         "default": "7",
@@ -85,6 +87,14 @@ class UnparseableVersion:
 
     def __lt__(self, other):
         return True
+
+
+class NoopDockerServices:
+    def start(self, *args, **kwargs):
+        pass
+
+    def wait_for_service(self, *args, **kwargs):
+        pass
 
 
 async def get_module_versions(client: Redis):
@@ -293,8 +303,11 @@ def docker_tags():
 
 
 @pytest.fixture(scope="session")
-def docker_services(host_ip_env, docker_tags, docker_services):
-    return docker_services
+def docker_services(request, host_ip_env, docker_tags, docker_services):
+    if request.config.getoption("--no-docker"):
+        yield NoopDockerServices()
+    else:
+        yield docker_services
 
 
 @pytest.fixture(scope="session")
@@ -1049,3 +1062,12 @@ def pytest_configure(config):
     if config.pluginmanager.hasplugin("pytest-mypy-plugins"):
         config.option.mypy_only_local_stub = True
         config.option.mypy_extension_hook = "tests.types.plugin_hook.hook"
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--no-docker",
+        action="store_true",
+        default=False,
+        help="Skip Docker service management; assume services are already running",
+    )
