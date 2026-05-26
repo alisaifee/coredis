@@ -235,6 +235,8 @@ Generic commands
 
 
 Search commands
+  :meth:`coredis.modules.Search.aliasdel`
+      The result is the response from the node
   :meth:`coredis.modules.Search.config_get`
       The result is the response from the node
 
@@ -254,6 +256,18 @@ Cluster commands
   :meth:`coredis.RedisCluster.cluster_delslotsrange`
       The result is ``True`` if all responses are ``True``
   :meth:`coredis.RedisCluster.cluster_getkeysinslot`
+      The result is the response from the node
+
+
+
+===============================================================================================================
+Commands routed to the explicitly passed slot when called with :meth:`~coredis.commands.CommandRequest.route`
+===============================================================================================================
+
+
+
+Generic commands
+  :meth:`coredis.RedisCluster.scan`
       The result is the response from the node
 
 
