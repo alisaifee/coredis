@@ -3,6 +3,23 @@
 Changelog
 =========
 
+v6.7.0
+------
+Release Date: 2026-05-25
+
+* Feature
+
+  * Extend read from replica functionality to unshareded cluster pubsub
+
+* Bug Fix
+
+  * Release lock when exception occcurs in lock context
+
+* Development
+
+  * Add ``--no-docker`` option to pytest to skip starting
+    docker containers when running tests.
+
 v6.6.1
 ------
 Release Date: 2026-04-14
