@@ -130,7 +130,7 @@ docs = [
   "sphinx-sitemap==2.9.0",
   "sphinx-toolbox>=4.1.2,<5",
   "sphinxext-opengraph==0.13.0",
-  "sphinxcontrib-programoutput==0.18",
+  "sphinxcontrib-programoutput==0.19",
   "botocore",
   "cachetools",
   {include-group = "dev"},
