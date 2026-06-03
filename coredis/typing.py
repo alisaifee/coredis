@@ -129,8 +129,6 @@ class Key:
     from other arguments
     """
 
-    __slots__ = ("key",)
-
     def __init__(self, key: KeyT):
         self.key = key
 
