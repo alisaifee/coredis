@@ -186,31 +186,26 @@ class OpenTelemetryProvider(TelemetryProvider):
 
         return attributes
 
-    @property
-    @functools.cache
+    @functools.cached_property
     def _operation_duration(self) -> Histogram:
         return self.meter.create_histogram(
             DB_CLIENT_OPERATION_DURATION,
             unit="s",
         )
 
-    @property
-    @functools.cache
+    @functools.cached_property
     def _connection_create_time(self) -> Histogram:
         return self.meter.create_histogram(DB_CLIENT_CONNECTION_CREATE_TIME, unit="s")
 
-    @property
-    @functools.cache
+    @functools.cached_property
     def _connection_use_time(self) -> Histogram:
         return self.meter.create_histogram(DB_CLIENT_CONNECTION_USE_TIME, unit="s")
 
-    @property
-    @functools.cache
+    @functools.cached_property
     def _connection_wait_time(self) -> Histogram:
         return self.meter.create_histogram(DB_CLIENT_CONNECTION_WAIT_TIME, unit="s")
 
-    @property
-    @functools.cache
+    @functools.cached_property
     def _connection_timeouts(self) -> Counter:
         return self.meter.create_counter(DB_CLIENT_CONNECTION_TIMEOUTS)
 

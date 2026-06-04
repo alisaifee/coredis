@@ -21,7 +21,7 @@ from collections.abc import (
     Set,
     ValuesView,
 )
-from functools import cache
+from functools import cached_property
 from types import GenericAlias, ModuleType, UnionType
 from typing import (
     TYPE_CHECKING,
@@ -129,13 +129,10 @@ class Key:
     from other arguments
     """
 
-    __slots__ = ("key",)
-
     def __init__(self, key: KeyT):
         self.key = key
 
-    @property
-    @cache
+    @cached_property
     def slot(self) -> int:
         from coredis._utils import b, hash_slot
 
