@@ -208,7 +208,6 @@ Supported python versions
 - 3.13
 - 3.14
 - PyPy 3.11
-- PyPy 3.12
 
 Support for Redis API compatible databases
 ------------------------------------------

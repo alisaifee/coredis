@@ -123,13 +123,6 @@ jobs:
             compiled: false
             uvloop: false
             label: ""
-          - python-version: "pypy-3.12"
-            redis-version: latest
-            test-params: "-m '(not (dragonfly or valkey))' tests/commands tests/test_tracking_cache.py"
-            runtime-type-checks: false
-            compiled: false
-            uvloop: false
-            label: ""
 
     steps:
     - uses: actions/checkout@v3
