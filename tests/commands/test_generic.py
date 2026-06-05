@@ -219,8 +219,7 @@ class TestGeneric:
         )
         assert await client.pttl("a") > 60 * 1000
 
-    @pytest.mark.max_server_version("8.4.0")
-    @pytest.mark.nocluster("8.4.0")
+    @pytest.mark.max_server_version("8.0.0")
     async def test_dump_and_restore_with_freq(self, client, _s):
         await client.config_set({"maxmemory-policy": "allkeys-lfu"})
         await client.set("a", "foo")
