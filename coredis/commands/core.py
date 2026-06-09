@@ -388,6 +388,68 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.INCRBYFLOAT, Key(key), increment, callback=FloatCallback()
         )
 
+    @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "persist")
+    @redis_command(CommandName.INCREX, group=CommandGroup.STRING, flags={CommandFlag.FAST})
+    def increx(
+        self,
+        key: KeyT,
+        *,
+        increment: int | float | None = None,
+        saturate: bool = False,
+        lowerbound: int | float | None = None,
+        upperbound: int | float | None = None,
+        ex: int | datetime.timedelta | None = None,
+        px: int | datetime.timedelta | None = None,
+        exat: int | datetime.datetime | None = None,
+        pxat: int | datetime.datetime | None = None,
+        persist: bool | None = None,
+        enx: bool = False,
+    ) -> CommandRequest[tuple[float, ...]]:
+        """
+        Increment the float value of a key by the given amount.
+
+        :param key: The key name.
+        :param increment: The amount to add.
+        :return: The value of the key after the increment (increment if key did not exist).
+        """
+        command_arguments: CommandArgList = []
+        if increment is not None:
+            command_arguments.extend(
+                [
+                    PrefixToken.BYFLOAT if isinstance(increment, float) else PrefixToken.BYINT,
+                    increment,
+                ]
+            )
+        if saturate:
+            command_arguments.append(PureToken.SATURATE)
+        if lowerbound is not None:
+            command_arguments.extend([PrefixToken.LBOUND, lowerbound])
+        if upperbound is not None:
+            command_arguments.extend([PrefixToken.UBOUND, upperbound])
+        if ex is not None:
+            command_arguments.append(PrefixToken.EX)
+            command_arguments.append(normalized_seconds(ex))
+        if px is not None:
+            command_arguments.append(PrefixToken.PX)
+            command_arguments.append(normalized_milliseconds(px))
+        if exat is not None:
+            command_arguments.append(PrefixToken.EXAT)
+            command_arguments.append(normalized_time_seconds(exat))
+        if pxat is not None:
+            command_arguments.append(PrefixToken.PXAT)
+            command_arguments.append(normalized_time_milliseconds(pxat))
+        if persist:
+            command_arguments.append(PureToken.PERSIST)
+        if enx:
+            command_arguments.append(PureToken.ENX)
+
+        return self.create_request(
+            CommandName.INCREX,
+            Key(key),
+            *command_arguments,
+            callback=TupleCallback[float](),
+        )
+
     @overload
     def lcs(
         self,
@@ -5823,6 +5885,39 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.XACK, Key(key), group, *identifiers, callback=IntCallback()
         )
 
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.XNACK,
+        version_introduced="8.8.0",
+        group=CommandGroup.STREAM,
+        flags={CommandFlag.FAST},
+    )
+    def xnack(
+        self,
+        key: KeyT,
+        group: StringT,
+        mode: Literal[PureToken.SILENT, PureToken.FAIL, PureToken.FATAL],
+        identifiers: Parameters[ValueT],
+        *,
+        retrycount: int | None = None,
+        force: bool = False,
+    ) -> CommandRequest[int]:
+        """
+        Releases pending messages back to the PEL without acknowledging them and resets
+        the idle timeouts, making the messages immediately available for re-delivery.
+
+        :return: The number of messages successfully released back to the group PEL.
+        """
+        command_arguments: CommandArgList = [PrefixToken.IDS, len(list(identifiers)), *identifiers]
+        if retrycount is not None:
+            command_arguments.extend([PrefixToken.RETRYCOUNT, retrycount])
+        if force:
+            command_arguments.append(PureToken.FORCE)
+
+        return self.create_request(
+            CommandName.XNACK, Key(key), group, mode, *command_arguments, callback=IntCallback()
+        )
+
     @versionadded(version="5.2.0")
     @redis_command(
         CommandName.XACKDEL,
@@ -9026,7 +9121,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
         command_arguments: CommandArgList = [Key(key)]
         if reduce is not None:
-            command_arguments.extend([PureToken.REDUCE, reduce])
+            command_arguments.extend([PureToken.REDUCE_TOKEN, reduce])
 
         if isinstance(values, bytes):
             command_arguments.extend([PureToken.FP32, values])
@@ -9324,7 +9419,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param element: The element to set the attributes for
         :param attributes: JSON serializable values to set as attributes
 
-
         :return: ``True`` if the attributes were successfully set
         """
         command_arguments: CommandArgList = [Key(key), element]
@@ -9368,7 +9462,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param key: The key containing the vector set
         :param count: The number of random elements to return
 
-
         :return: A random element, or a tuple of elements if count is specified; negative count allows duplicates.
         """
         command_arguments: CommandArgList = [Key(key)]
@@ -9387,7 +9480,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         self, key: KeyT, start: StringT, end: StringT, count: int | None = None
     ) -> CommandRequest[tuple[AnyStr, ...]]:
         """
-        Retreives all elements inside a vector set (optionally, in small
+        Retrieves all elements inside a vector set (optionally, in small
         batches with the use of :paramref:`count`)
 
         :param key: The key containing the vector set
@@ -9416,12 +9509,140 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param key: The key containing the vector set
         :param element: The element to check for membership
-
-
         """
         return self.create_request(
             CommandName.VISMEMBER,
             Key(key),
             element,
             callback=BoolCallback(),
+        )
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARCOUNT,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
+        version_introduced="8.8.0",
+    )
+    def arcount(self, key: KeyT) -> CommandRequest[int]:
+        """
+        Returns the number of non-empty elements in an array.
+
+        :param key: The name of the key that holds the array.
+        """
+
+        return self.create_request(CommandName.ARCOUNT, Key(key), callback=IntCallback())
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARSET,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.FAST},
+        version_introduced="8.8.0",
+    )
+    def arset(self, key: KeyT, index: int, values: Parameters[ValueT]) -> CommandRequest[int]:
+        """
+        Sets one or more contiguous values starting at an index in an array.
+
+        :param key: The name of the key that holds the array.
+        :param index: The zero-based integer index at which to start writing. When
+         multiple values are provided, they are stored at consecutive indices starting
+         from index.
+        :param values: One or more string values to store at consecutive indices
+         beginning at index.
+
+        :return: The number of new (previously empty) slots filled is returned.
+        """
+
+        return self.create_request(
+            CommandName.ARSET, Key(key), index, *values, callback=IntCallback()
+        )
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARDEL,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.FAST},
+    )
+    def ardel(self, key: KeyT, indices: Parameters[ValueT]) -> CommandRequest[int]:
+        """
+        Deletes elements at the specified indices in an array.
+
+        :param key: The name of the key that holds the array.
+        :param indices: One or more zero-based integer indices of the elements to
+         delete. Deleting an index that does not exist counts as zero elements deleted
+         and does not modify the array.
+
+        :return: Number of elements deleted.
+        """
+
+        return self.create_request(CommandName.ARDEL, Key(key), *indices, callback=IntCallback())
+
+    @versionadded(version="6.8.0")
+    @redis_command(CommandName.ARDELRANGE, group=CommandGroup.ARRAY, flags={CommandFlag.SLOW})
+    def ardelrange(
+        self, key: KeyT, ranges: Parameters[tuple[ValueT, ValueT]]
+    ) -> CommandRequest[int]:
+        """
+        Deletes elements in one or more ranges.
+
+        :param key: The name of the key that holds the array.
+        :param ranges: One or more start/end pairs, each defining an inclusive range of
+         indices to delete. If start is greater than end for a given pair, the range is
+         processed in ascending order regardless. Multiple pairs may overlap; each
+         element is counted at most once.
+
+        :return: Number of elements deleted.
+        """
+        command_arguments: CommandArgList = []
+        for _range in ranges:
+            command_arguments.extend(_range)
+        if not command_arguments:
+            raise DataError("ARDELRANGE needs at least one range to delete")
+
+        return self.create_request(
+            CommandName.ARDELRANGE, Key(key), *command_arguments, callback=IntCallback()
+        )
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARGET,
+        group=CommandGroup.ARRAY,
+        cacheable=True,
+        flags={CommandFlag.FAST, CommandFlag.READONLY},
+    )
+    def arget(self, key: KeyT, index: int) -> CommandRequest[AnyStr | None]:
+        """
+        Gets the value at an index in an array.
+
+        :param key: The name of the key that holds the array.
+        :param index: The zero-based integer index of the element to retrieve.
+        :return: The value at the given index, or ``None`` if the index does not exist.
+        """
+
+        return self.create_request(
+            CommandName.ARGET, Key(key), index, callback=OptionalAnyStrCallback[AnyStr]()
+        )
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARGETRANGE,
+        group=CommandGroup.ARRAY,
+        cacheable=True,
+        flags={CommandFlag.READONLY, CommandFlag.SLOW},
+    )
+    def argetrange(self, key: KeyT, start: int, end: int) -> CommandRequest[list[AnyStr]]:
+        """
+        Gets values in a range of indices.
+
+        :param key: The name of the key that holds the array.
+        :param start: The zero-based integer index of the first element to return. If
+         start is greater than end, elements are returned in reverse index order.
+        :param end: The zero-based integer index of the last element to return
+         (inclusive). If end is less than start, elements are returned in reverse index
+         order.
+        """
+
+        return self.create_request(
+            CommandName.ARGETRANGE, Key(key), start, end, callback=ListCallback[AnyStr]()
         )
