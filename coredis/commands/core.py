@@ -466,10 +466,50 @@ class CoreCommands(CommandMixin[AnyStr]):
         enx: bool = False,
     ) -> CommandRequest[tuple[float, ...]]:
         """
-        Increment the float value of a key by the given amount.
+        Increments or decrements the numeric value stored at key by the specified
+        amount, with optional upper/lower bounds and expiration control, in a single
+        atomic operation. If the key does not exist, it is set to 0 before performing
+        the operation. An error is returned if the key contains a value of the wrong
+        type or a string that cannot be interpreted as a number.
 
-        :param key: The key name.
-        :param increment: The amount to add.
+        Unlike INCR and INCRBY, INCREX returns an array of two elements: the new value
+        of the key after the increment, and the increment that was actually applied.
+        When the computed result would fall outside an explicit LBOUND/UBOUND or the
+        type limits, the default is to skip the operation and reply with [current_value,
+        0], leaving the key and its TTL untouched. The SATURATE flag changes this
+        behavior so the result is capped at the bound instead.
+
+        :param key: The name of the key to increment.
+        :param increment: Specifies the increment amount, defaults to 1
+        :param saturate: When specified, an out-of-bounds result is capped at UBOUND or
+         floored at LBOUND (or saturated to the type limits when no explicit bound is
+         given). The second element of the reply reflects the saturated delta. An error
+         is returned if the delta cannot be represented as a 64-bit signed integer in
+         integer mode, or would produce Infinity in BYFLOAT mode. Any expiration option
+         is still applied as specified.
+        :param lowerbound: Sets a lower bound for the resulting value. If the computed
+         result would fall below lowerbound, the operation is skipped and the reply is
+         [current_value, 0] (or use the SATURATE flag to floor the result at lowerbound
+         instead). When omitted, the bound is LLONG_MIN in integer mode or -LDBL_MAX in
+         BYFLOAT mode. LBOUND must be less than or equal to UBOUND when both are
+         specified.
+        :param upperbound: Sets an upper bound for the resulting value. If the computed
+         result would exceed upperbound, the operation is skipped and the reply is
+         [current_value, 0] (or use the SATURATE flag to cap the result at upperbound
+         instead). When omitted, the bound is LLONG_MAX in integer mode or LDBL_MAX in
+         BYFLOAT mode. UBOUND must be greater than or equal to LBOUND when both are
+         specified.
+        :param ex: set the specified expiration time in seconds.
+        :param px: set the specified expiration time in milliseconds.
+        :param exat: set a Unix time in seconds at which the key will expire.
+        :param pxat: set a Unix time in milliseconds at which the key will expire.
+        :param persist: remove the expiration associated with the key.
+        :param enx: Only sets the TTL/expiration if the key currently has no TTL/
+         expiration. If the key already has a TTL, the increment is still applied but
+         the TTL is left unchanged. ENX can ensure that a window counter rate limiter's
+         TTL is set only when it is created, and not reset on subsequent token requests.
+         ENX must be combined with EX/PX/EXAT/PXAT and is incompatible with PERSIST.
+
         :return: The value of the key after the increment (increment if key did not exist).
         """
         command_arguments: CommandArgList = []
@@ -5966,6 +6006,29 @@ class CoreCommands(CommandMixin[AnyStr]):
         Releases pending messages back to the PEL without acknowledging them and resets
         the idle timeouts, making the messages immediately available for re-delivery.
 
+        :param key: Name of the stream.
+        :param group: Name of the consumer group.
+        :param mode: Controls the delivery counter adjustment. Must be one of:
+         SILENT: Decrements the delivery counter by 1, essentially "undoing" the
+         delivery increment. Use this for an internal failure on the consumer side while
+         processing the message or graceful shutdown where the delivery "didn't count".
+         FAIL: Keeps the current delivery counter value unchanged. Use this when the
+         current consumer failed to process this message (for example, due to memory
+         constraints). The root cause may be the message or the consumer (it is
+         unclear), so the best strategy would be to let another consumer try to process
+         the message.
+         FATAL: Sets the delivery counter to the maximum value (LLONG_MAX or ~9.22e18),
+         marking the message as permanently failed. Use this for invalid or suspected
+         malicious messages.
+        :param identifiers: message IDs to release.
+        :param retrycount: Directly sets the delivery counter to the specified value,
+         overriding the mode-based adjustment. This gives explicit control over the
+         retry counter regardless of the mode selected.
+        :param force: Creates new unowned PEL entries for IDs that are not already in
+         the group PEL. Each entry must exist in the stream. When FORCE creates an
+         entry, the delivery counter is set to 0 (or to RETRYCOUNT if specified, or to
+         LLONG_MAX if mode is FATAL).
+
         :return: The number of messages successfully released back to the group PEL.
         """
         command_arguments: CommandArgList = [PrefixToken.IDS, len(list(identifiers)), *identifiers]
@@ -9739,7 +9802,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         limit: int | None = ...,
         withvalues: Literal[True],
         nocase: bool = ...,
-    ) -> CommandRequest[list[tuple[int, StringT]]]: ...
+    ) -> CommandRequest[list[tuple[int, AnyStr]]]: ...
 
     @versionadded(version="6.8.0")
     @redis_command(
