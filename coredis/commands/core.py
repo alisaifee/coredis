@@ -59,6 +59,7 @@ from coredis.response._callbacks import (
     IntCallback,
     ItemOrTupleCallback,
     ListCallback,
+    ListOfTuplesCallback,
     NoopCallback,
     OptionalAnyStrCallback,
     OptionalFloatCallback,
@@ -130,6 +131,8 @@ from coredis.response._callbacks.vector_sets import (
     VSimCallback,
 )
 from coredis.response.types import (
+    ArrayInfo,
+    ArrayInfoFull,
     ClientInfo,
     ClusterNode,
     ClusterNodeDetail,
@@ -170,6 +173,57 @@ from coredis.typing import (
 #  from builtin types. ``set`` is a redis commands with
 #  an associated method that clashes with the set[] type.
 _Set = set
+
+
+class Predicate:
+    """
+    Field definition to be used in :meth:`~coredis.Redis.argrep`.
+
+    EXACT string — Matches elements whose value is exactly equal to string.
+    MATCH string — Matches elements whose value contains string as a substring.
+    GLOB pattern — Matches elements whose value matches the glob-style pattern (with *,
+     ?, and [...] wildcards), the same syntax used by KEYS and SCAN MATCH.
+    RE pattern — Matches elements whose value matches the regular expression pattern.
+
+    Usage::
+
+        Predicate(glob="a*") | Predicate(match="b") & Predicate(exact="cob")
+    """
+
+    @mutually_exclusive_parameters("exact", "match", "glob", "re", required=True)
+    def __init__(
+        self,
+        *,
+        exact: StringT | None = None,
+        match: StringT | None = None,
+        glob: StringT | None = None,
+        re: StringT | None = None,
+    ) -> None:
+        self._tokens: CommandArgList = []
+        if exact:
+            self._tokens.extend([PureToken.EXACT, exact])
+        elif match:
+            self._tokens.extend([PureToken.MATCH, match])
+        elif glob:
+            self._tokens.extend([PureToken.GLOB, glob])
+        elif re:  # always reachable, but help type checker out
+            self._tokens.extend([PureToken.RE, re])
+
+    @classmethod
+    def _combine(cls, left: Predicate, op: PureToken, right: Predicate) -> Predicate:
+        combined = cls.__new__(cls)
+        combined._tokens = [*left._tokens, op, *right._tokens]
+        return combined
+
+    def __or__(self, other: Predicate) -> Predicate:
+        return self._combine(self, PureToken.OR, other)
+
+    def __and__(self, other: Predicate) -> Predicate:
+        return self._combine(self, PureToken.AND, other)
+
+    @property
+    def args(self) -> CommandArgList:
+        return self._tokens
 
 
 class CoreCommands(CommandMixin[AnyStr]):
@@ -388,8 +442,14 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.INCRBYFLOAT, Key(key), increment, callback=FloatCallback()
         )
 
+    @versionadded(version="6.8.0")
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "persist")
-    @redis_command(CommandName.INCREX, group=CommandGroup.STRING, flags={CommandFlag.FAST})
+    @redis_command(
+        CommandName.INCREX,
+        group=CommandGroup.STRING,
+        flags={CommandFlag.FAST},
+        version_introduced="8.8.0",
+    )
     def increx(
         self,
         key: KeyT,
@@ -5888,9 +5948,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="6.8.0")
     @redis_command(
         CommandName.XNACK,
-        version_introduced="8.8.0",
         group=CommandGroup.STREAM,
         flags={CommandFlag.FAST},
+        version_introduced="8.8.0",
     )
     def xnack(
         self,
@@ -9404,8 +9464,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         Return information about a vector set
 
         :param key: The key containing the vector set
-        :return: mapping of attributes and values describing the vector set
 
+        :return: mapping of attributes and values describing the vector set
         """
         return self.create_request(CommandName.VINFO, Key(key), callback=VInfoCallback[AnyStr]())
 
@@ -9563,8 +9623,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.ARDEL,
         group=CommandGroup.ARRAY,
         flags={CommandFlag.FAST},
+        version_introduced="8.8.0",
     )
-    def ardel(self, key: KeyT, indices: Parameters[ValueT]) -> CommandRequest[int]:
+    def ardel(self, key: KeyT, indices: Parameters[int]) -> CommandRequest[int]:
         """
         Deletes elements at the specified indices in an array.
 
@@ -9579,7 +9640,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(CommandName.ARDEL, Key(key), *indices, callback=IntCallback())
 
     @versionadded(version="6.8.0")
-    @redis_command(CommandName.ARDELRANGE, group=CommandGroup.ARRAY, flags={CommandFlag.SLOW})
+    @redis_command(
+        CommandName.ARDELRANGE,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.SLOW},
+        version_introduced="8.8.0",
+    )
     def ardelrange(
         self, key: KeyT, ranges: Parameters[tuple[ValueT, ValueT]]
     ) -> CommandRequest[int]:
@@ -9610,6 +9676,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.ARRAY,
         cacheable=True,
         flags={CommandFlag.FAST, CommandFlag.READONLY},
+        version_introduced="8.8.0",
     )
     def arget(self, key: KeyT, index: int) -> CommandRequest[AnyStr | None]:
         """
@@ -9617,6 +9684,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param key: The name of the key that holds the array.
         :param index: The zero-based integer index of the element to retrieve.
+
         :return: The value at the given index, or ``None`` if the index does not exist.
         """
 
@@ -9630,6 +9698,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.ARRAY,
         cacheable=True,
         flags={CommandFlag.READONLY, CommandFlag.SLOW},
+        version_introduced="8.8.0",
     )
     def argetrange(self, key: KeyT, start: int, end: int) -> CommandRequest[list[AnyStr]]:
         """
@@ -9645,4 +9714,393 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         return self.create_request(
             CommandName.ARGETRANGE, Key(key), start, end, callback=ListCallback[AnyStr]()
+        )
+
+    @overload
+    def argrep(
+        self,
+        key: KeyT,
+        start: ValueT,
+        end: ValueT,
+        predicate: Predicate,
+        *,
+        limit: int | None = ...,
+        nocase: bool = ...,
+    ) -> CommandRequest[list[int]]: ...
+
+    @overload
+    def argrep(
+        self,
+        key: KeyT,
+        start: ValueT,
+        end: ValueT,
+        predicate: Predicate,
+        *,
+        limit: int | None = ...,
+        withvalues: Literal[True],
+        nocase: bool = ...,
+    ) -> CommandRequest[list[tuple[int, StringT]]]: ...
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARGREP,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.READONLY, CommandFlag.SLOW},
+        version_introduced="8.8.0",
+    )
+    def argrep(
+        self,
+        key: KeyT,
+        start: ValueT,
+        end: ValueT,
+        predicate: Predicate,
+        *,
+        limit: int | None = None,
+        withvalues: bool = False,
+        nocase: bool = False,
+    ) -> CommandRequest[list[int] | list[tuple[int, AnyStr]]]:
+        """
+        Searches array elements in a range using textual predicates and returns the
+        indices of the matching elements. Empty slots in the range are skipped.
+
+        :param key: The name of the key that holds the array.
+        :param start: The zero-based integer index at which to begin searching. The
+         special value - denotes the first index of the array. If start is greater than
+         end, matches are returned in reverse index order.
+        :param end: The zero-based integer index at which to stop searching (inclusive).
+         The special value + denotes the last index of the array.
+        :param predicate: One or more textual predicates to evaluate against each
+         non-empty element in the range.
+        :param limit: Stop after limit matches have been collected. limit must be a
+         positive integer. When omitted, all matches in the range are returned.
+        :param withvalues: In addition to each matching index, return the matching
+         value. The reply becomes a flat list of alternating index-value pairs.
+        :param nocase: Perform case-insensitive comparisons for EXACT, MATCH, GLOB, and RE.
+
+        :return: Indices of the matching elements, in the same order in which the range
+         is traversed (ascending when start <= end, descending when start > end). When
+         WITHVALUES is given, a flat array of alternating index-value pairs: [idx1,
+         val1, idx2, val2, ...]. An empty array is returned when the key does not exist
+         or no element matches.
+        """
+        command_arguments: CommandArgList = [Key(key), start, end]
+        command_arguments.extend(predicate.args)
+        if limit is not None:
+            command_arguments.extend([PureToken.LIMIT, limit])
+        if withvalues:
+            command_arguments.append(PureToken.WITHVALUES)
+        if nocase:
+            command_arguments.append(PureToken.NOCASE)
+
+        if withvalues:
+            return self.create_request(
+                CommandName.ARGREP, *command_arguments, callback=ListOfTuplesCallback[int, AnyStr]()
+            )
+        return self.create_request(
+            CommandName.ARGREP, *command_arguments, callback=ListCallback[int]()
+        )
+
+    @overload
+    def arinfo(self, key: KeyT, *, full: Literal[True]) -> CommandRequest[ArrayInfoFull]: ...
+
+    @overload
+    def arinfo(self, key: KeyT) -> CommandRequest[ArrayInfo]: ...
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARINFO,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.READONLY, CommandFlag.SLOW},
+        version_introduced="8.8.0",
+    )
+    def arinfo(self, key: KeyT, *, full: bool = False) -> CommandRequest[ArrayInfo | ArrayInfoFull]:
+        """
+        Gets the value at an index in an array.
+
+        :param key: The name of the key that holds the array.
+        :param full: Include per-slice statistics in the reply: the number of dense and
+         sparse slices and their average sizes and fill rates. Raises the complexity
+         from O(1) to O(N) where N is the number of slices.
+
+        :return: The value at the given index, or ``None`` if the index does not exist.
+        """
+        command_arguments: CommandArgList = [Key(key)]
+        if full:
+            command_arguments.append(PureToken.FULL)
+
+        return self.create_request(
+            CommandName.ARINFO, *command_arguments, callback=NoopCallback[ArrayInfo]()
+        )
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARINSERT,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.FAST},
+        version_introduced="8.8.0",
+    )
+    def arinsert(self, key: KeyT, values: Parameters[ValueT]) -> CommandRequest[int]:
+        """
+        Inserts one or more values at consecutive indices.
+
+        :param key: The name of the key that holds the array.
+        :param values: One or more string values to insert at consecutive indices,
+         beginning at the current insert cursor position. The cursor advances by one for
+         each value inserted. Use ARNEXT to inspect the current cursor position and
+         ARSEEK to reposition it.
+
+        :return: The last index where a value was inserted.
+        """
+
+        return self.create_request(CommandName.ARINSERT, Key(key), *values, callback=IntCallback())
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARLASTITEMS,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.READONLY, CommandFlag.SLOW},
+        version_introduced="8.8.0",
+    )
+    def arlastitems(
+        self, key: KeyT, count: int, rev: bool = False
+    ) -> CommandRequest[tuple[AnyStr, ...]]:
+        """
+        Returns the most recently inserted elements.
+
+        :param key: The name of the key that holds the array.
+        :param count: The maximum number of most recently inserted elements to return.
+         If the array contains fewer elements than count, all elements are returned.
+        :param rev: When present, returns elements in reverse chronological order (most
+         recent first) instead of the default oldest-first order.
+        """
+        command_arguments: CommandArgList = [Key(key), count]
+        if rev:
+            command_arguments.append(PureToken.REV)
+
+        return self.create_request(
+            CommandName.ARLASTITEMS, *command_arguments, callback=TupleCallback[AnyStr]()
+        )
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARLEN,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
+        version_introduced="8.8.0",
+    )
+    def arlen(self, key: KeyT) -> CommandRequest[int]:
+        """
+        Returns the length of an array (max index + 1).
+
+        :param key: The name of the key that holds the array.
+        """
+
+        return self.create_request(CommandName.ARLEN, Key(key), callback=IntCallback())
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARMGET,
+        group=CommandGroup.ARRAY,
+        cacheable=True,
+        flags={CommandFlag.FAST, CommandFlag.READONLY},
+        version_introduced="8.8.0",
+    )
+    def armget(
+        self, key: KeyT, indices: Parameters[int]
+    ) -> CommandRequest[tuple[AnyStr | None, ...]]:
+        """
+        Gets values at multiple indices in an array.
+
+        :param key: The name of the key that holds the array.
+        :param indices: One or more zero-based integer indices of the elements to
+         retrieve. The reply preserves the order of the requested indices and returns
+         nil for any index that is not set.
+        """
+
+        return self.create_request(
+            CommandName.ARMGET, Key(key), *indices, callback=TupleCallback[AnyStr | None]()
+        )
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARMSET,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.FAST},
+        version_introduced="8.8.0",
+    )
+    def armset(self, key: KeyT, indices: Mapping[int, ValueT]) -> CommandRequest[int]:
+        """
+        Sets multiple index-value pairs in an array.
+
+        :param key: The name of the key that holds the array.
+        :param indices: One or more index value pairs. Each index is a zero-based
+         integer specifying where to write, and each value is the string to store at
+         that position. Pairs may be non-contiguous and in any order.
+
+        :return: Number of new slots that were set (previously empty).
+        """
+
+        return self.create_request(
+            CommandName.ARMSET, Key(key), *dict_to_flat_list(indices), callback=IntCallback()
+        )
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARNEXT,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.READONLY, CommandFlag.FAST},
+        version_introduced="8.8.0",
+    )
+    def arnext(self, key: KeyT) -> CommandRequest[int | None]:
+        """
+        Returns the next index ARINSERT would use.
+
+        :param key: The name of the key that holds the array.
+
+        :return: The next index ARINSERT would use. Returns 0 for missing keys or when
+         no insert happened yet. Null when the insertion cursor is exhausted (next
+         insert would overflow).
+        """
+
+        return self.create_request(CommandName.ARNEXT, Key(key), callback=OptionalIntCallback())
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARSEEK,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.FAST},
+        version_introduced="8.8.0",
+    )
+    def arseek(self, key: KeyT, index: int) -> CommandRequest[bool]:
+        """
+        Sets the ARINSERT / ARRING cursor to a specific index.
+
+        :param key: The name of the key that holds the array.
+        :param index: The zero-based integer index to set as the new insert cursor
+         position for subsequent ARINSERT calls.
+
+        :return: True if the cursor was set, False if the key does not exist.
+        """
+
+        return self.create_request(CommandName.ARSEEK, Key(key), index, callback=BoolCallback())
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARRING,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.SLOW},
+        version_introduced="8.8.0",
+    )
+    def arring(self, key: KeyT, size: int, values: Parameters[ValueT]) -> CommandRequest[int]:
+        """
+        Inserts one or more values at consecutive indices.
+
+        :param key: The name of the key that holds the array.
+        :param size: The size of the ring buffer window. Each value is inserted at
+         insert_idx % size, wrapping back to index 0 when the end of the window is
+         reached. When the buffer is full, newer values overwrite older ones. If size is
+         smaller than the current window, the array is truncated to fit.
+        :param values: One or more string values to insert into the ring buffer. Each
+         value is placed at the next position in the ring and the cursor advances
+         accordingly.
+
+        :return: The last index where a value was inserted.
+        """
+
+        return self.create_request(
+            CommandName.ARRING, Key(key), size, *values, callback=IntCallback()
+        )
+
+    @mutually_exclusive_parameters("op", "match", required=True)
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.AROP,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.READONLY, CommandFlag.SLOW},
+        version_introduced="8.8.0",
+    )
+    def arop(
+        self,
+        key: KeyT,
+        start: int,
+        end: int,
+        *,
+        op: Literal[
+            PureToken.SUM,
+            PureToken.MIN,
+            PureToken.MAX,
+            PureToken.AND,
+            PureToken.OR,
+            PureToken.XOR,
+            PureToken.USED,
+            PureToken.SUM,
+        ]
+        | None = None,
+        match: StringT | None = None,
+    ) -> CommandRequest[int | AnyStr | None]:
+        """
+        Performs aggregate operations on array elements in a range.
+
+        :param key: The name of the key that holds the array.
+        :param start: The zero-based integer index of the first element in the range to
+         aggregate.
+        :param end: The zero-based integer index of the last element in the range to
+         aggregate (inclusive). The command always scans from the lower to the higher
+         index regardless of argument order.
+        :param op: The aggregate function to apply to all non-empty elements in [start,
+         end]. One of:
+         SUM — Returns the sum of all numeric values as a bulk string.
+         MIN — Returns the minimum numeric value as a bulk string.
+         MAX — Returns the maximum numeric value as a bulk string.
+         AND — Returns the bitwise AND of all values, treating each as an integer.
+         OR — Returns the bitwise OR of all values, treating each as an integer.
+         XOR — Returns the bitwise XOR of all values, treating each as an integer.
+         USED — Returns the count of non-empty elements in the range.
+         SUM, MIN, and MAX return nil when no numeric elements are present in the range.
+         AND, OR, and XOR return nil when the range is empty.
+        :param match: Returns the count of elements whose value equals value.
+
+        :return: Result of the operation. Null if no elements match the operation.
+        """
+        command_arguments: CommandArgList = [Key(key), start, end]
+        if match is not None:
+            command_arguments.extend([PureToken.MATCH, match])
+        if op is not None:
+            command_arguments.append(op)
+
+        return self.create_request(CommandName.AROP, *command_arguments, callback=NoopCallback())
+
+    @versionadded(version="6.8.0")
+    @redis_command(
+        CommandName.ARSCAN,
+        group=CommandGroup.ARRAY,
+        flags={CommandFlag.READONLY, CommandFlag.SLOW},
+        version_introduced="8.8.0",
+    )
+    def arscan(
+        self,
+        key: KeyT,
+        start: int,
+        end: int,
+        limit: int | None = None,
+    ) -> CommandRequest[list[tuple[int, AnyStr]]]:
+        """
+        Incrementally iterate over members of a set using a cursor.
+
+        :param key: The name of the key that holds the array.
+        :param start: The zero-based integer index at which to begin scanning. If start
+         is greater than end, elements are returned in reverse index order.
+        :param end: The zero-based integer index at which to stop scanning (inclusive).
+        :param limit: The maximum number of index-value pairs to return. When omitted,
+         all elements in the range are returned. Unlike ARGETRANGE, empty slots are not
+         included in the output, so LIMIT caps the number of existing elements returned.
+
+        :return: A tuple of (index, value) pairs.
+        """
+        command_arguments: CommandArgList = [Key(key), start, end]
+        if limit is not None:
+            command_arguments.extend([PureToken.LIMIT, limit])
+
+        return self.create_request(
+            CommandName.ARSCAN, *command_arguments, callback=ListOfTuplesCallback[int, AnyStr]()
         )
