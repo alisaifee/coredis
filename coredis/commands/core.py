@@ -5039,7 +5039,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         keys: Parameters[KeyT],
         weights: Parameters[int] | None = None,
-        aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None = None,
+        aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM, PureToken.COUNT]
+        | None = None,
         withscores: bool | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
@@ -5066,7 +5067,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         keys: Parameters[KeyT],
         destination: KeyT,
         weights: Parameters[int] | None = None,
-        aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None = None,
+        aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM, PureToken.COUNT]
+        | None = None,
     ) -> CommandRequest[int]:
         """
         Compute sorted set intersection and store the result in destination.
@@ -5770,7 +5772,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         keys: Parameters[KeyT],
         weights: Parameters[int] | None = None,
-        aggregate: Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX] | None = None,
+        aggregate: Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX, PureToken.COUNT]
+        | None = None,
         withscores: bool | None = None,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         """
@@ -5797,7 +5800,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         keys: Parameters[KeyT],
         destination: KeyT,
         weights: Parameters[int] | None = None,
-        aggregate: Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX] | None = None,
+        aggregate: Literal[PureToken.SUM, PureToken.MIN, PureToken.MAX, PureToken.COUNT]
+        | None = None,
     ) -> CommandRequest[int]:
         """
         Compute the union of sorted sets and store the result at destination.
@@ -5898,7 +5902,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         *,
         destination: Key | None = ...,
         weights: Parameters[int] | None = ...,
-        aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None = ...,
+        aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM, PureToken.COUNT]
+        | None = ...,
         withscores: bool | None = ...,
     ) -> CommandRequest[int]: ...
 
@@ -5913,7 +5918,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         *,
         destination: Key | None = ...,
         weights: Parameters[int] | None = ...,
-        aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None = ...,
+        aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM, PureToken.COUNT]
+        | None = ...,
         withscores: bool | None = ...,
     ) -> CommandRequest[tuple[AnyStr | ScoredMember, ...]]: ...
 
@@ -5929,7 +5935,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         *,
         destination: Key | None = None,
         weights: Parameters[int] | None = None,
-        aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM] | None = None,
+        aggregate: Literal[PureToken.MAX, PureToken.MIN, PureToken.SUM, PureToken.COUNT]
+        | None = None,
         withscores: bool | None = None,
     ) -> CommandRequest[int] | CommandRequest[tuple[AnyStr | ScoredMember, ...]]:
         command_arguments: CommandArgList = []
