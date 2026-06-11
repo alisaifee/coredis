@@ -9763,7 +9763,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.READONLY, CommandFlag.SLOW},
         version_introduced="8.8.0",
     )
-    def argetrange(self, key: KeyT, start: int, end: int) -> CommandRequest[list[AnyStr]]:
+    def argetrange(self, key: KeyT, start: int, end: int) -> CommandRequest[list[AnyStr | None]]:
         """
         Gets values in a range of indices.
 
@@ -9776,7 +9776,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         """
 
         return self.create_request(
-            CommandName.ARGETRANGE, Key(key), start, end, callback=ListCallback[AnyStr]()
+            CommandName.ARGETRANGE, Key(key), start, end, callback=ListCallback[AnyStr | None]()
         )
 
     @overload
@@ -10100,7 +10100,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         ]
         | None = None,
         match: StringT | None = None,
-    ) -> CommandRequest[int | AnyStr | None]:
+    ) -> CommandRequest[float | None]:
         """
         Performs aggregate operations on array elements in a range.
 
@@ -10119,8 +10119,6 @@ class CoreCommands(CommandMixin[AnyStr]):
          OR — Returns the bitwise OR of all values, treating each as an integer.
          XOR — Returns the bitwise XOR of all values, treating each as an integer.
          USED — Returns the count of non-empty elements in the range.
-         SUM, MIN, and MAX return nil when no numeric elements are present in the range.
-         AND, OR, and XOR return nil when the range is empty.
         :param match: Returns the count of elements whose value equals value.
 
         :return: Result of the operation. Null if no elements match the operation.
@@ -10131,7 +10129,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         if op is not None:
             command_arguments.append(op)
 
-        return self.create_request(CommandName.AROP, *command_arguments, callback=NoopCallback())
+        return self.create_request(
+            CommandName.AROP, *command_arguments, callback=OptionalFloatCallback()
+        )
 
     @versionadded(version="6.8.0")
     @redis_command(
