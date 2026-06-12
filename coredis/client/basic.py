@@ -116,6 +116,7 @@ class Client(
         self.server_version: Version | None = None
         self.verify_version = verify_version
         self.__noreply = noreply
+        self._supported: dict[CommandName, bool] = {}
         self._noreplycontext: contextvars.ContextVar[bool | None] = contextvars.ContextVar(
             "noreply", default=None
         )
@@ -354,6 +355,19 @@ class Client(
         :param name: name of the library
         """
         return await Library[AnyStr](self, name)
+
+    @versionadded(version="6.8.0")
+    async def supports(self, command: CommandName) -> bool:
+        """
+        Check if given command is supported by the server. Result is cached.
+
+        :param command: command name to check
+        """
+        supported = self._supported.get(command)
+        if supported is None:
+            supported = bool(await self.command_info(command))
+            self._supported[command] = supported
+        return supported
 
     @contextlib.contextmanager
     def ignore_replies(self: ClientT) -> Iterator[ClientT]:
