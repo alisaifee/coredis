@@ -1064,7 +1064,7 @@ docs = [
     { name = "sphinx-paramlinks", marker = "python_full_version >= '3.12'", specifier = "==0.6.0" },
     { name = "sphinx-sitemap", marker = "python_full_version >= '3.12'", specifier = "==2.9.0" },
     { name = "sphinx-toolbox", marker = "python_full_version >= '3.12'", specifier = ">=4.1.2,<5" },
-    { name = "sphinxcontrib-programoutput", marker = "python_full_version >= '3.12'", specifier = "==0.18" },
+    { name = "sphinxcontrib-programoutput", marker = "python_full_version >= '3.12'", specifier = "==0.20" },
     { name = "sphinxext-opengraph", marker = "python_full_version >= '3.12'", specifier = "==0.13.0" },
     { name = "trio", marker = "python_full_version >= '3.12'", specifier = ">=0.31.0" },
     { name = "types-deprecated", marker = "python_full_version >= '3.12'" },
@@ -4288,14 +4288,15 @@ wheels = [
 
 [[package]]
 name = "sphinxcontrib-programoutput"
-version = "0.18"
+version = "0.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "docutils", marker = "python_full_version >= '3.12'" },
     { name = "sphinx", marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3f/c0/834af2290f8477213ec0dd60e90104f5644aa0c37b1a0d6f0a2b5efe03c4/sphinxcontrib_programoutput-0.18.tar.gz", hash = "sha256:09e68b6411d937a80b6085f4fdeaa42e0dc5555480385938465f410589d2eed8", size = 26333, upload-time = "2024-12-06T20:38:36.959Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/e5/0549d81b4144a1cc8464d368bd2d7a3482fd185399d9430c548978f13036/sphinxcontrib_programoutput-0.20.tar.gz", hash = "sha256:5c4282c1c7fc9b5a23febe16ae038b6392d7ce068d186ad4870ba22e74db0711", size = 28235, upload-time = "2026-06-16T15:55:52.243Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/2c/7aec6e0580f666d4f61474a50c4995a98abfff27d827f0e7bc8c4fa528f5/sphinxcontrib_programoutput-0.18-py3-none-any.whl", hash = "sha256:8a651bc85de69a808a064ff0e48d06c12b9347da4fe5fdb1e94914b01e1b0c36", size = 20346, upload-time = "2024-12-06T20:38:22.406Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/02/bb155d4a570d7ceaf48e81f1412093ecf066437bfcb56f34c1407bf14f50/sphinxcontrib_programoutput-0.20-py3-none-any.whl", hash = "sha256:f473f9e7992879358efdeb9962fbec2103f6ba1cb6a738eb7f81dae554bc5ec7", size = 20722, upload-time = "2026-06-16T15:55:51.353Z" },
 ]
 
 [[package]]
