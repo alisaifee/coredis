@@ -61,6 +61,60 @@ async def test_connect_tls(redis_ssl):
         tg.cancel_scope.cancel()
 
 
+async def _run_handshake_with_setinfo_failure(exc):
+    """
+    Drive ``__perform_handshake`` against a stubbed ``create_request`` that
+    raises ``exc`` for ``CLIENT SETINFO`` (simulating servers such as Google
+    Cloud Memorystore which block the command) while returning a RESP3 HELLO
+    reply reporting a 7.2 server. Returns the list of commands that were sent.
+    """
+    from coredis.connection._tcp import TCPLocation
+
+    conn = TCPConnection(location=TCPLocation("localhost", 6379))
+    sent = []
+
+    async def fake_create_request(command, *args, **kwargs):
+        sent.append(command)
+        if command == b"HELLO":
+            return {
+                b"proto": 3,
+                b"version": b"7.2.0",
+                b"id": 1,
+            }
+        if command == b"CLIENT SETINFO":
+            raise exc
+        return b"OK"
+
+    conn.create_request = fake_create_request
+    await conn._BaseConnection__perform_handshake()
+    assert conn._ready is True
+    assert conn.server_version == "7.2.0"
+    return sent
+
+
+async def test_handshake_ignores_unknown_command_on_setinfo():
+    from coredis.exceptions import UnknownCommandError
+
+    sent = await _run_handshake_with_setinfo_failure(
+        UnknownCommandError("unknown command 'CLIENT', with args beginning with: 'SETINFO'")
+    )
+    assert b"CLIENT SETINFO" in sent
+
+
+async def test_handshake_ignores_authorization_error_on_setinfo():
+    from coredis.exceptions import AuthorizationError
+
+    sent = await _run_handshake_with_setinfo_failure(AuthorizationError("NOPERM"))
+    assert b"CLIENT SETINFO" in sent
+
+
+async def test_handshake_propagates_other_errors_on_setinfo():
+    from coredis.exceptions import ResponseError
+
+    with pytest.raises(ResponseError):
+        await _run_handshake_with_setinfo_failure(ResponseError("boom"))
+
+
 async def test_connect_cred_provider(redis_auth):
     conn = TCPConnection(
         location=redis_auth.connection_pool.location,

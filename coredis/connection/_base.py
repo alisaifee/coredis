@@ -607,6 +607,11 @@ class BaseConnection(TelemetryAttributeProvider):
                     logger.info(
                         "Unable to set client info due to authorization error", exc_info=True
                     )
+                except UnknownCommandError:
+                    logger.info(
+                        "Unable to set client info as the CLIENT SETINFO command is not supported",
+                        exc_info=True,
+                    )
 
             if self._db:
                 if await self.create_request(b"SELECT", self._db, decode=False) != b"OK":
