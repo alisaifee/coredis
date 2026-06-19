@@ -241,6 +241,9 @@ line-length=100
 exclude = ["doc/**","_version.py","coredis/_py_312_typing.py"]
 
 [tool.ruff.lint]
+extend-select = [
+  "T20",   # flake8-print: forbid print/pprint statements
+]
 typing-modules = ["coredis.typing"]
 
 [tool.ruff.lint.isort]
