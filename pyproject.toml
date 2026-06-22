@@ -77,7 +77,7 @@ test = [
   "lovely-pytest-docker",
   "mock",
   "numpy",
-  "pytest<9.1",
+  "pytest<9.2",
   "pytest-asyncio",
   "pytest-cov",
   "pytest-env",
