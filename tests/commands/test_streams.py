@@ -589,3 +589,40 @@ class TestStreams:
         )
         assert await client.xcfgset("test", idmp_maxsize=1)
         assert new_identifier != await client.xadd("test", {"fu": 1}, idmpauto="producer1")
+
+    @pytest.mark.min_server_version("8.8")
+    async def test_xnack(self, client, _s):
+        ids = []
+        for i in range(4):
+            ids.append(await client.xadd("test_stream", {"k1": i}))
+
+        await client.xgroup_create("test_stream", "group", "0")
+        await client.xreadgroup("group", "consumer", {"test_stream": ">"})
+
+        # after delivery every message has a delivery counter of 1
+        detail = await client.xpending("test_stream", "group", start="-", end="+", count=10)
+        assert all(e.delivered == 1 for e in detail)
+
+        # SILENT decrements the counter, FAIL leaves it, FATAL maxes it out
+        assert await client.xnack("test_stream", "group", PureToken.SILENT, [ids[0]]) == 1
+        assert await client.xnack("test_stream", "group", PureToken.FAIL, [ids[1]]) == 1
+        assert await client.xnack("test_stream", "group", PureToken.FATAL, [ids[2]]) == 1
+
+        # messages remain pending — XNACK never acknowledges
+        assert (await client.xpending("test_stream", "group")).pending == 4
+        counters = {
+            e.identifier: e.delivered
+            for e in await client.xpending("test_stream", "group", start="-", end="+", count=10)
+        }
+        assert counters[ids[0]] == 0
+        assert counters[ids[1]] == 1
+        assert counters[ids[2]] == 9223372036854775807
+        # RETRYCOUNT sets the delivery counter explicitly
+        assert (
+            await client.xnack("test_stream", "group", PureToken.FAIL, [ids[3]], retrycount=7) == 1
+        )
+        counters = {
+            e.identifier: e.delivered
+            for e in await client.xpending("test_stream", "group", start="-", end="+", count=10)
+        }
+        assert counters[ids[3]] == 7

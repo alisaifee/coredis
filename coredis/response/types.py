@@ -357,3 +357,34 @@ class VectorData(TypedDict):
     l2_norm: float
     #: If the vector is quantized as q8, the quantization range
     quantization_range: float | None
+
+
+#: Details of an array
+#: See: `<https://redis.io/commands/arinfo>`__
+ArrayInfo = TypedDict(
+    "ArrayInfo",
+    {
+        "count": int,
+        "len": int,
+        "next-insert-index": int,
+        "slices": int,
+        "directory-size": int,
+        "super-dir-entries": int,
+        "slice-size": int,
+    },
+)
+
+_ArrayInfoFull = TypedDict(
+    "_ArrayInfoFull",
+    {
+        "dense-slices": int,
+        "sparse-slices": int,
+        "avg-dense-size": float,
+        "avg-dense-fill": float,
+        "avg-sparse-size": float,
+    },
+)
+
+
+class ArrayInfoFull(ArrayInfo, _ArrayInfoFull):
+    pass

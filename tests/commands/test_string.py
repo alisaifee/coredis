@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 
+import anyio
 import pytest
 
 from coredis import PureToken
@@ -54,6 +55,40 @@ class TestString:
         assert await client.get("a") == _s("1")
         assert await client.incrbyfloat("a", 1.1) == 2.1
         assert float(await client.get("a")) == 2.1
+
+    @pytest.mark.min_server_version("8.8.0")
+    async def test_increx(self, client, _s):
+        # missing key starts at 0 and increments by 1 in integer mode
+        assert await client.increx("a") == (1, 1)
+        assert await client.increx("a") == (2, 1)
+        # BYINT with positive and negative increments
+        await client.set("b", 100)
+        assert await client.increx("b", increment=5) == (105, 5)
+        assert await client.increx("b", increment=-10) == (95, -10)
+        # a float increment selects BYFLOAT mode
+        await client.set("c", "1.5")
+        new, delta = await client.increx("c", increment=0.25)
+        assert (float(new), float(delta)) == (1.75, 0.25)
+        # EX sets a TTL alongside the increment
+        for i in range(5):
+            assert await client.increx("d", upperbound=5, ex=1, enx=True) == (i + 1, 1)
+        for i in range(5):
+            assert await client.increx("d", upperbound=5, ex=1, enx=True) == (5, 0)
+        # should reset window
+        await anyio.sleep(1)
+        assert await client.increx("d", upperbound=5, ex=1, enx=True) == (1, 1)
+        # PERSIST clears the TTL while incrementing
+        await client.set("f", 5, ex=1000)
+        assert await client.increx("f", persist=True) == (6, 1)
+        assert await client.ttl("f") == -1
+        # SATURATE caps at the bound and reports the applied delta
+        await client.set("g", 99)
+        assert await client.increx("g", increment=5, upperbound=100, saturate=True) == (100, 1)
+        assert await client.get("g") == _s("100")
+        # lower bound: skipped by default, floored with SATURATE
+        await client.set("h", 5)
+        assert await client.increx("h", increment=-10, lowerbound=0) == (5, 0)
+        assert await client.increx("h", increment=-10, lowerbound=0, saturate=True) == (0, -5)
 
     async def test_getrange(self, client, _s):
         await client.set("a", "foo")

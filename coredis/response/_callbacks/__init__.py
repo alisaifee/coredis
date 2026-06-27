@@ -510,3 +510,10 @@ class FirstValueCallback(ResponseCallback[dict[R, S], S]):
             return list(response.values())[0]
         else:
             raise ValueError("Empty response")
+
+
+class ListOfTuplesCallback(ResponseCallback[list[ResponseType], list[tuple[R, S]]]):
+    def transform(self, response: list[ResponseType], **options: Any) -> list[tuple[R, S]]:
+        if isinstance(response, list):
+            return [tuple(r) for r in response]  # type: ignore
+        raise ValueError(f"Unable to map {response!r} to list of tuples")

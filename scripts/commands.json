@@ -10674,31 +10674,12 @@
                 ]
             },
             {
-                "name": "overflow-block",
-                "type": "oneof",
-                "token": "OVERFLOW",
-                "summary": "Out-of-bounds policy; defaults to FAIL. Missing LBOUND/UBOUND default to the type limits (LLONG_MIN/LLONG_MAX for BYINT, -LDBL_MAX/LDBL_MAX for BYFLOAT).",
-                "optional": true,
-                "arguments": [
-                    {
-                        "name": "fail",
-                        "type": "pure-token",
-                        "display_text": "fail",
-                        "token": "FAIL"
-                    },
-                    {
-                        "name": "sat",
-                        "type": "pure-token",
-                        "display_text": "sat",
-                        "token": "SAT"
-                    },
-                    {
-                        "name": "reject",
-                        "type": "pure-token",
-                        "display_text": "reject",
-                        "token": "REJECT"
-                    }
-                ]
+                "name": "saturate",
+                "type": "pure-token",
+                "display_text": "saturate",
+                "token": "SATURATE",
+                "summary": "Saturate the result to LBOUND/UBOUND (or the type limits when no explicit bound is given) when out of bounds. Without this option, out-of-bounds operations are rejected and reply [current_value, 0].",
+                "optional": true
             },
             {
                 "name": "lowerbound",
