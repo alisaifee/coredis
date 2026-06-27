@@ -10,6 +10,7 @@ from anyio import create_task_group, fail_after, sleep
 from packaging.version import Version
 
 import coredis
+from coredis.commands.constants import CommandName
 from coredis.exceptions import (
     AuthorizationError,
     ConnectionError,
@@ -120,6 +121,9 @@ class TestClient:
     async def test_stream_timeout(self, client, client_arguments, _s):
         with pytest.raises(TimeoutError):
             await client.hset("hash", {bytes(k): k for k in range(4096)})
+
+    async def test_supports(self, client):
+        assert await client.supports(CommandName.GET)
 
 
 @targets(
