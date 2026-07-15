@@ -498,7 +498,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         pxat: int | datetime.datetime | None = None,
         persist: bool | None = None,
         enx: bool = False,
-    ) -> CommandRequest[tuple[float, float]]:
+    ) -> CommandRequest[tuple[float, ...]]:
         """
         Increments or decrements the numeric value stored at key by the specified
         amount, with optional upper/lower bounds and expiration control, in a single
@@ -6500,7 +6500,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments: CommandArgList = [Key(key)]
         if condition is not None:
             command_arguments.append(condition)
-        identifiers_list = list(identifiers)
+        identifiers_list: list[ValueT] = list(identifiers)
         command_arguments.extend([PrefixToken.IDS, len(identifiers_list), *identifiers_list])
 
         return self.create_request(
