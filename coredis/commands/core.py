@@ -957,11 +957,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param slots: One or more slot numbers to unbound.
         :return: ``True`` on success.
         """
+        _slots: list[int] = list(slots)
         return self.create_request(
             CommandName.CLUSTER_DELSLOTS,
-            *slots,
+            *_slots,
             callback=SimpleStringCallback(),
-            execution_parameters={"slot_arguments_range": (0, len(list(slots)) - 1)},
+            execution_parameters={"slot_arguments_range": (0, len(_slots) - 1)},
         )
 
     @versionadded(version="3.1.1")
@@ -2217,8 +2218,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         if condition is not None:
             command_arguments.append(condition)
         command_arguments.append(PrefixToken.FIELDS)
-        command_arguments.append(len(list(fields)))
-        command_arguments.extend(fields)
+        _fields: list[StringT] = list(fields)
+        command_arguments.append(len(_fields))
+        command_arguments.extend(_fields)
 
         return self.create_request(
             CommandName.HEXPIRE, *command_arguments, callback=TupleCallback[int]()
@@ -2236,8 +2238,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param fields: One or more field names.
         :return: A tuple of Unix timestamps (-1 if no expiry, -2 if field missing).
         """
-        command_arguments: CommandArgList = [Key(key), PrefixToken.FIELDS, len(list(fields))]
-        command_arguments.extend(fields)
+        _fields: list[StringT] = list(fields)
+        command_arguments: CommandArgList = [Key(key), PrefixToken.FIELDS, len(_fields)]
+        command_arguments.extend(_fields)
 
         return self.create_request(
             CommandName.HEXPIRETIME, *command_arguments, callback=TupleCallback[int]()
@@ -2255,9 +2258,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param fields: One or more field names.
         :return: A tuple of Unix timestamps in ms (-1 if no expiry, -2 if field missing).
         """
-        command_arguments: CommandArgList = [Key(key), PrefixToken.FIELDS, len(list(fields))]
+        _fields: list[StringT] = list(fields)
+        command_arguments: CommandArgList = [Key(key), PrefixToken.FIELDS, len(_fields)]
 
-        command_arguments.extend(fields)
+        command_arguments.extend(_fields)
 
         return self.create_request(
             CommandName.HPEXPIRETIME, *command_arguments, callback=TupleCallback[int]()
@@ -2286,8 +2290,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         if condition is not None:
             command_arguments.append(condition)
         command_arguments.append(PrefixToken.FIELDS)
-        command_arguments.append(len(list(fields)))
-        command_arguments.extend(fields)
+        _fields: list[StringT] = list(fields)
+        command_arguments.append(len(_fields))
+        command_arguments.extend(_fields)
 
         return self.create_request(
             CommandName.HPEXPIRE, *command_arguments, callback=TupleCallback[int]()
@@ -2315,8 +2320,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         if condition is not None:
             command_arguments.append(condition)
         command_arguments.append(PrefixToken.FIELDS)
-        command_arguments.append(len(list(fields)))
-        command_arguments.extend(fields)
+        _fields: list[StringT] = list(fields)
+        command_arguments.append(len(_fields))
+        command_arguments.extend(_fields)
 
         return self.create_request(
             CommandName.HEXPIREAT, *command_arguments, callback=TupleCallback[int]()
@@ -2348,8 +2354,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         if condition is not None:
             command_arguments.append(condition)
         command_arguments.append(PrefixToken.FIELDS)
-        command_arguments.append(len(list(fields)))
-        command_arguments.extend(fields)
+        _fields: list[StringT] = list(fields)
+        command_arguments.append(len(_fields))
+        command_arguments.extend(_fields)
 
         return self.create_request(
             CommandName.HPEXPIREAT, *command_arguments, callback=TupleCallback[int]()
@@ -2365,8 +2372,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param fields: One or more field names.
         :return: A tuple of 1 for each field that had TTL removed, 0 for each that did not.
         """
-        command_arguments: CommandArgList = [Key(key), PrefixToken.FIELDS, len(list(fields))]
-        command_arguments.extend(fields)
+        _fields: list[StringT] = list(fields)
+        command_arguments: CommandArgList = [Key(key), PrefixToken.FIELDS, len(_fields)]
+        command_arguments.extend(_fields)
 
         return self.create_request(
             CommandName.HPERSIST, *command_arguments, callback=TupleCallback[int]()
@@ -2449,7 +2457,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         if persist is not None:
             command_arguments.append(PureToken.PERSIST)
 
-        command_arguments.extend([PrefixToken.FIELDS, len(list(fields)), *fields])
+        _fields: list[StringT] = list(fields)
+        command_arguments.extend([PrefixToken.FIELDS, len(_fields), *_fields])
         return self.create_request(
             CommandName.HGETEX, *command_arguments, callback=TupleCallback[AnyStr | None]()
         )
@@ -2468,12 +2477,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: the values of the fields requested (Missing fields are returned
          as ``None``)
         """
+        _fields: list[StringT] = list(fields)
         return self.create_request(
             CommandName.HGETDEL,
             Key(key),
             PrefixToken.FIELDS,
-            len(list(fields)),
-            *fields,
+            len(_fields),
+            *_fields,
             callback=TupleCallback[AnyStr | None](),
         )
 
@@ -2687,8 +2697,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         command_arguments.append(Key(key))
         command_arguments.append(PrefixToken.FIELDS)
-        command_arguments.append(len(list(fields)))
-        command_arguments.extend(fields)
+        _fields: list[StringT] = list(fields)
+        command_arguments.append(len(_fields))
+        command_arguments.extend(_fields)
 
         return self.create_request(
             CommandName.HTTL, *command_arguments, callback=TupleCallback[int]()
@@ -2708,8 +2719,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         command_arguments.append(Key(key))
         command_arguments.append(PrefixToken.FIELDS)
-        command_arguments.append(len(list(fields)))
-        command_arguments.extend(fields)
+        _fields: list[StringT] = list(fields)
+        command_arguments.append(len(_fields))
+        command_arguments.extend(_fields)
 
         return self.create_request(
             CommandName.HPTTL, *command_arguments, callback=TupleCallback[int]()
@@ -4811,7 +4823,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param withscores: If ``True``, include scores in the result.
         :return: Members (and optionally scores) in the difference.
         """
-        command_arguments: CommandArgList = [len(list(keys)), *[Key(key) for key in keys]]
+        _keys: list[KeyT] = list(keys)
+        command_arguments: CommandArgList = [len(_keys), *[Key(key) for key in _keys]]
 
         if withscores:
             command_arguments.append(PureToken.WITHSCORES)
@@ -4835,7 +4848,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param destination: Key where the result is stored.
         :return: The number of elements in the resulting sorted set.
         """
-        command_arguments: CommandArgList = [len(list(keys)), *[Key(key) for key in keys]]
+        _keys: list[KeyT] = list(keys)
+        command_arguments: CommandArgList = [len(_keys), *[Key(key) for key in _keys]]
 
         return self.create_request(
             CommandName.ZDIFFSTORE,
@@ -5774,8 +5788,9 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if destination:
             command_arguments.append(destination)
-        command_arguments.append(len(list(keys)))
-        command_arguments.extend(keys)
+        _keys: list[Key] = list(keys)
+        command_arguments.append(len(_keys))
+        command_arguments.extend(_keys)
         options = {}
 
         if weights:
@@ -5850,7 +5865,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         if condition is not None:
             command_arguments.append(condition)
 
-        command_arguments.extend([PrefixToken.IDS, len(list(identifiers)), *identifiers])
+        _identifiers: list[ValueT] = list(identifiers)
+        command_arguments.extend([PrefixToken.IDS, len(_identifiers), *_identifiers])
         return self.create_request(
             CommandName.XACKDEL, *command_arguments, callback=TupleCallback[int]()
         )
@@ -6241,7 +6257,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments: CommandArgList = [Key(key)]
         if condition is not None:
             command_arguments.append(condition)
-        command_arguments.extend([PrefixToken.IDS, len(list(identifiers)), *identifiers])
+        _identifiers: list[ValueT] = list(identifiers)
+        command_arguments.extend([PrefixToken.IDS, len(_identifiers), *_identifiers])
 
         return self.create_request(
             CommandName.XDELEX, *command_arguments, callback=TupleCallback[int]()
@@ -9031,7 +9048,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         if isinstance(values, bytes):
             command_arguments.extend([PureToken.FP32, values])
         else:
-            command_arguments.extend([PureToken.VALUES, len(list(values)), *values])
+            _values: list[float | int] = list(values)
+            command_arguments.extend([PureToken.VALUES, len(_values), *_values])
 
         command_arguments.append(element)
         if cas is not None:
