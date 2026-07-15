@@ -442,6 +442,40 @@ class CoreCommands(CommandMixin[AnyStr]):
             CommandName.INCRBYFLOAT, Key(key), increment, callback=FloatCallback()
         )
 
+    @overload
+    def increx(
+        self,
+        key: KeyT,
+        *,
+        increment: int | None = ...,
+        saturate: bool = ...,
+        lowerbound: int | float | None = ...,
+        upperbound: int | float | None = ...,
+        ex: int | datetime.timedelta | None = ...,
+        px: int | datetime.timedelta | None = ...,
+        exat: int | datetime.datetime | None = ...,
+        pxat: int | datetime.datetime | None = ...,
+        persist: bool | None = ...,
+        enx: bool = ...,
+    ) -> CommandRequest[tuple[int, int]]: ...
+
+    @overload
+    def increx(
+        self,
+        key: KeyT,
+        *,
+        increment: float = ...,
+        saturate: bool = ...,
+        lowerbound: int | float | None = ...,
+        upperbound: int | float | None = ...,
+        ex: int | datetime.timedelta | None = ...,
+        px: int | datetime.timedelta | None = ...,
+        exat: int | datetime.datetime | None = ...,
+        pxat: int | datetime.datetime | None = ...,
+        persist: bool | None = ...,
+        enx: bool = ...,
+    ) -> CommandRequest[tuple[float, float]]: ...
+
     @versionadded(version="6.8.0")
     @mutually_exclusive_parameters("ex", "px", "exat", "pxat", "persist")
     @redis_command(
@@ -464,7 +498,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         pxat: int | datetime.datetime | None = None,
         persist: bool | None = None,
         enx: bool = False,
-    ) -> CommandRequest[tuple[float, ...]]:
+    ) -> CommandRequest[tuple[float, float]]:
         """
         Increments or decrements the numeric value stored at key by the specified
         amount, with optional upper/lower bounds and expiration control, in a single
@@ -510,7 +544,7 @@ class CoreCommands(CommandMixin[AnyStr]):
          TTL is set only when it is created, and not reset on subsequent token requests.
          ENX must be combined with EX/PX/EXAT/PXAT and is incompatible with PERSIST.
 
-        :return: The value of the key after the increment (increment if key did not exist).
+        :return: A tuple of ``(new_value, applied_increment)``.
         """
         command_arguments: CommandArgList = []
         if increment is not None:
@@ -6466,7 +6500,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments: CommandArgList = [Key(key)]
         if condition is not None:
             command_arguments.append(condition)
-        command_arguments.extend([PrefixToken.IDS, len(list(identifiers)), *identifiers])
+        identifiers_list = list(identifiers)
+        command_arguments.extend([PrefixToken.IDS, len(identifiers_list), *identifiers_list])
 
         return self.create_request(
             CommandName.XDELEX, *command_arguments, callback=TupleCallback[int]()
