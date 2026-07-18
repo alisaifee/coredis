@@ -3,6 +3,41 @@
 Changelog
 =========
 
+v6.8.0
+------
+Release Date: 2026-07-18
+
+* Feature
+
+  * Add support for Redis 8.8 commands and options, including:
+
+    * Array commands (``AR*``) with :class:`~coredis.commands.Predicate`
+      for :rediscommand:`ARGREP`
+    * :rediscommand:`INCREX`
+    * :rediscommand:`XNACK`
+    * :rediscommand:`ZINTER` / :rediscommand:`ZUNION` ``AGGREGATE COUNT``
+    * Module updates for JSON (``FPHA``), Search hybrid options, and
+      TimeSeries multi-aggregator encoding
+
+  * Add :meth:`~coredis.Redis.supports` to check whether the connected
+    server exposes a given command
+
+* Bug Fix
+
+  * Materialize sequences once when building command arguments so
+    one-shot iterators are not exhausted mid-encoding
+  * Handle ``UnknownCommandError`` when ``CLIENT SETINFO`` is blocked
+    during connection setup
+  * Remove stray debug prints from stream info response handling
+  * Fix memory leak caused by incorrect caching of ``@property``
+    decorated attributes on command request objects
+
+* Development
+
+  * Fix stale Read the Docs build image configuration
+
+
+
 v6.7.0
 ------
 Release Date: 2026-05-25
