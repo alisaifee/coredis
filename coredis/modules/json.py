@@ -170,6 +170,7 @@ class Json(ModuleGroup[AnyStr]):
         group=COMMAND_GROUP,
         version_introduced="1.0.0",
         module=MODULE,
+        arguments={"fpha": {"version_introduced": "8.8.0"}},
     )
     def set(
         self,
@@ -177,6 +178,7 @@ class Json(ModuleGroup[AnyStr]):
         path: RedisValueT,
         value: JsonType,
         condition: Literal[PureToken.NX, PureToken.XX] | None = None,
+        fpha: Literal[PureToken.FP16, PureToken.BF16, PureToken.FP32, PureToken.FP64] | None = None,
     ) -> CommandRequest[bool]:
         """
         Sets or updates the JSON value at a path
@@ -194,11 +196,14 @@ class Json(ModuleGroup[AnyStr]):
         :param condition: Optional argument to modify the behavior of adding a key to a JSON Object.
          If ``NX``, the key is set only if it does not already exist. If ``XX``, the key is set only
          if it already exists.
+        :param fpha: Force floating point homogeneous arrays (FPHAs) to use a specified FP type.
         :return: `True` if the value was set successfully, `False` otherwise.
         """
         command_arguments: CommandArgList = [Key(key), path, json.dumps(value)]
-        if condition:
+        if condition is not None:
             command_arguments.append(condition)
+        if fpha is not None:
+            command_arguments.extend(["FPHA", fpha])
         return self.client.create_request(
             CommandName.JSON_SET, *command_arguments, callback=SimpleStringCallback()
         )

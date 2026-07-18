@@ -55,6 +55,25 @@ def normalized_timestamp(ts: int | datetime | StringT) -> StringT | int:
     return normalized_time_milliseconds(ts)
 
 
+Aggregator = Literal[
+    PureToken.AVG,
+    PureToken.COUNT,
+    PureToken.FIRST,
+    PureToken.LAST,
+    PureToken.MAX,
+    PureToken.MIN,
+    PureToken.RANGE,
+    PureToken.STD_P,
+    PureToken.STD_S,
+    PureToken.SUM,
+    PureToken.TWA,
+    PureToken.VAR_P,
+    PureToken.VAR_S,
+    PureToken.COUNTALL,
+    PureToken.COUNTNAN,
+]
+
+
 class RedisTimeSeries(Module[AnyStr]):
     NAME = "timeseries"
     FULL_NAME = "RedisTimeSeries"
@@ -520,26 +539,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         min_value: int | float | None = None,
         max_value: int | float | None = None,
         count: int | None = None,
-        aggregator: None
-        | (
-            Literal[
-                PureToken.AVG,
-                PureToken.COUNT,
-                PureToken.FIRST,
-                PureToken.LAST,
-                PureToken.MAX,
-                PureToken.MIN,
-                PureToken.RANGE,
-                PureToken.STD_P,
-                PureToken.STD_S,
-                PureToken.SUM,
-                PureToken.TWA,
-                PureToken.VAR_P,
-                PureToken.VAR_S,
-                PureToken.COUNTALL,
-                PureToken.COUNTNAN,
-            ]
-        ) = None,
+        aggregator: None | Aggregator | Parameters[Aggregator] = None,
         bucketduration: int | timedelta | None = None,
         align: int | StringT | None = None,
         buckettimestamp: StringT | None = None,
@@ -559,6 +559,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param max_value: Maximum value to filter samples by.
         :param count: Limits the number of returned samples.
         :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+         Redis 8.8+ supports multiple aggregators.
         :param bucketduration: Duration of each bucket in milliseconds.
         :param align: Time bucket alignment control for :paramref:`aggregator`.
         :param buckettimestamp: Timestamp of the first bucket.
@@ -587,10 +588,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if aggregator and bucketduration is not None:
             if align is not None:
                 command_arguments.extend([PrefixToken.ALIGN, align])
+            _agg = aggregator if isinstance(aggregator, PureToken) else b",".join(aggregator)
             command_arguments.extend(
                 [
                     PrefixToken.AGGREGATION,
-                    aggregator,
+                    _agg,
                     normalized_milliseconds(bucketduration),
                 ]
             )
@@ -627,26 +629,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         min_value: int | float | None = None,
         max_value: int | float | None = None,
         count: int | None = None,
-        aggregator: None
-        | (
-            Literal[
-                PureToken.AVG,
-                PureToken.COUNT,
-                PureToken.FIRST,
-                PureToken.LAST,
-                PureToken.MAX,
-                PureToken.MIN,
-                PureToken.RANGE,
-                PureToken.STD_P,
-                PureToken.STD_S,
-                PureToken.SUM,
-                PureToken.TWA,
-                PureToken.VAR_P,
-                PureToken.VAR_S,
-                PureToken.COUNTALL,
-                PureToken.COUNTNAN,
-            ]
-        ) = None,
+        aggregator: None | Aggregator | Parameters[Aggregator] = None,
         bucketduration: int | timedelta | None = None,
         align: int | StringT | None = None,
         buckettimestamp: StringT | None = None,
@@ -666,6 +649,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param max_value: Maximum value to filter samples by.
         :param count: Limit the number of returned samples.
         :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+         Redis 8.8+ supports multiple aggregators.
         :param bucketduration: Duration of each bucket in milliseconds.
         :param align: Time bucket alignment control for :paramref:`aggregator`.
         :param buckettimestamp: Timestamp for the first bucket.
@@ -691,10 +675,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
         if aggregator and bucketduration is not None:
             if align is not None:
                 command_arguments.extend([PrefixToken.ALIGN, align])
+            _agg = aggregator if isinstance(aggregator, PureToken) else b",".join(aggregator)
             command_arguments.extend(
                 [
                     PrefixToken.AGGREGATION,
-                    aggregator,
+                    _agg,
                     normalized_milliseconds(bucketduration),
                 ]
             )
@@ -738,26 +723,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         selected_labels: Parameters[StringT] | None = None,
         count: int | None = None,
         align: int | StringT | None = None,
-        aggregator: None
-        | (
-            Literal[
-                PureToken.AVG,
-                PureToken.COUNT,
-                PureToken.FIRST,
-                PureToken.LAST,
-                PureToken.MAX,
-                PureToken.MIN,
-                PureToken.RANGE,
-                PureToken.STD_P,
-                PureToken.STD_S,
-                PureToken.SUM,
-                PureToken.TWA,
-                PureToken.VAR_P,
-                PureToken.VAR_S,
-                PureToken.COUNTALL,
-                PureToken.COUNTNAN,
-            ]
-        ) = None,
+        aggregator: None | Aggregator | Parameters[Aggregator] = None,
         bucketduration: int | timedelta | None = None,
         buckettimestamp: StringT | None = None,
         groupby: StringT | None = None,
@@ -808,6 +774,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param count: Limit the number of samples returned.
         :param align: Time bucket alignment control for :paramref:`aggregator`.
         :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+         Redis 8.8+ supports multiple aggregators.
         :param bucketduration: Duration of each bucket, in milliseconds.
         :param buckettimestamp: Timestamp of the first bucket.
         :param groupby: Label to group the samples by
@@ -839,10 +806,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
             if align is not None:
                 command_arguments.extend([PrefixToken.ALIGN, align])
             if aggregator and bucketduration is not None:
+                _agg = aggregator if isinstance(aggregator, PureToken) else b",".join(aggregator)
                 command_arguments.extend(
                     [
                         PrefixToken.AGGREGATION,
-                        aggregator,
+                        _agg,
                         normalized_milliseconds(bucketduration),
                     ]
                 )
@@ -892,26 +860,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         selected_labels: Parameters[StringT] | None = None,
         count: int | None = None,
         align: int | StringT | None = None,
-        aggregator: None
-        | (
-            Literal[
-                PureToken.AVG,
-                PureToken.COUNT,
-                PureToken.FIRST,
-                PureToken.LAST,
-                PureToken.MAX,
-                PureToken.MIN,
-                PureToken.RANGE,
-                PureToken.STD_P,
-                PureToken.STD_S,
-                PureToken.SUM,
-                PureToken.TWA,
-                PureToken.VAR_P,
-                PureToken.VAR_S,
-                PureToken.COUNTALL,
-                PureToken.COUNTNAN,
-            ]
-        ) = None,
+        aggregator: None | Aggregator | Parameters[Aggregator] = None,
         bucketduration: int | timedelta | None = None,
         buckettimestamp: StringT | None = None,
         groupby: StringT | None = None,
@@ -946,6 +895,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param count: Limit the number of samples returned.
         :param align: Time bucket alignment control for :paramref:`aggregator`.
         :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+         Redis 8.8+ supports multiple aggregators.
         :param bucketduration: Duration of each bucket, in milliseconds.
         :param buckettimestamp: Timestamp of the first bucket.
         :param groupby: Label to group the samples by
@@ -977,10 +927,11 @@ class TimeSeries(ModuleGroup[AnyStr]):
             if align is not None:
                 command_arguments.extend([PrefixToken.ALIGN, align])
             if aggregator and bucketduration is not None:
+                _agg = aggregator if isinstance(aggregator, PureToken) else b",".join(aggregator)
                 command_arguments.extend(
                     [
                         PrefixToken.AGGREGATION,
-                        aggregator,
+                        _agg,
                         normalized_milliseconds(bucketduration),
                     ]
                 )

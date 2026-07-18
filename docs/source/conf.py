@@ -24,7 +24,7 @@ except:
 
 master_doc = "index"
 project = "coredis"
-copyright = "2107, NoneGG | 2023, Ali-Akber Saifee"
+copyright = "2017, NoneGG | 2023, Ali-Akber Saifee"
 author = "alisaifee"
 description = "Async redis client for python"
 
@@ -173,6 +173,7 @@ cmd_group_order = [
     coredis.commands.constants.CommandGroup.SERVER,
     coredis.commands.constants.CommandGroup.CLUSTER,
     coredis.commands.constants.CommandGroup.CONNECTION,
+    coredis.commands.constants.CommandGroup.ARRAY,
 ]
 preferred_order = {
     "object": 80,

@@ -82,10 +82,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     #:  - ``ZINTER``
     #:  - ``ZINTERSTORE``
     #:  - ``ZMPOP``
@@ -103,10 +99,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     #:  - ``ZINTER``
     #:  - ``ZINTERSTORE``
     #:  - ``ZMPOP``
@@ -123,10 +115,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     #:  - ``ZINTER``
     #:  - ``ZINTERSTORE``
     #:  - ``ZUNION``
@@ -164,14 +152,12 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``BITFIELD``
-    #:  - ``INCREX``
     #:  - ``XNACK``
     FAIL = b"FAIL"
 
     #: Used by:
     #:
     #:  - ``BITFIELD``
-    #:  - ``INCREX``
     SAT = b"SAT"
 
     #: Used by:
@@ -651,7 +637,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``INCREX``
-    REJECT = b"REJECT"
+    SATURATE = b"SATURATE"
 
     #: Used by:
     #:
@@ -836,10 +822,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``FT.AGGREGATE``
     #:  - ``FT.HYBRID``
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     #:  - ``ZINTER``
     #:  - ``ZINTERSTORE``
     #:  - ``ZUNION``
@@ -876,6 +858,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``JSON.SET``
     #:  - ``VADD``
     #:  - ``VSIM``
     FP32 = b"FP32"
@@ -920,6 +903,21 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``VEMB``
     RAW = b"RAW"
+
+    #: Used by:
+    #:
+    #:  - ``JSON.SET``
+    BF16 = b"BF16"
+
+    #: Used by:
+    #:
+    #:  - ``JSON.SET``
+    FP16 = b"FP16"
+
+    #: Used by:
+    #:
+    #:  - ``JSON.SET``
+    FP64 = b"FP64"
 
     #: Used by:
     #:
@@ -1001,10 +999,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     FIRST = b"FIRST"
 
     #: Used by:
@@ -1013,10 +1007,6 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     LAST = b"LAST"
 
     #: Used by:
@@ -1032,83 +1022,47 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``FT.AGGREGATE``
     #:  - ``FT.HYBRID``
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     AVG = b"AVG"
 
     #: Used by:
     #:
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     COUNTALL = b"COUNTALL"
 
     #: Used by:
     #:
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     COUNTNAN = b"COUNTNAN"
 
     #: Used by:
     #:
     #:  - ``FT.HYBRID``
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     RANGE = b"RANGE"
 
     #: Used by:
     #:
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     STD_P = b"STD.P"
 
     #: Used by:
     #:
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     STD_S = b"STD.S"
 
     #: Used by:
     #:
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     TWA = b"TWA"
 
     #: Used by:
     #:
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     VAR_P = b"VAR.P"
 
     #: Used by:
     #:
     #:  - ``TS.CREATERULE``
-    #:  - ``TS.MRANGE``
-    #:  - ``TS.MREVRANGE``
-    #:  - ``TS.RANGE``
-    #:  - ``TS.REVRANGE``
     VAR_S = b"VAR.S"
 
     #: Used by:
@@ -1398,6 +1352,12 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``FT.AGGREGATE``
     #:  - ``FT.HYBRID``
+    COLLECT_TOKEN = b"COLLECT"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     COUNT_DISTINCT = b"COUNT_DISTINCT"
 
     #: Used by:
@@ -1410,7 +1370,19 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``FT.AGGREGATE``
     #:  - ``FT.HYBRID``
+    FIELDSALL = b"FIELDS *"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     FIRST_VALUE = b"FIRST_VALUE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
+    LIMIT_TOKEN = b"LIMIT"
 
     #: Used by:
     #:
@@ -1434,7 +1406,13 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``FT.AGGREGATE``
     #:  - ``FT.HYBRID``
-    REDUCE = b"REDUCE"
+    REDUCE_TOKEN = b"REDUCE"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
+    SORTBY_TOKEN = b"SORTBY"
 
     #: Used by:
     #:
@@ -1570,7 +1548,6 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``BITFIELD``
-    #:  - ``INCREX``
     OVERFLOW = b"OVERFLOW"
 
     #: Used by:
@@ -1894,6 +1871,8 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     #:  - ``HEXPIRE``
     #:  - ``HEXPIREAT``
