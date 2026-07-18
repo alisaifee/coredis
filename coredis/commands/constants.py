@@ -580,6 +580,7 @@ class CommandName(bytes, enum.Enum):
     TS_REVRANGE = b"TS.REVRANGE"  # Since timeseries: 1.4.0
     TS_MREVRANGE = b"TS.MREVRANGE"  # Since timeseries: 1.4.0
     TS_DEL = b"TS.DEL"  # Since timeseries: 1.6.0
+    TS_BGET = b"TS.BGET"  # Since timeseries: 8.10.0
 
     #: Commands for search
     FT_CREATE = b"FT.CREATE"  # Since search: 1.0.0
@@ -604,6 +605,7 @@ class CommandName(bytes, enum.Enum):
     FT_DROPINDEX = b"FT.DROPINDEX"  # Since search: 2.0.0
     FT__LIST = b"FT._LIST"  # Since search: 2.0.0
     FT_PROFILE = b"FT.PROFILE"  # Since search: 2.2.0
+    FT_ALIASLIST = b"FT.ALIASLIST"  # Since search: 8.10.0
     FT_HYBRID = b"FT.HYBRID"  # Since search: 8.4.4
     FT_CONFIG_SET = b"FT.CONFIG SET"  # Deprecated in search: 8.0.0
     FT_CONFIG_GET = b"FT.CONFIG GET"  # Deprecated in search: 8.0.0

@@ -14,184 +14,334 @@ Array
 
 
 
-ARCOUNT [X]
-***********
+ARCOUNT
+*******
 
 Returns the number of non-empty elements in an array.
 
 - Documentation: `ARCOUNT <https://redis.io/commands/arcount>`_
+- Implementation: :meth:`~coredis.Redis.arcount`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARDEL [X]
-*********
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARDEL
+*****
 
 Deletes elements at the specified indices in an array.
 
 - Documentation: `ARDEL <https://redis.io/commands/ardel>`_
+- Implementation: :meth:`~coredis.Redis.ardel`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARDELRANGE [X]
-**************
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARDELRANGE
+**********
 
 Deletes elements in one or more ranges.
 
 - Documentation: `ARDELRANGE <https://redis.io/commands/ardelrange>`_
+- Implementation: :meth:`~coredis.Redis.ardelrange`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARGET [X]
-*********
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARGET
+*****
 
 Gets the value at an index in an array.
 
 - Documentation: `ARGET <https://redis.io/commands/arget>`_
+- Implementation: :meth:`~coredis.Redis.arget`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARGETRANGE [X]
-**************
+
+- .. versionadded:: 6.8.0
+
+
+
+- Supports client caching: yes
+
+
+
+ARGETRANGE
+**********
 
 Gets values in a range of indices.
 
 - Documentation: `ARGETRANGE <https://redis.io/commands/argetrange>`_
+- Implementation: :meth:`~coredis.Redis.argetrange`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARGREP [X]
-**********
+
+- .. versionadded:: 6.8.0
+
+
+
+- Supports client caching: yes
+
+
+
+ARGREP
+******
 
 Searches array elements in a range using textual predicates.
 
 - Documentation: `ARGREP <https://redis.io/commands/argrep>`_
+- Implementation: :meth:`~coredis.Redis.argrep`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARINFO [X]
-**********
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARINFO
+******
 
 Returns metadata about an array.
 
 - Documentation: `ARINFO <https://redis.io/commands/arinfo>`_
+- Implementation: :meth:`~coredis.Redis.arinfo`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARINSERT [X]
-************
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARINSERT
+********
 
 Inserts one or more values at consecutive indices.
 
 - Documentation: `ARINSERT <https://redis.io/commands/arinsert>`_
+- Implementation: :meth:`~coredis.Redis.arinsert`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARLASTITEMS [X]
-***************
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARLASTITEMS
+***********
 
 Returns the most recently inserted elements.
 
 - Documentation: `ARLASTITEMS <https://redis.io/commands/arlastitems>`_
+- Implementation: :meth:`~coredis.Redis.arlastitems`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARLEN [X]
-*********
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARLEN
+*****
 
 Returns the length of an array (max index + 1).
 
 - Documentation: `ARLEN <https://redis.io/commands/arlen>`_
+- Implementation: :meth:`~coredis.Redis.arlen`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARMGET [X]
-**********
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARMGET
+******
 
 Gets values at multiple indices in an array.
 
 - Documentation: `ARMGET <https://redis.io/commands/armget>`_
+- Implementation: :meth:`~coredis.Redis.armget`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARMSET [X]
-**********
+
+- .. versionadded:: 6.8.0
+
+
+
+- Supports client caching: yes
+
+
+
+ARMSET
+******
 
 Sets multiple index-value pairs in an array.
 
 - Documentation: `ARMSET <https://redis.io/commands/armset>`_
+- Implementation: :meth:`~coredis.Redis.armset`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARNEXT [X]
-**********
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARNEXT
+******
 
 Returns the next index ARINSERT would use.
 
 - Documentation: `ARNEXT <https://redis.io/commands/arnext>`_
+- Implementation: :meth:`~coredis.Redis.arnext`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-AROP [X]
-********
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+AROP
+****
 
 Performs aggregate operations on array elements in a range.
 
 - Documentation: `AROP <https://redis.io/commands/arop>`_
+- Implementation: :meth:`~coredis.Redis.arop`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARRING [X]
-**********
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARRING
+******
 
 Inserts values into a ring buffer of specified size, wrapping and truncating as needed.
 
 - Documentation: `ARRING <https://redis.io/commands/arring>`_
+- Implementation: :meth:`~coredis.Redis.arring`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARSCAN [X]
-**********
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARSCAN
+******
 
 Iterates existing elements in a range, returning index-value pairs.
 
 - Documentation: `ARSCAN <https://redis.io/commands/arscan>`_
+- Implementation: :meth:`~coredis.Redis.arscan`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARSEEK [X]
-**********
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARSEEK
+******
 
 Sets the ARINSERT / ARRING cursor to a specific index.
 
 - Documentation: `ARSEEK <https://redis.io/commands/arseek>`_
+- Implementation: :meth:`~coredis.Redis.arseek`
 
-- Not Implemented
+- New in redis: 8.8.0
 
 
-ARSET [X]
-*********
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
+ARSET
+*****
 
 Sets one or more contiguous values starting at an index in an array.
 
 - Documentation: `ARSET <https://redis.io/commands/arset>`_
+- Implementation: :meth:`~coredis.Redis.arset`
 
-- Not Implemented
+- New in redis: 8.8.0
+
+
+
+- .. versionadded:: 6.8.0
+
+
+
 
 
 
@@ -880,6 +1030,24 @@ Increment the floating point value of a key by a number. Uses 0 as initial value
 
 
 
+INCREX
+******
+
+Increments the numeric value of a key by a number and sets its expiration time. Uses 0 as initial value if the key doesn't exist.
+
+- Documentation: `INCREX <https://redis.io/commands/increx>`_
+- Implementation: :meth:`~coredis.Redis.increx`
+
+- New in redis: 8.8.0
+
+
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
 LCS
 ***
 
@@ -1064,16 +1232,6 @@ Returns a substring from a string value.
 
 - Supports client caching: yes
 
-
-
-INCREX [X]
-**********
-
-Increments the numeric value of a key by a number and sets its expiration time. Uses 0 as initial value if the key doesn't exist.
-
-- Documentation: `INCREX <https://redis.io/commands/increx>`_
-
-- Not Implemented
 
 
 
@@ -3256,6 +3414,24 @@ Return the number of messages in a stream.
 
 
 
+XNACK
+*****
+
+Releases claimed messages back to the group's PEL without acknowledging them, making them available for re-delivery.
+
+- Documentation: `XNACK <https://redis.io/commands/xnack>`_
+- Implementation: :meth:`~coredis.Redis.xnack`
+
+- New in redis: 8.8.0
+
+
+
+- .. versionadded:: 6.8.0
+
+
+
+
+
 XPENDING
 ********
 
@@ -3346,16 +3522,6 @@ XIDMPRECORD [X]
 An internal command for setting IDMP metadata on an existing stream message.
 
 - Documentation: `XIDMPRECORD <https://redis.io/commands/xidmprecord>`_
-
-- Not Implemented
-
-
-XNACK [X]
-*********
-
-Releases claimed messages back to the group's PEL without acknowledging them, making them available for re-delivery.
-
-- Documentation: `XNACK <https://redis.io/commands/xnack>`_
 
 - Not Implemented
 

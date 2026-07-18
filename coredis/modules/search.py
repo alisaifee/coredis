@@ -211,7 +211,7 @@ class Group:
             bies: list[StringT] = list(self.by)
             args.extend([len(bies), *bies])
         for reducer in self.reducers or []:
-            args.append(PureToken.REDUCE)
+            args.append(PureToken.REDUCE_TOKEN)
             args.extend(reducer.args)
 
         return args
@@ -1130,6 +1130,7 @@ class Search(ModuleGroup[AnyStr]):
         module=MODULE,
         version_introduced="8.4.0",
         group=COMMAND_GROUP,
+        arguments={"shard_k_ratio": {"version_introduced": "8.8.0"}},
     )
     def hybrid(
         self,
@@ -1142,6 +1143,7 @@ class Search(ModuleGroup[AnyStr]):
         search_score_alias: StringT | None = None,
         k: int | None = None,
         ef_runtime: int | None = None,
+        shard_k_ratio: float | None = None,
         radius: int | None = None,
         epsilon: float | None = None,
         vector_score_alias: StringT | None = None,
@@ -1167,6 +1169,8 @@ class Search(ModuleGroup[AnyStr]):
         :param search_score_alias: Alias for the search score
         :param k: K value for performing K-nearest neighbour search
         :param ef_runtime: controls the range search accuracy vs. speed tradeoff.
+        :param shard_k_ratio: controls the number of results each shard retrieves
+         relative to the requested top_k in cluster setups.
         :param radius: maximum distance for range matches
         :param epsilon: precision controls for range matches
         :param vector_score_alias: Alias for the vector search score
@@ -1198,6 +1202,8 @@ class Search(ModuleGroup[AnyStr]):
             _knn_args: CommandArgList = [PrefixToken.K, k]
             if ef_runtime:
                 _knn_args.extend([PrefixToken.EF_RUNTIME, ef_runtime])
+            if shard_k_ratio is not None:
+                _knn_args.extend([PrefixToken.SHARD_K_RATIO, shard_k_ratio])
 
             command_arguments.extend([PureToken.KNN, len(_knn_args), *_knn_args])
         if radius is not None:
