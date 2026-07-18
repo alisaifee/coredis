@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from coredis.commands.core import Predicate
+from coredis.commands import Predicate
 from coredis.exceptions import DataError
 from coredis.tokens import PureToken
 from tests.conftest import targets

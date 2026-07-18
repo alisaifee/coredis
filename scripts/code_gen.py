@@ -23,6 +23,7 @@ import coredis.client
 from coredis._utils import b
 from coredis.commands.constants import *  # noqa
 import coredis.commands._routing
+from coredis.commands import Predicate
 from coredis.globals import CACHEABLE_COMMANDS
 from coredis.pool import ClusterConnectionPool, ConnectionPool  # noqa
 from coredis.response.types import *  # noqa

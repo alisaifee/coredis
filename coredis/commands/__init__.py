@@ -25,6 +25,7 @@ from .bitfield import BitFieldOperation
 from .function import Function, Library
 from .request import CommandRequest, CommandResponseT
 from .script import Script
+from .types import Predicate
 
 
 class CommandMixin(Generic[AnyStr], ABC):
@@ -50,5 +51,6 @@ __all__ = [
     "BitFieldOperation",
     "Function",
     "Library",
+    "Predicate",
     "Script",
 ]

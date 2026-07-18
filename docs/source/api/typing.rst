@@ -34,6 +34,18 @@ Custom types
 .. autoclass:: coredis.typing.TypeAdapter
    :class-doc-from: both
 
+Command parameter types
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Structured argument helpers used by core redis command wrappers
+(the request-side counterpart to :mod:`coredis.response.types`).
+
+:mod:`coredis.commands.types`
+
+.. automodule:: coredis.commands.types
+   :no-inherited-members:
+   :show-inheritance:
+
 Redis Response (RESP) descriptions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
