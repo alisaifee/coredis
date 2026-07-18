@@ -322,6 +322,19 @@ class TestTimeseries:
 
         assert all(math.isnan(k[1]) for k in res[10:20])
 
+    @pytest.mark.min_module_version("timeseries", "8.8")
+    async def test_range_multi_aggregator(self, client: Redis):
+        for i in range(10):
+            await client.timeseries.add("ts1", i, i)
+        # multi-aggregator reply is (timestamp, value...) per bucket
+        assert ((0, 0.0, 9.0, 4.5),) == await client.timeseries.range(
+            "ts1",
+            0,
+            9,
+            aggregator=[PureToken.MIN, PureToken.MAX, PureToken.AVG],
+            bucketduration=10,
+        )
+
     async def test_revrange(self, client: Redis):
         for i in range(100):
             await client.timeseries.add("ts1", i, i % 7)
@@ -358,6 +371,18 @@ class TestTimeseries:
         )
         assert ((1, 10.0), (0, 1.0)) == await client.timeseries.revrange(
             "ts1", 0, 10, aggregator=PureToken.COUNT, bucketduration=10, align=1
+        )
+
+    @pytest.mark.min_module_version("timeseries", "8.8")
+    async def test_revrange_multi_aggregator(self, client: Redis):
+        for i in range(10):
+            await client.timeseries.add("ts1", i, i)
+        assert ((0, 0.0, 9.0, 10.0),) == await client.timeseries.revrange(
+            "ts1",
+            0,
+            9,
+            aggregator=[PureToken.MIN, PureToken.MAX, PureToken.COUNT],
+            bucketduration=10,
         )
 
     @pytest.mark.min_module_version("timeseries", "1.8.0")
@@ -433,6 +458,20 @@ class TestTimeseries:
         )
 
         assert all(math.isnan(k[1]) for k in res[_s("ts1")][1][10:20])
+
+    @pytest.mark.min_module_version("timeseries", "8.8")
+    async def test_mrange_multi_aggregator(self, client: Redis, _s):
+        await client.timeseries.create("ts1", labels={"Test": "This"})
+        for i in range(10):
+            await client.timeseries.add("ts1", i, i)
+        res = await client.timeseries.mrange(
+            0,
+            9,
+            filters=["Test=This"],
+            aggregator=[PureToken.MIN, PureToken.MAX, PureToken.AVG],
+            bucketduration=10,
+        )
+        assert ((0, 0.0, 9.0, 4.5),) == res[_s("ts1")][1]
 
     async def test_mrange_filter_align(self, client: Redis, _s):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})
