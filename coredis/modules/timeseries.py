@@ -545,7 +545,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         buckettimestamp: StringT | None = None,
         empty: bool | None = None,
         latest: bool | None = None,
-    ) -> CommandRequest[tuple[tuple[int, float], ...] | tuple[()]]:
+    ) -> CommandRequest[tuple[tuple[int | float, ...], ...] | tuple[()]]:
         """
         Query a range in forward direction.
 
@@ -635,7 +635,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         buckettimestamp: StringT | None = None,
         empty: bool | None = None,
         latest: bool | None = None,
-    ) -> CommandRequest[tuple[tuple[int, float], ...] | tuple[()]]:
+    ) -> CommandRequest[tuple[tuple[int | float, ...], ...] | tuple[()]]:
         """
         Query a range in reverse direction from a RedisTimeSeries key.
 
@@ -749,7 +749,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     ) -> CommandRequest[
         dict[
             AnyStr,
-            tuple[dict[AnyStr, AnyStr], tuple[tuple[int, float], ...] | tuple[()]],
+            tuple[dict[AnyStr, AnyStr], tuple[tuple[int | float, ...], ...] | tuple[()]],
         ]
     ]:
         """
@@ -870,7 +870,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     ) -> CommandRequest[
         dict[
             AnyStr,
-            tuple[dict[AnyStr, AnyStr], tuple[tuple[int, float], ...] | tuple[()]],
+            tuple[dict[AnyStr, AnyStr], tuple[tuple[int | float, ...], ...] | tuple[()]],
         ]
     ]:
         """
@@ -962,7 +962,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     )
     def get(
         self, key: KeyT, latest: bool | None = None
-    ) -> CommandRequest[tuple[int, float] | tuple[()]]:
+    ) -> CommandRequest[tuple[int | float, ...] | tuple[()]]:
         """
         Get the sample with the highest timestamp from a given time series.
 
@@ -999,7 +999,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
         withlabels: bool | None = None,
         selected_labels: Parameters[StringT] | None = None,
         latest: bool | None = None,
-    ) -> CommandRequest[dict[AnyStr, tuple[dict[AnyStr, AnyStr], tuple[int, float] | tuple[()]]]]:
+    ) -> CommandRequest[
+        dict[AnyStr, tuple[dict[AnyStr, AnyStr], tuple[int | float, ...] | tuple[()]]]
+    ]:
         """
         Get the sample with the highest timestamp from each time series matching a specific filter.
 
