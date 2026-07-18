@@ -569,7 +569,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
          reports the compacted value of the latest, possibly partial, bucket, given that
          this bucket's start time falls within ``[fromtimestamp, totimestamp]``.
 
-        :return: A tuple of samples, where each sample is a tuple of timestamp and value.
+        :return: A tuple of samples. Each sample is ``(timestamp, value)``, or with
+         multiple aggregators ``(timestamp, value1, value2, ...)``.
         """
         command_arguments: CommandArgList = [
             Key(key),
@@ -656,7 +657,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param empty: Return an empty list if no samples are found.
         :param latest: Report the compacted value of the latest, possibly partial, bucket.
 
-        :return: A tuple of timestamp-value pairs in reverse order.
+        :return: A tuple of samples in reverse order. Each sample is
+         ``(timestamp, value)``, or with multiple aggregators
+         ``(timestamp, value1, value2, ...)``.
         """
         command_arguments: CommandArgList = [
             Key(key),

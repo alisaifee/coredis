@@ -5046,7 +5046,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param keys: One or more sorted set key names.
         :param weights: Optional multiplier for each key's scores.
-        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :param aggregate: How to combine scores: SUM, MIN, MAX, or COUNT.
         :param withscores: If ``True``, include scores in the result.
         :return: Members (and optionally scores) in the intersection.
         """
@@ -5074,7 +5074,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param keys: One or more sorted set key names.
         :param destination: Key where the result is stored.
         :param weights: Optional multiplier for each key's scores.
-        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :param aggregate: How to combine scores: SUM, MIN, MAX, or COUNT.
         :return: The number of elements in the resulting sorted set.
         """
 
@@ -5779,7 +5779,7 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :param keys: One or more sorted set key names.
         :param weights: Optional multiplier for each key's scores.
-        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :param aggregate: How to combine scores: SUM, MIN, MAX, or COUNT.
         :param withscores: If ``True``, include scores in the result.
         :return: Members (and optionally scores) in the union.
         """
@@ -5807,7 +5807,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param keys: One or more sorted set key names.
         :param destination: Key where the result sorted set is stored.
         :param weights: Optional multiplier for each key's scores.
-        :param aggregate: How to combine scores: SUM, MIN, or MAX.
+        :param aggregate: How to combine scores: SUM, MIN, MAX, or COUNT.
         :return: Number of elements in the resulting sorted set.
         """
 
@@ -9783,6 +9783,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param end: The zero-based integer index of the last element to return
          (inclusive). If end is less than start, elements are returned in reverse index
          order.
+
+        :return: Values for each index in the range; ``None`` for empty slots.
         """
 
         return self.create_request(
@@ -9847,14 +9849,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param limit: Stop after limit matches have been collected. limit must be a
          positive integer. When omitted, all matches in the range are returned.
         :param withvalues: In addition to each matching index, return the matching
-         value. The reply becomes a flat list of alternating index-value pairs.
+         value. The reply becomes a list of ``(index, value)`` pairs.
         :param nocase: Perform case-insensitive comparisons for EXACT, MATCH, GLOB, and RE.
 
         :return: Indices of the matching elements, in the same order in which the range
          is traversed (ascending when start <= end, descending when start > end). When
-         WITHVALUES is given, a flat array of alternating index-value pairs: [idx1,
-         val1, idx2, val2, ...]. An empty array is returned when the key does not exist
-         or no element matches.
+         :paramref:`withvalues` is given, a list of ``(index, value)`` pairs. An empty
+         list is returned when the key does not exist or no element matches.
         """
         command_arguments: CommandArgList = [Key(key), start, end]
         command_arguments.extend(predicate.args)
@@ -9888,14 +9889,16 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def arinfo(self, key: KeyT, *, full: bool = False) -> CommandRequest[ArrayInfo | ArrayInfoFull]:
         """
-        Gets the value at an index in an array.
+        Returns metadata about an array key.
 
         :param key: The name of the key that holds the array.
         :param full: Include per-slice statistics in the reply: the number of dense and
          sparse slices and their average sizes and fill rates. Raises the complexity
          from O(1) to O(N) where N is the number of slices.
 
-        :return: The value at the given index, or ``None`` if the index does not exist.
+        :return: Array metadata (:class:`~coredis.response.types.ArrayInfo`), or
+         :class:`~coredis.response.types.ArrayInfoFull` when :paramref:`full` is
+         ``True``.
         """
         command_arguments: CommandArgList = [Key(key)]
         if full:
@@ -10066,7 +10069,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def arring(self, key: KeyT, size: int, values: Parameters[ValueT]) -> CommandRequest[int]:
         """
-        Inserts one or more values at consecutive indices.
+        Inserts values into a fixed-size ring buffer window (wrapping/overwriting).
 
         :param key: The name of the key that holds the array.
         :param size: The size of the ring buffer window. Each value is inserted at
@@ -10106,7 +10109,6 @@ class CoreCommands(CommandMixin[AnyStr]):
             PureToken.OR,
             PureToken.XOR,
             PureToken.USED,
-            PureToken.SUM,
         ]
         | None = None,
         match: StringT | None = None,
@@ -10122,16 +10124,16 @@ class CoreCommands(CommandMixin[AnyStr]):
          index regardless of argument order.
         :param op: The aggregate function to apply to all non-empty elements in [start,
          end]. One of:
-         SUM — Returns the sum of all numeric values as a bulk string.
-         MIN — Returns the minimum numeric value as a bulk string.
-         MAX — Returns the maximum numeric value as a bulk string.
-         AND — Returns the bitwise AND of all values, treating each as an integer.
-         OR — Returns the bitwise OR of all values, treating each as an integer.
-         XOR — Returns the bitwise XOR of all values, treating each as an integer.
-         USED — Returns the count of non-empty elements in the range.
-        :param match: Returns the count of elements whose value equals value.
+         SUM — Sum of all numeric values.
+         MIN — Minimum numeric value.
+         MAX — Maximum numeric value.
+         AND — Bitwise AND of all values, treating each as an integer.
+         OR — Bitwise OR of all values, treating each as an integer.
+         XOR — Bitwise XOR of all values, treating each as an integer.
+         USED — Count of non-empty elements in the range.
+        :param match: Returns the count of elements whose value equals :paramref:`match`.
 
-        :return: Result of the operation. Null if no elements match the operation.
+        :return: Result of the operation, or ``None`` if no elements match.
         """
         command_arguments: CommandArgList = [Key(key), start, end]
         if match is not None:
@@ -10158,7 +10160,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         limit: int | None = None,
     ) -> CommandRequest[list[tuple[int, AnyStr]]]:
         """
-        Incrementally iterate over members of a set using a cursor.
+        Scans non-empty array elements in an index range.
 
         :param key: The name of the key that holds the array.
         :param start: The zero-based integer index at which to begin scanning. If start
@@ -10168,7 +10170,7 @@ class CoreCommands(CommandMixin[AnyStr]):
          all elements in the range are returned. Unlike ARGETRANGE, empty slots are not
          included in the output, so LIMIT caps the number of existing elements returned.
 
-        :return: A tuple of (index, value) pairs.
+        :return: A list of ``(index, value)`` pairs for non-empty slots in the range.
         """
         command_arguments: CommandArgList = [Key(key), start, end]
         if limit is not None:
