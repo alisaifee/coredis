@@ -6087,7 +6087,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         :return: The number of messages successfully released back to the group PEL.
         """
-        command_arguments: CommandArgList = [PrefixToken.IDS, len(list(identifiers)), *identifiers]
+        _identifiers: list[ValueT] = list(identifiers)
+        command_arguments: CommandArgList = [PrefixToken.IDS, len(_identifiers), *_identifiers]
         if retrycount is not None:
             command_arguments.extend([PrefixToken.RETRYCOUNT, retrycount])
         if force:
