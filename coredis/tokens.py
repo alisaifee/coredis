@@ -195,18 +195,34 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #: Used by:
     #:
     #:  - ``BLMOVE``
+    #:  - ``BLMOVEM``
     #:  - ``BLMPOP``
     #:  - ``LMOVE``
+    #:  - ``LMOVEM``
     #:  - ``LMPOP``
     LEFT = b"LEFT"
 
     #: Used by:
     #:
     #:  - ``BLMOVE``
+    #:  - ``BLMOVEM``
     #:  - ``BLMPOP``
     #:  - ``LMOVE``
+    #:  - ``LMOVEM``
     #:  - ``LMPOP``
     RIGHT = b"RIGHT"
+
+    #: Used by:
+    #:
+    #:  - ``BLMOVEM``
+    #:  - ``LMOVEM``
+    BULK = b"BULK"
+
+    #: Used by:
+    #:
+    #:  - ``BLMOVEM``
+    #:  - ``LMOVEM``
+    OBO = b"OBO"
 
     #: Used by:
     #:
@@ -708,6 +724,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``SUNIONCARD``
+    APPROX = b"APPROX"
+
+    #: Used by:
+    #:
     #:  - ``XACKDEL``
     #:  - ``XADD``
     #:  - ``XDELEX``
@@ -1069,6 +1090,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
+    #:  - ``TS.NRANGE``
     #:  - ``TS.RANGE``
     BUCKETTIMESTAMP = b"BUCKETTIMESTAMP"
 
@@ -1076,6 +1098,8 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
+    #:  - ``TS.NRANGE``
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.RANGE``
     #:  - ``TS.REVRANGE``
     EMPTY = b"EMPTY"
@@ -1084,39 +1108,53 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
+    #:  - ``TS.NRANGE``
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.RANGE``
     #:  - ``TS.REVRANGE``
     FILTER_BY_VALUE = b"FILTER_BY_VALUE"
 
     #: Used by:
     #:
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.REVRANGE``
     END = b"END"
 
     #: Used by:
     #:
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.REVRANGE``
     HYPHEN_MINUS = b"-"
 
     #: Used by:
     #:
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.REVRANGE``
     MID = b"MID"
 
     #: Used by:
     #:
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.REVRANGE``
     PLUS_SIGN = b"+"
 
     #: Used by:
     #:
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.REVRANGE``
     START = b"START"
 
     #: Used by:
     #:
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.REVRANGE``
     TILDE = b"~"
+
+    #: Used by:
+    #:
+    #:  - ``TS.MRANGE``
+    #:  - ``TS.MREVRANGE``
+    EXCLUDEEMPTY = b"EXCLUDEEMPTY"
 
     #: Used by:
     #:
@@ -1284,6 +1322,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``FT.HYBRID``
     #:  - ``FT.SEARCH``
     EXPLAINSCORE = b"EXPLAINSCORE"
 
@@ -1365,6 +1404,12 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``FT.AGGREGATE``
     #:  - ``FT.HYBRID``
     COUNT_DISTINCTISH = b"COUNT_DISTINCTISH"
+
+    #: Used by:
+    #:
+    #:  - ``FT.AGGREGATE``
+    #:  - ``FT.HYBRID``
+    DISTINCT = b"DISTINCT"
 
     #: Used by:
     #:
@@ -1518,9 +1563,11 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``ARGREP``
     #:  - ``ARSCAN``
     #:  - ``CLUSTER SLOT-STATS``
+    #:  - ``SDIFFCARD``
     #:  - ``SINTERCARD``
     #:  - ``SORT``
     #:  - ``SORT_RO``
+    #:  - ``SUNIONCARD``
     #:  - ``XADD``
     #:  - ``XTRIM``
     #:  - ``ZINTERCARD``
@@ -1557,6 +1604,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``BLMOVEM``
     #:  - ``BLMPOP``
     #:  - ``BZMPOP``
     #:  - ``FT.AGGREGATE``
@@ -1570,12 +1618,15 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``GEOSEARCHSTORE``
     #:  - ``HOTKEYS START``
     #:  - ``HSCAN``
+    #:  - ``LMOVEM``
     #:  - ``LMPOP``
     #:  - ``LPOS``
     #:  - ``SCAN``
     #:  - ``SSCAN``
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
+    #:  - ``TS.NRANGE``
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.RANGE``
     #:  - ``TS.REVRANGE``
     #:  - ``VSIM``
@@ -1588,6 +1639,12 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``ZMPOP``
     #:  - ``ZSCAN``
     COUNT = b"COUNT"
+
+    #: Used by:
+    #:
+    #:  - ``BLMOVEM``
+    #:  - ``LMOVEM``
+    EXACTLY = b"EXACTLY"
 
     #: Used by:
     #:
@@ -2061,9 +2118,22 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``TS.READ``
     #:  - ``XREAD``
     #:  - ``XREADGROUP``
     BLOCK = b"BLOCK"
+
+    #: Used by:
+    #:
+    #:  - ``XREAD``
+    #:  - ``XREADGROUP``
+    MAXCOUNT = b"MAXCOUNT"
+
+    #: Used by:
+    #:
+    #:  - ``XREAD``
+    #:  - ``XREADGROUP``
+    MAXSIZE = b"MAXSIZE"
 
     #: Used by:
     #:
@@ -2257,6 +2327,8 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.CREATERULE``
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
+    #:  - ``TS.NRANGE``
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.RANGE``
     #:  - ``TS.REVRANGE``
     AGGREGATION = b"AGGREGATION"
@@ -2265,6 +2337,8 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
+    #:  - ``TS.NRANGE``
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.RANGE``
     #:  - ``TS.REVRANGE``
     ALIGN = b"ALIGN"
@@ -2273,14 +2347,22 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
+    #:  - ``TS.NRANGE``
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.RANGE``
     #:  - ``TS.REVRANGE``
     FILTER_BY_TS = b"FILTER_BY_TS"
 
     #: Used by:
     #:
+    #:  - ``TS.NREVRANGE``
     #:  - ``TS.REVRANGE``
     BUCKETTIMESTAMP = b"BUCKETTIMESTAMP"
+
+    #: Used by:
+    #:
+    #:  - ``TS.READ``
+    MAX_COUNT = b"MAX_COUNT"
 
     #: Used by:
     #:

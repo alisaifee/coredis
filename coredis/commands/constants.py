@@ -86,6 +86,14 @@ class CommandName(bytes, enum.Enum):
     COMMAND_LIST = b"COMMAND LIST"  # Since redis: 7.0.0
     LATENCY_HISTOGRAM = b"LATENCY HISTOGRAM"  # Since redis: 7.0.0
     MODULE_LOADEX = b"MODULE LOADEX"  # Since redis: 7.0.0
+    BACKUP = b"BACKUP"  # Since redis: 8.10.0
+    BACKUP_ABORT = b"BACKUP ABORT"  # Since redis: 8.10.0
+    BACKUP_CLEANUP = b"BACKUP CLEANUP"  # Since redis: 8.10.0
+    BACKUP_HELP = b"BACKUP HELP"  # Since redis: 8.10.0
+    BACKUP_LIST = b"BACKUP LIST"  # Since redis: 8.10.0
+    BACKUP_SEAL = b"BACKUP SEAL"  # Since redis: 8.10.0
+    BACKUP_START = b"BACKUP START"  # Since redis: 8.10.0
+    BACKUP_STATUS = b"BACKUP STATUS"  # Since redis: 8.10.0
     TRIMSLOTS = b"TRIMSLOTS"  # Since redis: 8.4.0
     HOTKEYS = b"HOTKEYS"  # Since redis: 8.6.0
     HOTKEYS_GET = b"HOTKEYS GET"  # Since redis: 8.6.0
@@ -176,7 +184,6 @@ class CommandName(bytes, enum.Enum):
     CLUSTER_MYSHARDID = b"CLUSTER MYSHARDID"  # Since redis: 7.2.0
     CLUSTER_SLOT_STATS = b"CLUSTER SLOT-STATS"  # Since redis: 8.2.0
     CLUSTER_MIGRATION = b"CLUSTER MIGRATION"  # Since redis: 8.4.0
-    CLUSTER_SYNCSLOTS = b"CLUSTER SYNCSLOTS"  # Since redis: 8.4.0
     CLUSTER_SLAVES = b"CLUSTER SLAVES"  # Deprecated in redis: 5.0.0
     CLUSTER_SLOTS = b"CLUSTER SLOTS"  # Deprecated in redis: 7.0.0
 
@@ -238,6 +245,8 @@ class CommandName(bytes, enum.Enum):
     LMOVE = b"LMOVE"  # Since redis: 6.2.0
     BLMPOP = b"BLMPOP"  # Since redis: 7.0.0
     LMPOP = b"LMPOP"  # Since redis: 7.0.0
+    BLMOVEM = b"BLMOVEM"  # Since redis: 8.10.0
+    LMOVEM = b"LMOVEM"  # Since redis: 8.10.0
     RPOPLPUSH = b"RPOPLPUSH"  # Deprecated in redis: 6.2.0
     BRPOPLPUSH = b"BRPOPLPUSH"  # Deprecated in redis: 6.2.0
 
@@ -386,6 +395,11 @@ class CommandName(bytes, enum.Enum):
     HGETDEL = b"HGETDEL"  # Since redis: 8.0.0
     HGETEX = b"HGETEX"  # Since redis: 8.0.0
     HSETEX = b"HSETEX"  # Since redis: 8.0.0
+    HIMPORT = b"HIMPORT"  # Since redis: 8.10.0
+    HIMPORT_DISCARD = b"HIMPORT DISCARD"  # Since redis: 8.10.0
+    HIMPORT_DISCARDALL = b"HIMPORT DISCARDALL"  # Since redis: 8.10.0
+    HIMPORT_PREPARE = b"HIMPORT PREPARE"  # Since redis: 8.10.0
+    HIMPORT_SET = b"HIMPORT SET"  # Since redis: 8.10.0
     HMSET = b"HMSET"  # Deprecated in redis: 4.0.0
 
     #: Commands for hyperloglog
@@ -428,6 +442,8 @@ class CommandName(bytes, enum.Enum):
     SSCAN = b"SSCAN"  # Since redis: 2.8.0
     SMISMEMBER = b"SMISMEMBER"  # Since redis: 6.2.0
     SINTERCARD = b"SINTERCARD"  # Since redis: 7.0.0
+    SDIFFCARD = b"SDIFFCARD"  # Since redis: 8.10.0
+    SUNIONCARD = b"SUNIONCARD"  # Since redis: 8.10.0
 
     #: Commands for stream
     XACK = b"XACK"  # Since redis: 5.0.0
@@ -580,7 +596,9 @@ class CommandName(bytes, enum.Enum):
     TS_REVRANGE = b"TS.REVRANGE"  # Since timeseries: 1.4.0
     TS_MREVRANGE = b"TS.MREVRANGE"  # Since timeseries: 1.4.0
     TS_DEL = b"TS.DEL"  # Since timeseries: 1.6.0
-    TS_BGET = b"TS.BGET"  # Since timeseries: 8.10.0
+    TS_NRANGE = b"TS.NRANGE"  # Since timeseries: 8.10.0
+    TS_NREVRANGE = b"TS.NREVRANGE"  # Since timeseries: 8.10.0
+    TS_READ = b"TS.READ"  # Since timeseries: 8.10.0
 
     #: Commands for search
     FT_CREATE = b"FT.CREATE"  # Since search: 1.0.0
@@ -606,7 +624,7 @@ class CommandName(bytes, enum.Enum):
     FT__LIST = b"FT._LIST"  # Since search: 2.0.0
     FT_PROFILE = b"FT.PROFILE"  # Since search: 2.2.0
     FT_ALIASLIST = b"FT.ALIASLIST"  # Since search: 8.10.0
-    FT_HYBRID = b"FT.HYBRID"  # Since search: 8.4.4
+    FT_HYBRID = b"FT.HYBRID"  # Since search: 8.4.0
     FT_CONFIG_SET = b"FT.CONFIG SET"  # Deprecated in search: 8.0.0
     FT_CONFIG_GET = b"FT.CONFIG GET"  # Deprecated in search: 8.0.0
     FT_CONFIG_HELP = b"FT.CONFIG HELP"  # Deprecated in search: 8.0.0

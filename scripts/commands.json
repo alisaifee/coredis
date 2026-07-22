@@ -1571,6 +1571,126 @@
             "allow_busy"
         ]
     },
+    "BACKUP": {
+        "summary": "A container for backup management commands.",
+        "since": "8.10.0",
+        "group": "server",
+        "complexity": "Depends on subcommand.",
+        "acl_categories": [
+            "@slow"
+        ],
+        "arity": 2
+    },
+    "BACKUP ABORT": {
+        "summary": "Cancel a backup that has not been sealed yet.",
+        "since": "8.10.0",
+        "group": "server",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": 2,
+        "command_flags": [
+            "admin",
+            "noscript"
+        ]
+    },
+    "BACKUP CLEANUP": {
+        "summary": "Remove a sealed backup's files and return to idle.",
+        "since": "8.10.0",
+        "group": "server",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": 2,
+        "command_flags": [
+            "admin",
+            "noscript"
+        ]
+    },
+    "BACKUP HELP": {
+        "summary": "Return helpful text about BACKUP command parameters.",
+        "since": "8.10.0",
+        "group": "server",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@slow"
+        ],
+        "arity": 2,
+        "command_flags": [
+            "loading",
+            "stale"
+        ]
+    },
+    "BACKUP LIST": {
+        "summary": "List the immutable backup file paths pinned so far.",
+        "since": "8.10.0",
+        "group": "server",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": 2,
+        "command_flags": [
+            "admin",
+            "stale"
+        ]
+    },
+    "BACKUP SEAL": {
+        "summary": "Freeze the current backup (BASE + INCR + manifest).",
+        "since": "8.10.0",
+        "group": "server",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": 2,
+        "command_flags": [
+            "admin",
+            "noscript"
+        ]
+    },
+    "BACKUP START": {
+        "summary": "Start a new backup into the configured 'backupdirname'.",
+        "since": "8.10.0",
+        "group": "server",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": 2,
+        "command_flags": [
+            "admin",
+            "noscript"
+        ]
+    },
+    "BACKUP STATUS": {
+        "summary": "Report the current backup state.",
+        "since": "8.10.0",
+        "group": "server",
+        "complexity": "O(1)",
+        "acl_categories": [
+            "@admin",
+            "@slow",
+            "@dangerous"
+        ],
+        "arity": 2,
+        "command_flags": [
+            "admin",
+            "stale"
+        ]
+    },
     "BGREWRITEAOF": {
         "summary": "Asynchronously rewrites the append-only file to disk.",
         "since": "1.0.0",
@@ -2250,6 +2370,161 @@
                 "name": "timeout",
                 "type": "double",
                 "display_text": "timeout"
+            }
+        ],
+        "command_flags": [
+            "write",
+            "denyoom",
+            "blocking"
+        ]
+    },
+    "BLMOVEM": {
+        "summary": "Moves up to (or exactly) a number of elements from one list to another and returns them. Blocks until the elements are available otherwise. Deletes the source list if it becomes empty.",
+        "since": "8.10.0",
+        "group": "list",
+        "complexity": "O(N) where N is the number of elements moved.",
+        "acl_categories": [
+            "@write",
+            "@list",
+            "@slow",
+            "@blocking"
+        ],
+        "arity": -6,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "access": true,
+                "delete": true
+            },
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 2
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "insert": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "source",
+                "type": "key",
+                "display_text": "source",
+                "key_spec_index": 0
+            },
+            {
+                "name": "destination",
+                "type": "key",
+                "display_text": "destination",
+                "key_spec_index": 1
+            },
+            {
+                "name": "wherefrom",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "left",
+                        "type": "pure-token",
+                        "display_text": "left",
+                        "token": "LEFT"
+                    },
+                    {
+                        "name": "right",
+                        "type": "pure-token",
+                        "display_text": "right",
+                        "token": "RIGHT"
+                    }
+                ]
+            },
+            {
+                "name": "whereto",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "left",
+                        "type": "pure-token",
+                        "display_text": "left",
+                        "token": "LEFT"
+                    },
+                    {
+                        "name": "right",
+                        "type": "pure-token",
+                        "display_text": "right",
+                        "token": "RIGHT"
+                    }
+                ]
+            },
+            {
+                "name": "timeout",
+                "type": "double",
+                "display_text": "timeout"
+            },
+            {
+                "name": "how-many",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "selector",
+                        "type": "oneof",
+                        "arguments": [
+                            {
+                                "name": "count",
+                                "type": "integer",
+                                "display_text": "count",
+                                "token": "COUNT"
+                            },
+                            {
+                                "name": "exactly",
+                                "type": "integer",
+                                "display_text": "exactly",
+                                "token": "EXACTLY"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "ordering",
+                        "type": "oneof",
+                        "arguments": [
+                            {
+                                "name": "obo",
+                                "type": "pure-token",
+                                "display_text": "obo",
+                                "token": "OBO"
+                            },
+                            {
+                                "name": "bulk",
+                                "type": "pure-token",
+                                "display_text": "bulk",
+                                "token": "BULK"
+                            }
+                        ]
+                    }
+                ]
             }
         ],
         "command_flags": [
@@ -5234,13 +5509,13 @@
                     },
                     {
                         "name": "ifdeq-digest",
-                        "type": "integer",
+                        "type": "string",
                         "display_text": "ifdeq-digest",
                         "token": "IFDEQ"
                     },
                     {
                         "name": "ifdne-digest",
-                        "type": "integer",
+                        "type": "string",
                         "display_text": "ifdne-digest",
                         "token": "IFDNE"
                     }
@@ -5447,7 +5722,8 @@
             "stale",
             "skip_monitor",
             "no_mandatory_keys",
-            "movablekeys"
+            "movablekeys",
+            "script_runner"
         ]
     },
     "EVALSHA": {
@@ -5513,7 +5789,8 @@
             "stale",
             "skip_monitor",
             "no_mandatory_keys",
-            "movablekeys"
+            "movablekeys",
+            "script_runner"
         ]
     },
     "EVALSHA_RO": {
@@ -5579,7 +5856,8 @@
             "stale",
             "skip_monitor",
             "no_mandatory_keys",
-            "movablekeys"
+            "movablekeys",
+            "script_runner"
         ]
     },
     "EVAL_RO": {
@@ -5646,7 +5924,8 @@
             "stale",
             "skip_monitor",
             "no_mandatory_keys",
-            "movablekeys"
+            "movablekeys",
+            "script_runner"
         ]
     },
     "EXEC": {
@@ -6060,7 +6339,8 @@
             "stale",
             "skip_monitor",
             "no_mandatory_keys",
-            "movablekeys"
+            "movablekeys",
+            "script_runner"
         ]
     },
     "FCALL_RO": {
@@ -6127,7 +6407,8 @@
             "stale",
             "skip_monitor",
             "no_mandatory_keys",
-            "movablekeys"
+            "movablekeys",
+            "script_runner"
         ]
     },
     "FLUSHALL": {
@@ -6830,6 +7111,7 @@
                 "access": true
             },
             {
+                "notes": "Incomplete because duplicate STORE options use last-wins; fall back to georadiusGetKeys",
                 "begin_search": {
                     "type": "keyword",
                     "spec": {
@@ -6846,9 +7128,11 @@
                     }
                 },
                 "OW": true,
-                "update": true
+                "update": true,
+                "incomplete": true
             },
             {
+                "notes": "Incomplete because duplicate STOREDIST options use last-wins; fall back to georadiusGetKeys",
                 "begin_search": {
                     "type": "keyword",
                     "spec": {
@@ -6865,7 +7149,8 @@
                     }
                 },
                 "OW": true,
-                "update": true
+                "update": true,
+                "incomplete": true
             }
         ],
         "arguments": [
@@ -7055,6 +7340,7 @@
                 "access": true
             },
             {
+                "notes": "Incomplete because duplicate STORE options use last-wins; fall back to georadiusGetKeys",
                 "begin_search": {
                     "type": "keyword",
                     "spec": {
@@ -7071,9 +7357,11 @@
                     }
                 },
                 "OW": true,
-                "update": true
+                "update": true,
+                "incomplete": true
             },
             {
+                "notes": "Incomplete because duplicate STOREDIST options use last-wins; fall back to georadiusGetKeys",
                 "begin_search": {
                     "type": "keyword",
                     "spec": {
@@ -7090,7 +7378,8 @@
                     }
                 },
                 "OW": true,
-                "update": true
+                "update": true,
+                "incomplete": true
             }
         ],
         "arguments": [
@@ -9043,6 +9332,137 @@
         "command_flags": [
             "write",
             "fast"
+        ]
+    },
+    "HIMPORT": {
+        "summary": "A container for session-based hash import commands using fieldsets.",
+        "since": "8.10.0",
+        "group": "hash",
+        "complexity": "Depends on subcommand.",
+        "acl_categories": [
+            "@hash",
+            "@slow"
+        ],
+        "arity": -2
+    },
+    "HIMPORT DISCARD": {
+        "summary": "Removes a single session-local fieldset by name.",
+        "since": "8.10.0",
+        "group": "hash",
+        "complexity": "O(N) where N is the number of session-local fieldsets.",
+        "acl_categories": [
+            "@hash",
+            "@slow"
+        ],
+        "arity": 3,
+        "arguments": [
+            {
+                "name": "fieldset-name",
+                "type": "string",
+                "display_text": "fieldset-name"
+            }
+        ],
+        "hints": [
+            "request_policy:all_shards"
+        ]
+    },
+    "HIMPORT DISCARDALL": {
+        "summary": "Removes all session-local fieldsets for the connection.",
+        "since": "8.10.0",
+        "group": "hash",
+        "complexity": "O(N) where N is the number of session-local fieldsets.",
+        "acl_categories": [
+            "@hash",
+            "@slow"
+        ],
+        "arity": 2,
+        "hints": [
+            "request_policy:all_shards"
+        ]
+    },
+    "HIMPORT PREPARE": {
+        "summary": "Defines a session-local fieldset that maps a name to a sorted set of field names.",
+        "since": "8.10.0",
+        "group": "hash",
+        "complexity": "O(N*log(N)) where N is the number of fields.",
+        "acl_categories": [
+            "@hash",
+            "@slow"
+        ],
+        "arity": -4,
+        "arguments": [
+            {
+                "name": "fieldset-name",
+                "type": "string",
+                "display_text": "fieldset-name"
+            },
+            {
+                "name": "field",
+                "type": "string",
+                "display_text": "field",
+                "multiple": true
+            }
+        ],
+        "command_flags": [
+            "denyoom"
+        ],
+        "hints": [
+            "request_policy:all_shards"
+        ]
+    },
+    "HIMPORT SET": {
+        "summary": "Creates a fieldset-based hash from values supplied in the order matching a previously prepared fieldset.",
+        "since": "8.10.0",
+        "group": "hash",
+        "complexity": "O(N) where N is the number of fields in the fieldset.",
+        "acl_categories": [
+            "@write",
+            "@hash",
+            "@slow"
+        ],
+        "arity": -5,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 2
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "OW": true,
+                "update": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "fieldset-name",
+                "type": "string",
+                "display_text": "fieldset-name"
+            },
+            {
+                "name": "value",
+                "type": "string",
+                "display_text": "value",
+                "multiple": true
+            }
+        ],
+        "command_flags": [
+            "write",
+            "denyoom"
         ]
     },
     "HINCRBY": {
@@ -11360,6 +11780,154 @@
                         "type": "pure-token",
                         "display_text": "right",
                         "token": "RIGHT"
+                    }
+                ]
+            }
+        ],
+        "command_flags": [
+            "write",
+            "denyoom"
+        ]
+    },
+    "LMOVEM": {
+        "summary": "Moves up to (or exactly) a number of elements from one list to another and returns them. Deletes the source list if it becomes empty.",
+        "since": "8.10.0",
+        "group": "list",
+        "complexity": "O(N) where N is the number of elements moved.",
+        "acl_categories": [
+            "@write",
+            "@list",
+            "@slow"
+        ],
+        "arity": -5,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "access": true,
+                "delete": true
+            },
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 2
+                    }
+                },
+                "find_keys": {
+                    "type": "range",
+                    "spec": {
+                        "lastkey": 0,
+                        "keystep": 1,
+                        "limit": 0
+                    }
+                },
+                "RW": true,
+                "insert": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "source",
+                "type": "key",
+                "display_text": "source",
+                "key_spec_index": 0
+            },
+            {
+                "name": "destination",
+                "type": "key",
+                "display_text": "destination",
+                "key_spec_index": 1
+            },
+            {
+                "name": "wherefrom",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "left",
+                        "type": "pure-token",
+                        "display_text": "left",
+                        "token": "LEFT"
+                    },
+                    {
+                        "name": "right",
+                        "type": "pure-token",
+                        "display_text": "right",
+                        "token": "RIGHT"
+                    }
+                ]
+            },
+            {
+                "name": "whereto",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "left",
+                        "type": "pure-token",
+                        "display_text": "left",
+                        "token": "LEFT"
+                    },
+                    {
+                        "name": "right",
+                        "type": "pure-token",
+                        "display_text": "right",
+                        "token": "RIGHT"
+                    }
+                ]
+            },
+            {
+                "name": "how-many",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "selector",
+                        "type": "oneof",
+                        "arguments": [
+                            {
+                                "name": "count",
+                                "type": "integer",
+                                "display_text": "count",
+                                "token": "COUNT"
+                            },
+                            {
+                                "name": "exactly",
+                                "type": "integer",
+                                "display_text": "exactly",
+                                "token": "EXACTLY"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "ordering",
+                        "type": "oneof",
+                        "arguments": [
+                            {
+                                "name": "obo",
+                                "type": "pure-token",
+                                "display_text": "obo",
+                                "token": "OBO"
+                            },
+                            {
+                                "name": "bulk",
+                                "type": "pure-token",
+                                "display_text": "bulk",
+                                "token": "BULK"
+                            }
+                        ]
                     }
                 ]
             }
@@ -15039,6 +15607,63 @@
             "nondeterministic_output_order"
         ]
     },
+    "SDIFFCARD": {
+        "summary": "Returns the number of members of the difference between the first set and all successive sets.",
+        "since": "8.10.0",
+        "group": "set",
+        "complexity": "O(N) where N is the total number of elements in all given sets.",
+        "acl_categories": [
+            "@read",
+            "@set",
+            "@slow"
+        ],
+        "arity": -3,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "keynum",
+                    "spec": {
+                        "keynumidx": 0,
+                        "firstkey": 1,
+                        "keystep": 1
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "numkeys",
+                "type": "integer",
+                "display_text": "numkeys"
+            },
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0,
+                "multiple": true
+            },
+            {
+                "name": "limit",
+                "type": "integer",
+                "display_text": "limit",
+                "token": "LIMIT",
+                "optional": true
+            }
+        ],
+        "command_flags": [
+            "readonly",
+            "movablekeys"
+        ]
+    },
     "SDIFFSTORE": {
         "summary": "Stores the difference of multiple sets in a key.",
         "since": "1.0.0",
@@ -15233,14 +15858,14 @@
                     },
                     {
                         "name": "ifdeq-digest",
-                        "type": "integer",
+                        "type": "string",
                         "display_text": "ifdeq-digest",
                         "token": "IFDEQ",
                         "since": "8.4.0"
                     },
                     {
                         "name": "ifdne-digest",
-                        "type": "integer",
+                        "type": "string",
                         "display_text": "ifdne-digest",
                         "token": "IFDNE",
                         "since": "8.4.0"
@@ -15902,6 +16527,10 @@
             [
                 "4.0.0",
                 "Added client IP address, port and name to the reply."
+            ],
+            [
+                "8.10.0",
+                "Added original command argument count to the reply."
             ]
         ],
         "acl_categories": [
@@ -16927,6 +17556,70 @@
         ],
         "hints": [
             "nondeterministic_output_order"
+        ]
+    },
+    "SUNIONCARD": {
+        "summary": "Returns the number of members of the union of multiple sets.",
+        "since": "8.10.0",
+        "group": "set",
+        "complexity": "O(N) where N is the total number of elements in all given sets.",
+        "acl_categories": [
+            "@read",
+            "@set",
+            "@slow"
+        ],
+        "arity": -3,
+        "key_specs": [
+            {
+                "begin_search": {
+                    "type": "index",
+                    "spec": {
+                        "index": 1
+                    }
+                },
+                "find_keys": {
+                    "type": "keynum",
+                    "spec": {
+                        "keynumidx": 0,
+                        "firstkey": 1,
+                        "keystep": 1
+                    }
+                },
+                "RO": true,
+                "access": true
+            }
+        ],
+        "arguments": [
+            {
+                "name": "numkeys",
+                "type": "integer",
+                "display_text": "numkeys"
+            },
+            {
+                "name": "key",
+                "type": "key",
+                "display_text": "key",
+                "key_spec_index": 0,
+                "multiple": true
+            },
+            {
+                "name": "approx",
+                "type": "pure-token",
+                "display_text": "approx",
+                "token": "APPROX",
+                "optional": true
+            },
+            {
+                "name": "limit",
+                "type": "integer",
+                "display_text": "limit",
+                "token": "LIMIT",
+                "optional": true
+            }
+        ],
+        "command_flags": [
+            "readonly",
+            "movablekeys"
         ]
     },
     "SUNIONSTORE": {
@@ -19194,6 +19887,12 @@
         "summary": "Returns messages from multiple streams with IDs greater than the ones requested. Blocks until a message is available otherwise.",
         "since": "5.0.0",
         "group": "stream",
+        "history": [
+            [
+                "8.10.0",
+                "Added the `MAXCOUNT` and `MAXSIZE` options."
+            ]
+        ],
         "acl_categories": [
             "@read",
             "@stream",
@@ -19203,6 +19902,7 @@
         "arity": -4,
         "key_specs": [
             {
+                "notes": "Incomplete because a stream key named STREAMS (or options before it) can shift the STREAMS keyword; fall back to xreadGetKeys",
                 "begin_search": {
                     "type": "keyword",
                     "spec": {
@@ -19219,7 +19919,8 @@
                     }
                 },
                 "RO": true,
-                "access": true
+                "access": true,
+                "incomplete": true
             }
         ],
         "arguments": [
@@ -19228,6 +19929,22 @@
                 "type": "integer",
                 "display_text": "count",
                 "token": "COUNT",
+                "optional": true
+            },
+            {
+                "name": "maxcount",
+                "type": "integer",
+                "display_text": "maxcount",
+                "token": "MAXCOUNT",
+                "since": "8.10.0",
+                "optional": true
+            },
+            {
+                "name": "maxsize",
+                "type": "integer",
+                "display_text": "maxsize",
+                "token": "MAXSIZE",
+                "since": "8.10.0",
                 "optional": true
             },
             {
@@ -19269,6 +19986,16 @@
         "since": "5.0.0",
         "group": "stream",
         "complexity": "For each stream mentioned: O(M) with M being the number of elements returned. If M is constant (e.g. always asking for the first 10 elements with COUNT), you can consider it O(1). On the other side when XREADGROUP blocks, XADD will pay the O(N) time in order to serve the N clients blocked on the stream getting new data.",
+        "history": [
+            [
+                "8.4.0",
+                "Added the `CLAIM` option."
+            ],
+            [
+                "8.10.0",
+                "Added the `MAXCOUNT` and `MAXSIZE` options."
+            ]
+        ],
         "acl_categories": [
             "@write",
             "@stream",
@@ -19278,6 +20005,7 @@
         "arity": -7,
         "key_specs": [
             {
+                "notes": "Incomplete because a consumer/group named STREAMS (or options before GROUP) can shift the STREAMS keyword; fall back to xreadGetKeys",
                 "begin_search": {
                     "type": "keyword",
                     "spec": {
@@ -19294,7 +20022,8 @@
                     }
                 },
                 "RO": true,
-                "access": true
+                "access": true,
+                "incomplete": true
             }
         ],
         "arguments": [
@@ -19323,6 +20052,22 @@
                 "optional": true
             },
             {
+                "name": "maxcount",
+                "type": "integer",
+                "display_text": "maxcount",
+                "token": "MAXCOUNT",
+                "since": "8.10.0",
+                "optional": true
+            },
+            {
+                "name": "maxsize",
+                "type": "integer",
+                "display_text": "maxsize",
+                "token": "MAXSIZE",
+                "since": "8.10.0",
+                "optional": true
+            },
+            {
                 "name": "milliseconds",
                 "type": "integer",
                 "display_text": "milliseconds",
@@ -19334,6 +20079,7 @@
                 "type": "integer",
                 "display_text": "min-idle-time",
                 "token": "CLAIM",
+                "since": "8.4.0",
                 "optional": true
             },
             {
