@@ -10404,7 +10404,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: cardinality of the union of sets
 
         """
-        _keys = list(keys)
+        _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [len(_keys), *_keys]
         if approx:
             command_arguments.append(PureToken.APPROX)
@@ -10436,7 +10436,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: cardinality of the difference between the sets
 
         """
-        _keys = list(keys)
+        _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [len(_keys), *_keys]
         if limit is not None:
             command_arguments.extend([PrefixToken.LIMIT, limit])

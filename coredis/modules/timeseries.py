@@ -1163,7 +1163,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :return:
 
         """
-        _keys = list(keys)
+        _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [
             len(_keys),
             *_keys,
@@ -1252,7 +1252,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :return:
 
         """
-        _keys = list(keys)
+        _keys: list[KeyT] = list(keys)
         command_arguments: CommandArgList = [
             len(_keys),
             *_keys,
