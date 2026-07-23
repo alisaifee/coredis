@@ -34,7 +34,6 @@ from ..response._callbacks import (
     ClusterMergeSets,
     DictCallback,
     IntCallback,
-    NoopCallback,
     SetCallback,
     SimpleStringCallback,
     TupleCallback,
@@ -43,6 +42,7 @@ from ..tokens import PrefixToken, PureToken
 from .base import Module, ModuleGroup, module_command
 from .response._callbacks.timeseries import (
     ClusterMergeTimeSeries,
+    NSamplesCallback,
     SampleCallback,
     SamplesCallback,
     TimeSeriesCallback,
@@ -572,6 +572,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
         :return: A tuple of samples. Each sample is ``(timestamp, value)``, or with
          multiple aggregators ``(timestamp, value1, value2, ...)``.
+
         """
         command_arguments: CommandArgList = [
             Key(key),
@@ -1135,7 +1136,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         buckettimestamp: StringT | None = None,
         empty: bool | None = None,
         latest: bool | None = None,
-    ) -> CommandRequest[None]:  # TODO: figure out return type
+    ) -> CommandRequest[list[tuple[int, list[int | float]]]]:
         """
         Query a range across multiple time series in forward direction, returning the results pivoted by timestamp (one value column per key)
 
@@ -1195,7 +1196,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 command_arguments.append(PureToken.EMPTY)
 
         return self.client.create_request(
-            CommandName.TS_NRANGE, *command_arguments, callback=NoopCallback()
+            CommandName.TS_NRANGE, *command_arguments, callback=NSamplesCallback()
         )
 
     @mutually_inclusive_parameters("min_value", "max_value")
@@ -1224,7 +1225,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         buckettimestamp: StringT | None = None,
         empty: bool | None = None,
         latest: bool | None = None,
-    ) -> CommandRequest[None]:  # TODO: figure out return type
+    ) -> CommandRequest[list[tuple[int, list[int | float]]]]:
         """
         Query a range across multiple time series in reverse direction, returning the results pivoted by timestamp (one value column per key)
 
@@ -1284,7 +1285,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 command_arguments.append(PureToken.EMPTY)
 
         return self.client.create_request(
-            CommandName.TS_NREVRANGE, *command_arguments, callback=NoopCallback()
+            CommandName.TS_NREVRANGE, *command_arguments, callback=NSamplesCallback()
         )
 
     @mutually_inclusive_parameters("block", "min_count")
@@ -1302,7 +1303,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         block: int | timedelta | None = None,
         min_count: int | None = None,
         max_count: int | None = None,
-    ) -> CommandRequest[None]:  # TODO: figure out the return type
+    ) -> CommandRequest[tuple[tuple[int | float, ...], ...] | tuple[()]]:
         """
         Return up to `max_count` samples with timestamp >= `timestamp` in ascending order. With BLOCK, waits up to `milliseconds` ms until at least `min_count` qualifying samples exist; without BLOCK, returns immediately whatever is available. Defaults: `min_count` 1, `max_count` unlimited.
 
@@ -1312,7 +1313,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param min_count: minimum number of samples to read
         :param max_count: maximum number of samples to read
 
-        :return:
+        :return: A tuple of samples. Each sample is ``(timestamp, value)``, or with
+         multiple aggregators ``(timestamp, value1, value2, ...)``.
 
         """
         command_arguments: CommandArgList = [key, normalized_timestamp(timestamp)]
@@ -1323,7 +1325,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             command_arguments.extend([PrefixToken.MAX_COUNT, max_count])
 
         return self.client.create_request(
-            CommandName.TS_READ, *command_arguments, callback=NoopCallback()
+            CommandName.TS_READ, *command_arguments, callback=SamplesCallback()
         )
 
     # TODO: add TS.QUERYLABELS (missing from timeseries' command.json)

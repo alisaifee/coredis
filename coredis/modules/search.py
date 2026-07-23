@@ -20,7 +20,6 @@ from ..response._callbacks import (
     ClusterMergeSets,
     DictCallback,
     IntCallback,
-    ListCallback,
     SetCallback,
     SimpleStringCallback,
 )
@@ -1312,16 +1311,16 @@ class Search(ModuleGroup[AnyStr]):
         version_introduced="8.10.0",
         group=CommandGroup.SEARCH,
     )
-    def aliaslist(self, index: KeyT) -> CommandRequest[list[AnyStr]]:
+    def aliaslist(self, index: KeyT) -> CommandRequest[set[AnyStr]]:
         """
         Lists all aliases for the index
 
         :param index: index to list aliases for
 
-        :return: list of alises for the index
+        :return: set of aliases for the index
 
         """
 
         return self.client.create_request(
-            CommandName.FT_ALIASLIST, index, callback=ListCallback[AnyStr]()
+            CommandName.FT_ALIASLIST, index, callback=SetCallback[AnyStr]()
         )

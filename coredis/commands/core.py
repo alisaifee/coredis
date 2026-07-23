@@ -6252,12 +6252,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.XREAD,
         group=CommandGroup.STREAM,
         flags={CommandFlag.READONLY, CommandFlag.BLOCKING},
+        arguments={
+            "max_count": {"version_introduced": "6.9.0"},
+            "max_size": {"version_introduced": "6.9.0"},
+        },
     )
     def xread(
         self,
         streams: Mapping[MappingStringKeyT, ValueT],
         count: int | None = None,
         block: int | datetime.timedelta | None = None,
+        max_count: int | None = None,
+        max_size: int | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
         """
         Read new entries from one or more streams with IDs greater than the given IDs.
@@ -6265,6 +6271,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param streams: Mapping of stream key to last-seen ID (use ``$`` for new only).
         :param count: Max entries to return per stream.
         :param block: Block up to this many milliseconds (or timedelta) for new data.
+        :param max_count: cap the total number of entries returned across all streams.
+        :param max_size: a soft cap on the total server reply size in bytes across all streams.
+
         :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = []
@@ -6279,6 +6288,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments.append(PrefixToken.STREAMS)
         ids: CommandArgList = []
 
+        if max_count is not None:
+            command_arguments.append(PrefixToken.MAXCOUNT)
+            command_arguments.append(max_count)
+
+        if max_size is not None:
+            command_arguments.append(PrefixToken.MAXSIZE)
+            command_arguments.append(max_size)
+
         for partial_stream in streams.items():
             command_arguments.append(Key(partial_stream[0]))
             ids.append(partial_stream[1])
@@ -6290,7 +6307,15 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=MultiStreamRangeCallback[AnyStr](),
         )
 
-    @redis_command(CommandName.XREADGROUP, group=CommandGroup.STREAM, flags={CommandFlag.BLOCKING})
+    @redis_command(
+        CommandName.XREADGROUP,
+        group=CommandGroup.STREAM,
+        flags={CommandFlag.BLOCKING},
+        arguments={
+            "max_count": {"version_introduced": "6.9.0"},
+            "max_size": {"version_introduced": "6.9.0"},
+        },
+    )
     def xreadgroup(
         self,
         group: StringT,
@@ -6299,6 +6324,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
         block: int | datetime.timedelta | None = None,
         noack: bool | None = None,
+        max_count: int | None = None,
+        max_size: int | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
         """
         Read entries from streams as a consumer in a group, with IDs greater than the given IDs.
@@ -6309,17 +6336,28 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: Max entries to return per stream.
         :param block: Block up to this many milliseconds (or timedelta) for new data.
         :param noack: If ``True``, do not add messages to PEL (no XACK needed).
+        :param max_count: cap the total number of entries returned across all streams.
+        :param max_size: a soft cap on the total server reply size in bytes across all streams.
+
         :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = [PrefixToken.GROUP, group, consumer]
 
-        if block is not None:
-            command_arguments.append(PrefixToken.BLOCK)
-            command_arguments.append(normalized_milliseconds(block))
-
         if count is not None:
             command_arguments.append(PrefixToken.COUNT)
             command_arguments.append(count)
+
+        if max_count is not None:
+            command_arguments.append(PrefixToken.MAXCOUNT)
+            command_arguments.append(max_count)
+
+        if max_size is not None:
+            command_arguments.append(PrefixToken.MAXSIZE)
+            command_arguments.append(max_size)
+
+        if block is not None:
+            command_arguments.append(PrefixToken.BLOCK)
+            command_arguments.append(normalized_milliseconds(block))
 
         if noack:
             command_arguments.append(PureToken.NOACK)
