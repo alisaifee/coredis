@@ -6252,12 +6252,18 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.XREAD,
         group=CommandGroup.STREAM,
         flags={CommandFlag.READONLY, CommandFlag.BLOCKING},
+        arguments={
+            "max_count": {"version_introduced": "6.9.0"},
+            "max_size": {"version_introduced": "6.9.0"},
+        },
     )
     def xread(
         self,
         streams: Mapping[MappingStringKeyT, ValueT],
         count: int | None = None,
         block: int | datetime.timedelta | None = None,
+        max_count: int | None = None,
+        max_size: int | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
         """
         Read new entries from one or more streams with IDs greater than the given IDs.
@@ -6265,6 +6271,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param streams: Mapping of stream key to last-seen ID (use ``$`` for new only).
         :param count: Max entries to return per stream.
         :param block: Block up to this many milliseconds (or timedelta) for new data.
+        :param max_count: cap the total number of entries returned across all streams.
+        :param max_size: a soft cap on the total server reply size in bytes across all streams.
+
         :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = []
@@ -6279,6 +6288,14 @@ class CoreCommands(CommandMixin[AnyStr]):
         command_arguments.append(PrefixToken.STREAMS)
         ids: CommandArgList = []
 
+        if max_count is not None:
+            command_arguments.append(PrefixToken.MAXCOUNT)
+            command_arguments.append(max_count)
+
+        if max_size is not None:
+            command_arguments.append(PrefixToken.MAXSIZE)
+            command_arguments.append(max_size)
+
         for partial_stream in streams.items():
             command_arguments.append(Key(partial_stream[0]))
             ids.append(partial_stream[1])
@@ -6290,7 +6307,15 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=MultiStreamRangeCallback[AnyStr](),
         )
 
-    @redis_command(CommandName.XREADGROUP, group=CommandGroup.STREAM, flags={CommandFlag.BLOCKING})
+    @redis_command(
+        CommandName.XREADGROUP,
+        group=CommandGroup.STREAM,
+        flags={CommandFlag.BLOCKING},
+        arguments={
+            "max_count": {"version_introduced": "6.9.0"},
+            "max_size": {"version_introduced": "6.9.0"},
+        },
+    )
     def xreadgroup(
         self,
         group: StringT,
@@ -6299,6 +6324,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
         block: int | datetime.timedelta | None = None,
         noack: bool | None = None,
+        max_count: int | None = None,
+        max_size: int | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
         """
         Read entries from streams as a consumer in a group, with IDs greater than the given IDs.
@@ -6309,17 +6336,28 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: Max entries to return per stream.
         :param block: Block up to this many milliseconds (or timedelta) for new data.
         :param noack: If ``True``, do not add messages to PEL (no XACK needed).
+        :param max_count: cap the total number of entries returned across all streams.
+        :param max_size: a soft cap on the total server reply size in bytes across all streams.
+
         :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = [PrefixToken.GROUP, group, consumer]
 
-        if block is not None:
-            command_arguments.append(PrefixToken.BLOCK)
-            command_arguments.append(normalized_milliseconds(block))
-
         if count is not None:
             command_arguments.append(PrefixToken.COUNT)
             command_arguments.append(count)
+
+        if max_count is not None:
+            command_arguments.append(PrefixToken.MAXCOUNT)
+            command_arguments.append(max_count)
+
+        if max_size is not None:
+            command_arguments.append(PrefixToken.MAXSIZE)
+            command_arguments.append(max_size)
+
+        if block is not None:
+            command_arguments.append(PrefixToken.BLOCK)
+            command_arguments.append(normalized_milliseconds(block))
 
         if noack:
             command_arguments.append(PureToken.NOACK)
@@ -10179,3 +10217,296 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(
             CommandName.ARSCAN, *command_arguments, callback=ListOfTuplesCallback[int, AnyStr]()
         )
+
+    @versionadded(version="6.9.0")
+    @redis_command(
+        CommandName.HIMPORT_PREPARE, version_introduced="8.10.0", group=CommandGroup.HASH
+    )
+    def himport_prepare(
+        self, fieldset_name: KeyT, fields: Parameters[KeyT]
+    ) -> CommandRequest[None]:
+        """
+        Defines a session-local fieldset that maps a name to a sorted set of field names.
+
+        :param fieldset_name: fieldset to define schema for
+        :param fields: field names for the schema
+
+        """
+        command_arguments: CommandArgList = [fieldset_name, *fields]
+        return self.create_request(
+            CommandName.HIMPORT_PREPARE, *command_arguments, callback=NoopCallback()
+        )
+
+    @versionadded(version="6.9.0")
+    @redis_command(CommandName.HIMPORT_SET, version_introduced="8.10.0", group=CommandGroup.HASH)
+    def himport_set(
+        self, key: KeyT, fieldset_name: KeyT, values: Parameters[KeyT]
+    ) -> CommandRequest[None]:
+        """
+        Creates a fieldset-based hash from values supplied in the order matching a previously prepared fieldset.
+
+        :param key: hash name
+        :param fieldset_name: fieldset containing schema for hash
+        :param values: values to insert into the hash
+
+        """
+        command_arguments: CommandArgList = [key, fieldset_name]
+        command_arguments.extend(*values)
+        return self.create_request(
+            CommandName.HIMPORT_SET, *command_arguments, callback=NoopCallback()
+        )
+
+    @versionadded(version="6.9.0")
+    @redis_command(
+        CommandName.HIMPORT_DISCARD, version_introduced="8.10.0", group=CommandGroup.HASH
+    )
+    def himport_discard(self, fieldset_name: KeyT) -> CommandRequest[bool]:
+        """
+        Removes a single session-local fieldset by name.
+
+        :param fieldset_name: fieldset to remove
+
+        :return: whether the fieldset was removed successfully
+
+        """
+        return self.create_request(
+            CommandName.HIMPORT_DISCARD, fieldset_name, callback=BoolCallback()
+        )
+
+    @versionadded(version="6.9.0")
+    @redis_command(
+        CommandName.HIMPORT_DISCARDALL, version_introduced="8.10.0", group=CommandGroup.HASH
+    )
+    def himport_discardall(self) -> CommandRequest[int]:
+        """
+        Removes all session-local fieldsets for the connection.
+
+        :return: number of fieldsets removed
+
+        """
+        return self.create_request(CommandName.HIMPORT_DISCARDALL, callback=IntCallback())
+
+    @mutually_exclusive_parameters("count", "exactly")
+    @mutually_inclusive_parameters("count", "ordering")
+    @mutually_inclusive_parameters("exactly", "ordering")
+    @versionadded(version="6.9.0")
+    @redis_command(CommandName.LMOVEM, version_introduced="8.10.0", group=CommandGroup.LIST)
+    def lmovem(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        wherefrom: Literal[PureToken.LEFT, PureToken.RIGHT],
+        whereto: Literal[PureToken.LEFT, PureToken.RIGHT],
+        count: int | None = None,
+        exactly: int | None = None,
+        ordering: Literal[PureToken.BULK, PureToken.OBO] | None = None,
+    ) -> CommandRequest[list[AnyStr] | None]:
+        """
+        Moves up to (or exactly) a number of elements from one list to another and returns them. Deletes the source list if it becomes empty.
+
+        :param source: list to move elements from
+        :param destination: list to move elements to
+        :param wherefrom: side to move elements from
+        :param whereto: side to move elements to
+        :param count: move up to this many elements
+        :param exactly: move exactly this many elements or do nothing
+        :param ordering: move elements one-by-one or in bulk
+
+        :return: the moved elements in destination order
+
+        """
+        command_arguments: CommandArgList = [source, destination, wherefrom, whereto]
+        if count is not None:
+            command_arguments.extend([PrefixToken.COUNT, count])
+        if exactly is not None:
+            command_arguments.extend([PrefixToken.EXACTLY, exactly])
+        if ordering is not None:
+            command_arguments.append(ordering)
+
+        return self.create_request(
+            CommandName.LMOVEM, *command_arguments, callback=OptionalListCallback[AnyStr]()
+        )
+
+    @mutually_exclusive_parameters("count", "exactly")
+    @mutually_inclusive_parameters("count", "ordering")
+    @mutually_inclusive_parameters("exactly", "ordering")
+    @versionadded(version="6.9.0")
+    @redis_command(
+        CommandName.BLMOVEM,
+        version_introduced="8.10.0",
+        group=CommandGroup.LIST,
+        flags={CommandFlag.BLOCKING},
+    )
+    def blmovem(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        wherefrom: Literal[PureToken.LEFT, PureToken.RIGHT],
+        whereto: Literal[PureToken.LEFT, PureToken.RIGHT],
+        timeout: int | datetime.timedelta | None = None,
+        count: int | None = None,
+        exactly: int | None = None,
+        ordering: Literal[PureToken.BULK, PureToken.OBO] | None = None,
+    ) -> CommandRequest[list[AnyStr] | None]:
+        """
+        Moves up to (or exactly) a number of elements from one list to another and returns them. Blocks until the elements are available otherwise. Deletes the source list if it becomes empty.
+
+        :param source: list to move elements from
+        :param destination: list to move elements to
+        :param wherefrom: side to move elements from
+        :param whereto: side to move elements to
+        :param timeout: seconds to block if elements aren't available
+        :param count: move up to this many elements
+        :param exactly: move exactly this many elements or do nothing
+        :param ordering: move elements one-by-one or in bulk
+
+        :return: the moved elements in destination order
+
+        """
+        command_arguments: CommandArgList = [
+            source,
+            destination,
+            wherefrom,
+            whereto,
+            normalized_seconds(timeout or 0),
+        ]
+        if count is not None:
+            command_arguments.extend([PrefixToken.COUNT, count])
+        if exactly is not None:
+            command_arguments.extend([PrefixToken.EXACTLY, exactly])
+        if ordering is not None:
+            command_arguments.append(ordering)
+
+        return self.create_request(
+            CommandName.BLMOVEM, *command_arguments, callback=OptionalListCallback[AnyStr]()
+        )
+
+    @versionadded(version="6.9.0")
+    @redis_command(
+        CommandName.SUNIONCARD,
+        version_introduced="8.10.0",
+        group=CommandGroup.SET,
+        flags={CommandFlag.READONLY},
+    )
+    def sunioncard(
+        self,
+        keys: Parameters[KeyT],
+        approx: bool = False,
+        limit: int | None = None,
+    ) -> CommandRequest[int]:
+        """
+        Returns the number of members of the union of multiple sets.
+
+        :param keys: sets to calculate union for
+        :param approx: uses HLL to estimate union cardinality
+        :param limit: maximum value to return, terminating calculation early
+
+        :return: cardinality of the union of sets
+
+        """
+        _keys: list[KeyT] = list(keys)
+        command_arguments: CommandArgList = [len(_keys), *_keys]
+        if approx:
+            command_arguments.append(PureToken.APPROX)
+        if limit is not None:
+            command_arguments.extend([PrefixToken.LIMIT, limit])
+
+        return self.create_request(
+            CommandName.SUNIONCARD, *command_arguments, callback=IntCallback()
+        )
+
+    @versionadded(version="6.9.0")
+    @redis_command(
+        CommandName.SDIFFCARD,
+        version_introduced="8.10.0",
+        group=CommandGroup.SET,
+        flags={CommandFlag.READONLY},
+    )
+    def sdiffcard(
+        self,
+        keys: Parameters[KeyT],
+        limit: int | None = None,
+    ) -> CommandRequest[int]:
+        """
+        Returns the number of members of the difference between the first set and all successive sets.
+
+        :param keys: sets to calculate difference for
+        :param limit: caps the returned cardinality, allowing early exit
+
+        :return: cardinality of the difference between the sets
+
+        """
+        _keys: list[KeyT] = list(keys)
+        command_arguments: CommandArgList = [len(_keys), *_keys]
+        if limit is not None:
+            command_arguments.extend([PrefixToken.LIMIT, limit])
+
+        return self.create_request(
+            CommandName.SDIFFCARD, *command_arguments, callback=IntCallback()
+        )
+
+    @versionadded(version="6.9.0")
+    @redis_command(CommandName.BACKUP_START, version_introduced="8.10.0", group=CommandGroup.SERVER)
+    def backup_start(self) -> CommandRequest[None]:
+        """
+        Start a new backup into the configured 'backupdirname'.
+        """
+
+        return self.create_request(CommandName.BACKUP_START, callback=NoopCallback())
+
+    @versionadded(version="6.9.0")
+    @redis_command(
+        CommandName.BACKUP_STATUS, version_introduced="8.10.0", group=CommandGroup.SERVER
+    )
+    def backup_status(self) -> CommandRequest[dict[AnyStr, AnyStr]]:
+        """
+        Report the current backup state.
+
+        :return: mapping containing info about current backup state
+
+        """
+
+        return self.create_request(
+            CommandName.BACKUP_STATUS, callback=DictCallback[AnyStr, AnyStr]()
+        )
+
+    @versionadded(version="6.9.0")
+    @redis_command(CommandName.BACKUP_LIST, version_introduced="8.10.0", group=CommandGroup.SERVER)
+    def backup_list(self) -> CommandRequest[list[AnyStr]]:
+        """
+        List the immutable backup file paths pinned so far.
+
+        :return: the absolute paths of immutable files pinned so far
+
+        """
+
+        return self.create_request(CommandName.BACKUP_LIST, callback=ListCallback[AnyStr]())
+
+    @versionadded(version="6.9.0")
+    @redis_command(CommandName.BACKUP_SEAL, version_introduced="8.10.0", group=CommandGroup.SERVER)
+    def backup_seal(self) -> CommandRequest[None]:
+        """
+        Freeze the current backup (BASE + INCR + manifest).
+        """
+
+        return self.create_request(CommandName.BACKUP_SEAL, callback=NoopCallback())
+
+    @versionadded(version="6.9.0")
+    @redis_command(CommandName.BACKUP_ABORT, version_introduced="8.10.0", group=CommandGroup.SERVER)
+    def backup_abort(self) -> CommandRequest[None]:
+        """
+        Cancel a backup that has not been sealed yet.
+        """
+
+        return self.create_request(CommandName.BACKUP_ABORT, callback=NoopCallback())
+
+    @versionadded(version="6.9.0")
+    @redis_command(
+        CommandName.BACKUP_CLEANUP, version_introduced="8.10.0", group=CommandGroup.SERVER
+    )
+    def backup_cleanup(self) -> CommandRequest[None]:
+        """
+        Remove a sealed backup's files and return to idle.
+        """
+
+        return self.create_request(CommandName.BACKUP_CLEANUP, callback=NoopCallback())

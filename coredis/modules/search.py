@@ -1304,3 +1304,23 @@ class Search(ModuleGroup[AnyStr]):
             *command_arguments,
             callback=SimpleStringCallback(),
         )
+
+    @module_command(
+        CommandName.FT_ALIASLIST,
+        module=MODULE,
+        version_introduced="8.10.0",
+        group=CommandGroup.SEARCH,
+    )
+    def aliaslist(self, index: KeyT) -> CommandRequest[set[AnyStr]]:
+        """
+        Lists all aliases for the index
+
+        :param index: index to list aliases for
+
+        :return: set of aliases for the index
+
+        """
+
+        return self.client.create_request(
+            CommandName.FT_ALIASLIST, index, callback=SetCallback[AnyStr]()
+        )

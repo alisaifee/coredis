@@ -42,6 +42,7 @@ from ..tokens import PrefixToken, PureToken
 from .base import Module, ModuleGroup, module_command
 from .response._callbacks.timeseries import (
     ClusterMergeTimeSeries,
+    NSamplesCallback,
     SampleCallback,
     SamplesCallback,
     TimeSeriesCallback,
@@ -571,6 +572,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
         :return: A tuple of samples. Each sample is ``(timestamp, value)``, or with
          multiple aggregators ``(timestamp, value1, value2, ...)``.
+
         """
         command_arguments: CommandArgList = [
             Key(key),
@@ -578,7 +580,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             normalized_timestamp(totimestamp),
         ]
         if latest:
-            command_arguments.append(b"LATEST")
+            command_arguments.append(PureToken.LATEST)
         if filter_by_ts:
             _ts: list[int] = list(filter_by_ts)
             command_arguments.extend([PrefixToken.FILTER_BY_TS, *_ts])
@@ -699,6 +701,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @mutually_exclusive_parameters("withlabels", "selected_labels")
     @mutually_inclusive_parameters("aggregator", "bucketduration")
     @mutually_inclusive_parameters("groupby", "reducer")
+    @mutually_exclusive_parameters("exclude_empty", "groupby")
     @module_command(
         CommandName.TS_MRANGE,
         group=COMMAND_GROUP,
@@ -706,6 +709,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         arguments={
             "latest": {"version_introduced": "1.8.0"},
             "empty": {"version_introduced": "1.8.0"},
+            "exclude_empty": {"version_introduced": "6.9.0"},
         },
         module=MODULE,
         cluster=ClusterCommandConfig(
@@ -730,24 +734,23 @@ class TimeSeries(ModuleGroup[AnyStr]):
         bucketduration: int | timedelta | None = None,
         buckettimestamp: StringT | None = None,
         groupby: StringT | None = None,
-        reducer: None
-        | (
-            Literal[
-                PureToken.AVG,
-                PureToken.COUNT,
-                PureToken.FIRST,
-                PureToken.LAST,
-                PureToken.MAX,
-                PureToken.MIN,
-                PureToken.RANGE,
-                PureToken.STD_P,
-                PureToken.STD_S,
-                PureToken.SUM,
-                PureToken.VAR_P,
-                PureToken.VAR_S,
-            ]
-        ) = None,
+        reducer: Literal[
+            PureToken.AVG,
+            PureToken.COUNT,
+            PureToken.FIRST,
+            PureToken.LAST,
+            PureToken.MAX,
+            PureToken.MIN,
+            PureToken.RANGE,
+            PureToken.STD_P,
+            PureToken.STD_S,
+            PureToken.SUM,
+            PureToken.VAR_P,
+            PureToken.VAR_S,
+        ]
+        | None = None,
         empty: bool | None = None,
+        exclude_empty: bool | None = None,
         latest: bool | None = None,
     ) -> CommandRequest[
         dict[
@@ -783,6 +786,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param groupby: Label to group the samples by
         :param reducer: Aggregation type to aggregate the results in each group
         :param empty: Optional boolean to include empty time series in the response.
+        :param exclude_empty: Omit matching series whose reported samples array is empty
         :param latest: Report the compacted value of the latest, possibly partial, bucket.
 
         :return: A dictionary containing the time series data.
@@ -821,6 +825,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 command_arguments.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
             if empty:
                 command_arguments.append(PureToken.EMPTY)
+        if exclude_empty:
+            command_arguments.append(PureToken.EXCLUDEEMPTY)
         if filters:
             _filters: list[StringT] = list(filters)
             command_arguments.extend([PrefixToken.FILTER, *_filters])
@@ -836,6 +842,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @mutually_exclusive_parameters("withlabels", "selected_labels")
     @mutually_inclusive_parameters("aggregator", "bucketduration")
     @mutually_inclusive_parameters("groupby", "reducer")
+    @mutually_exclusive_parameters("exclude_empty", "groupby")
     @module_command(
         CommandName.TS_MREVRANGE,
         group=COMMAND_GROUP,
@@ -843,6 +850,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         arguments={
             "latest": {"version_introduced": "1.8.0"},
             "empty": {"version_introduced": "1.8.0"},
+            "exclude_empty": {"version_introduced": "6.9.0"},
         },
         module=MODULE,
         cluster=ClusterCommandConfig(
@@ -869,6 +877,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         groupby: StringT | None = None,
         reducer: StringT | None = None,
         empty: bool | None = None,
+        exclude_empty: bool | None = None,
         latest: bool | None = None,
     ) -> CommandRequest[
         dict[
@@ -904,6 +913,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param groupby: Label to group the samples by
         :param reducer: Aggregation type to aggregate the results in each group
         :param empty: Optional boolean to include empty time series in the response.
+        :param exclude_empty: Omit matching series whose reported samples array is empty
         :param latest: Report the compacted value of the latest, possibly partial, bucket.
 
         :return: A dictionary containing the result of the query.
@@ -942,6 +952,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 command_arguments.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
             if empty:
                 command_arguments.append(PureToken.EMPTY)
+        if exclude_empty:
+            command_arguments.append(PureToken.EXCLUDEEMPTY)
         if filters:
             _filters: list[StringT] = list(filters)
             command_arguments.extend([PrefixToken.FILTER, *_filters])
@@ -1107,3 +1119,223 @@ class TimeSeries(ModuleGroup[AnyStr]):
             *command_arguments,
             callback=SetCallback[AnyStr](),
         )
+
+    @mutually_inclusive_parameters("min_value", "max_value")
+    @mutually_inclusive_parameters("aggregator", "bucketduration")
+    @module_command(
+        CommandName.TS_NRANGE,
+        group=COMMAND_GROUP,
+        version_introduced="8.10.0",
+        module=MODULE,
+        flags={CommandFlag.READONLY},
+        cacheable=True,
+    )
+    def nrange(
+        self,
+        keys: Parameters[KeyT],
+        fromtimestamp: datetime | int | StringT,
+        totimestamp: datetime | int | StringT,
+        *,
+        filter_by_ts: Parameters[int] | None = None,
+        min_value: int | float | None = None,
+        max_value: int | float | None = None,
+        count: int | None = None,
+        aggregator: None | Aggregator | Parameters[Aggregator] = None,
+        bucketduration: int | timedelta | None = None,
+        align: int | StringT | None = None,
+        buckettimestamp: StringT | None = None,
+        empty: bool | None = None,
+        latest: bool | None = None,
+    ) -> CommandRequest[list[tuple[int, list[int | float]]]]:
+        """
+        Query a range across multiple time series in forward direction, returning the results pivoted by timestamp (one value column per key)
+
+        :param key: The key name for the time series.
+        :param fromtimestamp: Start timestamp for the range query (integer UNIX timestamp in
+         milliseconds) or `-` to denote the timestamp of the earliest sample in the time series.
+        :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
+         milliseconds) or `+` to denote the timestamp of the latest sample in the time series.
+        :param filter_by_ts: List of specific timestamps to filter samples by.
+        :param min_value: Minimum value to filter samples by.
+        :param max_value: Maximum value to filter samples by.
+        :param count: Limits the number of returned samples.
+        :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+         Redis 8.8+ supports multiple aggregators.
+        :param bucketduration: Duration of each bucket in milliseconds.
+        :param align: Time bucket alignment control for :paramref:`aggregator`.
+        :param buckettimestamp: Timestamp of the first bucket.
+        :param empty: If True, returns an empty list instead of raising an error when no data
+         is available.
+        :param latest: Used when a time series is a compaction. When ``True``, the command also
+         reports the compacted value of the latest, possibly partial, bucket, given that
+         this bucket's start time falls within ``[fromtimestamp, totimestamp]``.
+
+        :return:
+
+        """
+        _keys: list[KeyT] = list(keys)
+        command_arguments: CommandArgList = [
+            len(_keys),
+            *_keys,
+            normalized_timestamp(fromtimestamp),
+            normalized_timestamp(totimestamp),
+        ]
+        if latest:
+            command_arguments.append(PureToken.LATEST)
+        if filter_by_ts:
+            _ts: list[int] = list(filter_by_ts)
+            command_arguments.extend([PrefixToken.FILTER_BY_TS, *_ts])
+        if min_value is not None and max_value is not None:
+            command_arguments.extend([PureToken.FILTER_BY_VALUE, min_value, max_value])
+        if count is not None:
+            command_arguments.extend([PrefixToken.COUNT, count])
+        if aggregator and bucketduration is not None:
+            if align is not None:
+                command_arguments.extend([PrefixToken.ALIGN, align])
+            _agg = aggregator if isinstance(aggregator, PureToken) else b",".join(aggregator)
+            command_arguments.extend(
+                [
+                    PrefixToken.AGGREGATION,
+                    _agg,
+                    normalized_milliseconds(bucketduration),
+                ]
+            )
+            if buckettimestamp is not None:
+                command_arguments.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
+            if empty is not None:
+                command_arguments.append(PureToken.EMPTY)
+
+        return self.client.create_request(
+            CommandName.TS_NRANGE, *command_arguments, callback=NSamplesCallback()
+        )
+
+    @mutually_inclusive_parameters("min_value", "max_value")
+    @mutually_inclusive_parameters("aggregator", "bucketduration")
+    @module_command(
+        CommandName.TS_NRANGE,
+        group=COMMAND_GROUP,
+        version_introduced="8.10.0",
+        module=MODULE,
+        flags={CommandFlag.READONLY},
+        cacheable=True,
+    )
+    def nrevrange(
+        self,
+        keys: Parameters[KeyT],
+        fromtimestamp: datetime | int | StringT,
+        totimestamp: datetime | int | StringT,
+        *,
+        filter_by_ts: Parameters[int] | None = None,
+        min_value: int | float | None = None,
+        max_value: int | float | None = None,
+        count: int | None = None,
+        aggregator: None | Aggregator | Parameters[Aggregator] = None,
+        bucketduration: int | timedelta | None = None,
+        align: int | StringT | None = None,
+        buckettimestamp: StringT | None = None,
+        empty: bool | None = None,
+        latest: bool | None = None,
+    ) -> CommandRequest[list[tuple[int, list[int | float]]]]:
+        """
+        Query a range across multiple time series in reverse direction, returning the results pivoted by timestamp (one value column per key)
+
+        :param key: The key name for the time series.
+        :param fromtimestamp: Start timestamp for the range query (integer UNIX timestamp in
+         milliseconds) or `-` to denote the timestamp of the earliest sample in the time series.
+        :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
+         milliseconds) or `+` to denote the timestamp of the latest sample in the time series.
+        :param filter_by_ts: List of specific timestamps to filter samples by.
+        :param min_value: Minimum value to filter samples by.
+        :param max_value: Maximum value to filter samples by.
+        :param count: Limits the number of returned samples.
+        :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+         Redis 8.8+ supports multiple aggregators.
+        :param bucketduration: Duration of each bucket in milliseconds.
+        :param align: Time bucket alignment control for :paramref:`aggregator`.
+        :param buckettimestamp: Timestamp of the first bucket.
+        :param empty: If True, returns an empty list instead of raising an error when no data
+         is available.
+        :param latest: Used when a time series is a compaction. When ``True``, the command also
+         reports the compacted value of the latest, possibly partial, bucket, given that
+         this bucket's start time falls within ``[fromtimestamp, totimestamp]``.
+
+        :return:
+
+        """
+        _keys: list[KeyT] = list(keys)
+        command_arguments: CommandArgList = [
+            len(_keys),
+            *_keys,
+            normalized_timestamp(fromtimestamp),
+            normalized_timestamp(totimestamp),
+        ]
+        if latest:
+            command_arguments.append(PureToken.LATEST)
+        if filter_by_ts:
+            _ts: list[int] = list(filter_by_ts)
+            command_arguments.extend([PrefixToken.FILTER_BY_TS, *_ts])
+        if min_value is not None and max_value is not None:
+            command_arguments.extend([PureToken.FILTER_BY_VALUE, min_value, max_value])
+        if count is not None:
+            command_arguments.extend([PrefixToken.COUNT, count])
+        if aggregator and bucketduration is not None:
+            if align is not None:
+                command_arguments.extend([PrefixToken.ALIGN, align])
+            _agg = aggregator if isinstance(aggregator, PureToken) else b",".join(aggregator)
+            command_arguments.extend(
+                [
+                    PrefixToken.AGGREGATION,
+                    _agg,
+                    normalized_milliseconds(bucketduration),
+                ]
+            )
+            if buckettimestamp is not None:
+                command_arguments.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
+            if empty is not None:
+                command_arguments.append(PureToken.EMPTY)
+
+        return self.client.create_request(
+            CommandName.TS_NREVRANGE, *command_arguments, callback=NSamplesCallback()
+        )
+
+    @mutually_inclusive_parameters("block", "min_count")
+    @module_command(
+        CommandName.TS_READ,
+        module=MODULE,
+        version_introduced="8.10.0",
+        group=CommandGroup.TIMESERIES,
+        flags={CommandFlag.READONLY, CommandFlag.BLOCKING},
+    )
+    def read(
+        self,
+        key: KeyT,
+        timestamp: datetime | int | StringT,
+        block: int | timedelta | None = None,
+        min_count: int | None = None,
+        max_count: int | None = None,
+    ) -> CommandRequest[tuple[tuple[int | float, ...], ...] | tuple[()]]:
+        """
+        Return up to `max_count` samples with timestamp >= `timestamp` in ascending order. With BLOCK, waits up to `milliseconds` ms until at least `min_count` qualifying samples exist; without BLOCK, returns immediately whatever is available. Defaults: `min_count` 1, `max_count` unlimited.
+
+        :param key: time series to read from
+        :param timestamp: timestamp to start reading from
+        :param block: milliseconds to block until `min_count` samples are read
+        :param min_count: minimum number of samples to read
+        :param max_count: maximum number of samples to read
+
+        :return: A tuple of samples. Each sample is ``(timestamp, value)``, or with
+         multiple aggregators ``(timestamp, value1, value2, ...)``.
+
+        """
+        command_arguments: CommandArgList = [key, normalized_timestamp(timestamp)]
+        if block is not None:
+            assert min_count is not None
+            command_arguments.extend([PrefixToken.BLOCK, min_count])
+        if max_count is not None:
+            command_arguments.extend([PrefixToken.MAX_COUNT, max_count])
+
+        return self.client.create_request(
+            CommandName.TS_READ, *command_arguments, callback=SamplesCallback()
+        )
+
+    # TODO: add TS.QUERYLABELS (missing from timeseries' command.json)

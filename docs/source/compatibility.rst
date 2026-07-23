@@ -1502,6 +1502,78 @@ Get the value of one or more fields of a given hash key, and optionally set thei
 
 
 
+HIMPORT DISCARD
+***************
+
+Removes a single session-local fieldset by name.
+
+- Documentation: `HIMPORT DISCARD <https://redis.io/commands/himport-discard>`_
+- Implementation: :meth:`~coredis.Redis.himport_discard`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
+HIMPORT DISCARDALL
+******************
+
+Removes all session-local fieldsets for the connection.
+
+- Documentation: `HIMPORT DISCARDALL <https://redis.io/commands/himport-discardall>`_
+- Implementation: :meth:`~coredis.Redis.himport_discardall`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
+HIMPORT PREPARE
+***************
+
+Defines a session-local fieldset that maps a name to a sorted set of field names.
+
+- Documentation: `HIMPORT PREPARE <https://redis.io/commands/himport-prepare>`_
+- Implementation: :meth:`~coredis.Redis.himport_prepare`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
+HIMPORT SET
+***********
+
+Creates a fieldset-based hash from values supplied in the order matching a previously prepared fieldset.
+
+- Documentation: `HIMPORT SET <https://redis.io/commands/himport-set>`_
+- Implementation: :meth:`~coredis.Redis.himport_set`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
 HINCRBY
 *******
 
@@ -1834,6 +1906,24 @@ Pops an element from a list, pushes it to another list and returns it. Blocks un
 
 
 
+BLMOVEM
+*******
+
+Moves up to (or exactly) a number of elements from one list to another and returns them. Blocks until the elements are available otherwise. Deletes the source list if it becomes empty.
+
+- Documentation: `BLMOVEM <https://redis.io/commands/blmovem>`_
+- Implementation: :meth:`~coredis.Redis.blmovem`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
 BLMPOP
 ******
 
@@ -1953,6 +2043,24 @@ Returns an element after popping it from one list and pushing it to another. Del
 - New in redis: 6.2.0
 
 
+
+
+
+
+
+LMOVEM
+******
+
+Moves up to (or exactly) a number of elements from one list to another and returns them. Deletes the source list if it becomes empty.
+
+- Documentation: `LMOVEM <https://redis.io/commands/lmovem>`_
+- Implementation: :meth:`~coredis.Redis.lmovem`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
 
 
 
@@ -2204,6 +2312,24 @@ Returns the difference of multiple sets.
 
 
 
+SDIFFCARD
+*********
+
+Returns the number of members of the difference between the first set and all successive sets.
+
+- Documentation: `SDIFFCARD <https://redis.io/commands/sdiffcard>`_
+- Implementation: :meth:`~coredis.Redis.sdiffcard`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
 SDIFFSTORE
 **********
 
@@ -2393,6 +2519,24 @@ Returns the union of multiple sets.
 - Implementation: :meth:`~coredis.Redis.sunion`
 
 
+
+
+
+
+
+SUNIONCARD
+**********
+
+Returns the number of members of the union of multiple sets.
+
+- Documentation: `SUNIONCARD <https://redis.io/commands/sunioncard>`_
+- Implementation: :meth:`~coredis.Redis.sunioncard`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
 
 
 
@@ -4550,6 +4694,114 @@ Returns the authenticated username of the current connection.
 
 
 
+BACKUP ABORT
+************
+
+Cancel a backup that has not been sealed yet.
+
+- Documentation: `BACKUP ABORT <https://redis.io/commands/backup-abort>`_
+- Implementation: :meth:`~coredis.Redis.backup_abort`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
+BACKUP CLEANUP
+**************
+
+Remove a sealed backup's files and return to idle.
+
+- Documentation: `BACKUP CLEANUP <https://redis.io/commands/backup-cleanup>`_
+- Implementation: :meth:`~coredis.Redis.backup_cleanup`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
+BACKUP LIST
+***********
+
+List the immutable backup file paths pinned so far.
+
+- Documentation: `BACKUP LIST <https://redis.io/commands/backup-list>`_
+- Implementation: :meth:`~coredis.Redis.backup_list`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
+BACKUP SEAL
+***********
+
+Freeze the current backup (BASE + INCR + manifest).
+
+- Documentation: `BACKUP SEAL <https://redis.io/commands/backup-seal>`_
+- Implementation: :meth:`~coredis.Redis.backup_seal`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
+BACKUP START
+************
+
+Start a new backup into the configured 'backupdirname'.
+
+- Documentation: `BACKUP START <https://redis.io/commands/backup-start>`_
+- Implementation: :meth:`~coredis.Redis.backup_start`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
+BACKUP STATUS
+*************
+
+Report the current backup state.
+
+- Documentation: `BACKUP STATUS <https://redis.io/commands/backup-status>`_
+- Implementation: :meth:`~coredis.Redis.backup_status`
+
+- New in redis: 8.10.0
+
+
+
+- .. versionadded:: 6.9.0
+
+
+
+
+
 BGREWRITEAOF
 ************
 
@@ -6190,16 +6442,6 @@ CLUSTER SLOT-STATS [X]
 Return an array of slot usage statistics for slots assigned to the current node.
 
 - Documentation: `CLUSTER SLOT-STATS <https://redis.io/commands/cluster-slot-stats>`_
-
-- Not Implemented
-
-
-CLUSTER SYNCSLOTS [X]
-*********************
-
-Internal command for atomic slot migration protocol between cluster nodes.
-
-- Documentation: `CLUSTER SYNCSLOTS <https://redis.io/commands/cluster-syncslots>`_
 
 - Not Implemented
 
