@@ -6299,6 +6299,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         count: int | None = None,
         block: int | datetime.timedelta | None = None,
         noack: bool | None = None,
+        claim: int | datetime.timedelta | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
         """
         Read entries from streams as a consumer in a group, with IDs greater than the given IDs.
@@ -6309,6 +6310,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: Max entries to return per stream.
         :param block: Block up to this many milliseconds (or timedelta) for new data.
         :param noack: If ``True``, do not add messages to PEL (no XACK needed).
+        :param claim: Claim messages that have been idle for at least this many ms before reading.
+
         :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = [PrefixToken.GROUP, group, consumer]
@@ -6323,6 +6326,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if noack:
             command_arguments.append(PureToken.NOACK)
+
+        if claim is not None:
+            command_arguments.append(PrefixToken.CLAIM)
+            command_arguments.append(normalized_milliseconds(claim))
 
         command_arguments.append(PrefixToken.STREAMS)
         ids: CommandArgList = []
