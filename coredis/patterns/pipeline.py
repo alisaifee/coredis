@@ -282,10 +282,13 @@ class Pipeline(Client[AnyStr]):
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        yield self
-        await self._execute()
-        if self._connection:
-            self.client.connection_pool.release(self._connection)
+        try:
+            yield self
+            await self._execute()
+        finally:
+            await self._clear()
+            if self._connection:
+                self.client.connection_pool.release(self._connection)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{repr(self._connection)}>"
@@ -529,8 +532,6 @@ class Pipeline(Client[AnyStr]):
                         "A connection error occurred while watching one or more keys"
                     ) from e
                 raise
-            finally:
-                await self._clear()
 
 
 @versionchanged(
