@@ -1338,4 +1338,45 @@ class TimeSeries(ModuleGroup[AnyStr]):
             CommandName.TS_READ, *command_arguments, callback=SamplesCallback()
         )
 
-    # TODO: add TS.QUERYLABELS (missing from timeseries' command.json)
+    @module_command(
+        CommandName.TS_QUERYLABELS,
+        module=MODULE,
+        version_introduced="8.10.0",
+        group=CommandGroup.TIMESERIES,
+    )
+    def querylabels(
+        self, label: StringT | None = None, filters: Parameters[StringT] | None = None
+    ) -> CommandRequest[set[AnyStr]]:
+        """
+        Get all label names, or all values of a given label, for the time series matching a filter
+        list (or all series when no filter is given).
+
+        When `label` is omitted, the ``LABELS`` form is issued and the reply is the set of all label
+        names present on the matching (and readable) series, including the label names used in the
+        filter itself.
+
+        When `label` is given, the ``VALUES`` form is issued and the reply is the set of all values
+        assigned to `label` across the matching series.
+
+        :param label: returns the set of distinct values of label used by the matching time series.
+        :param filters: restricts the command to the time series whose labels and label values
+         match all of the filter expressions.
+
+        :return: set of matching labels or values
+
+        """
+        command_arguments: CommandArgList = []
+
+        if label is None:
+            command_arguments.append(PureToken.LABELS)
+        else:
+            command_arguments.append(PureToken.VALUES)
+            command_arguments.append(label)
+
+        if filters is not None:
+            command_arguments.append(PrefixToken.FILTER)
+            command_arguments.extend(filters)
+
+        return self.client.create_request(
+            CommandName.TS_QUERYLABELS, *command_arguments, callback=SetCallback()
+        )

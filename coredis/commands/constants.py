@@ -599,6 +599,7 @@ class CommandName(bytes, enum.Enum):
     TS_NRANGE = b"TS.NRANGE"  # Since timeseries: 8.10.0
     TS_NREVRANGE = b"TS.NREVRANGE"  # Since timeseries: 8.10.0
     TS_READ = b"TS.READ"  # Since timeseries: 8.10.0
+    TS_QUERYLABELS = b"TS.QUERYLABELS"  # Since timeseries: 8.10.0
 
     #: Commands for search
     FT_CREATE = b"FT.CREATE"  # Since search: 1.0.0

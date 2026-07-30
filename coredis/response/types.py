@@ -269,6 +269,8 @@ class SlowLogInfo(NamedTuple):
     client_addr: StringT
     #: Client name
     client_name: StringT
+    #: Total number of arguments in the command.
+    argument_count: int | None
 
 
 class LCSMatch(NamedTuple):

@@ -82,6 +82,8 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
     #:  - ``TS.CREATERULE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
     #:  - ``ZINTER``
     #:  - ``ZINTERSTORE``
     #:  - ``ZMPOP``
@@ -99,6 +101,8 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
     #:  - ``TS.CREATERULE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
     #:  - ``ZINTER``
     #:  - ``ZINTERSTORE``
     #:  - ``ZMPOP``
@@ -115,6 +119,8 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
     #:  - ``TS.CREATERULE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
     #:  - ``ZINTER``
     #:  - ``ZINTERSTORE``
     #:  - ``ZUNION``
@@ -896,6 +902,7 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
 
     #: Used by:
     #:
+    #:  - ``TS.QUERYLABELS``
     #:  - ``VADD``
     #:  - ``VSIM``
     VALUES = b"VALUES"
@@ -1006,12 +1013,16 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.ADD``
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
     BLOCK = b"BLOCK"
 
     #: Used by:
     #:
     #:  - ``TS.ADD``
     #:  - ``TS.CREATE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
     COMPRESSED = b"COMPRESSED"
 
     #: Used by:
@@ -1020,6 +1031,8 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
     #:  - ``TS.CREATERULE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
     FIRST = b"FIRST"
 
     #: Used by:
@@ -1028,6 +1041,8 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
     #:  - ``TS.CREATERULE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
     LAST = b"LAST"
 
     #: Used by:
@@ -1181,6 +1196,11 @@ class PureToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``TS.MREVRANGE``
     LATEST = b"LATEST"
+
+    #: Used by:
+    #:
+    #:  - ``TS.QUERYLABELS``
+    LABELS = b"LABELS"
 
     #: Used by:
     #:
@@ -2213,6 +2233,7 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:  - ``TS.MGET``
     #:  - ``TS.MRANGE``
     #:  - ``TS.MREVRANGE``
+    #:  - ``TS.QUERYLABELS``
     #:  - ``VSIM``
     FILTER = b"FILTER"
 
@@ -2283,12 +2304,16 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``TS.ALTER``
     #:  - ``TS.CREATE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
     DUPLICATE_POLICY = b"DUPLICATE_POLICY"
 
     #: Used by:
     #:
     #:  - ``TS.ADD``
     #:  - ``TS.CREATE``
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
     ENCODING = b"ENCODING"
 
     #: Used by:
@@ -2313,6 +2338,12 @@ class PrefixToken(CaseAndEncodingInsensitiveEnum):
     #:
     #:  - ``TS.ADD``
     ON_DUPLICATE = b"ON_DUPLICATE"
+
+    #: Used by:
+    #:
+    #:  - ``TS.DECRBY``
+    #:  - ``TS.INCRBY``
+    IGNORE = b"IGNORE"
 
     #: Used by:
     #:
