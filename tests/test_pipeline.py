@@ -244,3 +244,83 @@ class TestPipeline:
         result = await client.transaction(my_transaction, "a", "b", watch_delay=0.01)
         assert await result
         assert await client.get("c") == "4"
+
+
+@targets("redis_basic", "dragonfly", "valkey")
+class TestPipelineConnectionRelease:
+    @pytest.mark.parametrize("transaction", [False, True])
+    async def test_pipeline_exit_no_exceptions(self, client: Redis[str], transaction: bool):
+        await client.set("a", "0")
+
+        in_use = client.connection_pool.statistics.in_use_connections
+        async with client.pipeline(transaction=transaction) as pipe:
+            assert client.connection_pool.statistics.in_use_connections == in_use
+            pipe.get("a")
+
+        assert client.connection_pool.statistics.in_use_connections == in_use
+
+    @pytest.mark.parametrize("transaction", [False, True])
+    async def test_pipeline_exit_response_error(self, client: Redis[str], transaction: bool):
+        await client.set("a", "0")
+
+        in_use = client.connection_pool.statistics.in_use_connections
+        with pytest.raises(ResponseError):
+            async with client.pipeline(transaction=transaction) as pipe:
+                assert client.connection_pool.statistics.in_use_connections == in_use
+                pipe.llen("a")
+
+        assert client.connection_pool.statistics.in_use_connections == in_use
+
+    @pytest.mark.parametrize("transaction", [False, True])
+    async def test_pipeline_exit_body_error(self, client: Redis[str], transaction: bool):
+        await client.set("a", "0")
+
+        in_use = client.connection_pool.statistics.in_use_connections
+        with pytest.raises(RuntimeError, match="body error"):
+            async with client.pipeline(transaction=transaction) as pipe:
+                async with pipe.watch("a"):
+                    assert client.connection_pool.statistics.in_use_connections == in_use + 1
+                    raise RuntimeError("body error")
+
+        assert client.connection_pool.statistics.in_use_connections == in_use
+
+    @pytest.mark.parametrize("transaction", [False, True])
+    async def test_pipeline_exit_watch_error(self, client: Redis[str], transaction: bool):
+        await client.set("a", "0")
+
+        in_use = client.connection_pool.statistics.in_use_connections
+        with pytest.raises(WatchError):
+            async with client.pipeline(transaction=transaction) as pipe:
+                async with pipe.watch("a"):
+                    assert client.connection_pool.statistics.in_use_connections == in_use + 1
+                    await client.set("a", "-1")
+                    pipe.set("a", "1")
+
+        assert client.connection_pool.statistics.in_use_connections == in_use
+
+    @pytest.mark.parametrize("client_arguments", [{"max_connections": 1}])
+    async def test_pipeline_conn_reuse(self, client: Redis[str], client_arguments: dict[str, int]):
+        client.connection_pool.timeout = 1
+
+        await client.set("a", "0")
+
+        with pytest.raises(ResponseError):
+            async with client.pipeline() as pipe:
+                pipe.llen("a")
+
+        await client.get("a")
+
+    @pytest.mark.parametrize("client_arguments", [{"max_connections": 1}])
+    async def test_pipeline_conn_clear(self, client: Redis[str], client_arguments: dict[str, int]):
+        client.connection_pool.timeout = 1
+
+        await client.set("a", "0")
+
+        with pytest.raises(RuntimeError):
+            async with client.pipeline() as pipe:
+                async with pipe.watch("a"):
+                    raise RuntimeError
+
+        await client.set("a", "-1")
+        async with client.pipeline() as pipe:
+            pipe.set("a", "1")
