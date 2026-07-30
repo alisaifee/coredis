@@ -111,8 +111,15 @@ class ClusterMergeTimeSeries(ClusterMergeMapping[AnyStr, tuple[Any, ...]]):
         self, values: Any
     ) -> tuple[dict[AnyStr, AnyStr], tuple[tuple[int | float, ...], ...]]:
         merged_labels: dict[AnyStr, AnyStr] = {}
-        merged_series: tuple[tuple[int | float, ...], ...] = ()
+        merged_series: list[tuple[int | float, ...]] = []
+        # Since v8.10.0, time series became cluster aware, so every primary answers with the
+        # complete cross shard result. Timestamps are unique within a series (and within a group's
+        # reduction), which makes an identical sample proof of a duplicated reply, not data to keep.
+        seen: set[tuple[int | float, ...]] = set()
         for value in values:
             merged_labels.update(value[0])
-            merged_series = merged_series + value[1]
+            for sample in value[1]:
+                if sample not in seen:
+                    seen.add(sample)
+                    merged_series.append(sample)
         return merged_labels, tuple(merged_series)
