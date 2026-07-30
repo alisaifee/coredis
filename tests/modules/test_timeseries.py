@@ -9,6 +9,11 @@ import pytest
 
 from coredis import PureToken, Redis
 from coredis._concurrency import gather
+from coredis.commands._validators import (
+    MutuallyExclusiveParametersError,
+    MutuallyInclusiveParametersMissing,
+)
+from coredis.exceptions import CommandSyntaxError, ResponseError
 from tests.conftest import module_targets
 
 
@@ -786,3 +791,350 @@ class TestTimeseries:
                 p.timeseries.get("ts"),
             ]
         assert await gather(*results) == (True, 1, (1, 1.0))
+
+
+@module_targets()
+@pytest.mark.min_module_version("timeseries", "8.10.0")
+class TestTimeseriesNRange:
+    async def test_nrange(self, client: Redis, _s):
+        await client.timeseries.add("{s}ts1", 10, 1.0)
+        await client.timeseries.add("{s}ts1", 20, 2.0)
+        await client.timeseries.add("{s}ts2", 20, 3.0)
+        await client.timeseries.add("{s}ts2", 30, 4.0)
+
+        # One row per distinct timestamp, one value column per key in the
+        # order the keys were given; cells with no sample are NaN.
+        res = await client.timeseries.nrange(["{s}ts1", "{s}ts2"], "-", "+")
+        assert [row[0] for row in res] == [10, 20, 30]
+        assert all(len(row[1]) == 2 for row in res)
+        assert res[0][1][0] == 1.0 and math.isnan(res[0][1][1])
+        assert res[1][1] == [2.0, 3.0]
+        assert math.isnan(res[2][1][0]) and res[2][1][1] == 4.0
+
+    async def test_nrange_preserves_duplicate_keys(self, client: Redis, _s):
+        await client.timeseries.add("{s}ts1", 10, 1.0)
+        await client.timeseries.add("{s}ts1", 20, 2.0)
+
+        # Duplicated keys produce repeated value columns rather than being
+        # deduplicated.
+        assert await client.timeseries.nrange(["{s}ts1", "{s}ts1"], "-", "+") == [
+            (10, [1.0, 1.0]),
+            (20, [2.0, 2.0]),
+        ]
+
+    async def test_nrange_empty(self, client: Redis, _s):
+        await client.timeseries.create("{s}ts1")
+        assert await client.timeseries.nrange(["{s}ts1"], "-", "+") == []
+
+    async def test_nrange_count(self, client: Redis, _s):
+        for i in range(5):
+            await client.timeseries.add("{s}ts1", i, i)
+        # COUNT is applied after the merge, in ascending timestamp order.
+        assert await client.timeseries.nrange(["{s}ts1"], "-", "+", count=2) == [
+            (0, [0.0]),
+            (1, [1.0]),
+        ]
+
+    async def test_nrange_filters(self, client: Redis, _s):
+        for i in range(10):
+            await client.timeseries.add("{s}ts1", i, i)
+
+        assert await client.timeseries.nrange(["{s}ts1"], "-", "+", filter_by_ts=[2, 4, 6]) == [
+            (2, [2.0]),
+            (4, [4.0]),
+            (6, [6.0]),
+        ]
+        assert await client.timeseries.nrange(["{s}ts1"], "-", "+", min_value=7, max_value=8) == [
+            (7, [7.0]),
+            (8, [8.0]),
+        ]
+
+    async def test_nrange_aggregation(self, client: Redis, _s):
+        for timestamp, value in [(0, 1.0), (5, 3.0), (10, 10.0), (15, 20.0)]:
+            await client.timeseries.add("{s}ts1", timestamp, value)
+
+        assert await client.timeseries.nrange(
+            ["{s}ts1"], 0, 20, aggregators=[PureToken.MAX], bucketduration=10
+        ) == [(0, [3.0]), (10, [20.0])]
+        # A key may be aggregated by several aggregators, contributing one value
+        # column each, in spec order.
+        assert await client.timeseries.nrange(
+            ["{s}ts1"],
+            0,
+            20,
+            aggregators=[(PureToken.AVG, PureToken.MAX)],
+            bucketduration=10,
+        ) == [(0, [2.0, 3.0]), (10, [15.0, 20.0])]
+
+    async def test_nrange_aggregation_one_spec_per_key(self, client: Redis, _s):
+        for timestamp, value in [(0, 1.0), (1, 2.0), (10, 3.0), (11, 4.0)]:
+            await client.timeseries.add("{s}ts1", timestamp, value)
+        for timestamp, value in [(0, 5.0), (1, 6.0), (10, 7.0), (11, 8.0)]:
+            await client.timeseries.add("{s}ts2", timestamp, value)
+
+        # TS.NRANGE takes exactly one aggregation spec per queried key; a single
+        # aggregator is never broadcast across keys.
+        assert await client.timeseries.nrange(
+            ["{s}ts1", "{s}ts2"],
+            0,
+            20,
+            aggregators=[PureToken.MAX, PureToken.MIN],
+            bucketduration=10,
+        ) == [(0, [2.0, 5.0]), (10, [4.0, 7.0])]
+
+    async def test_nrange_aggregation_spec_count_mismatch(self, client: Redis, _s):
+        await client.timeseries.add("{s}ts1", 0, 1.0)
+        await client.timeseries.add("{s}ts2", 0, 1.0)
+        with pytest.raises(CommandSyntaxError):
+            await client.timeseries.nrange(
+                ["{s}ts1", "{s}ts2"],
+                0,
+                20,
+                aggregators=[PureToken.MAX],
+                bucketduration=10,
+            )
+
+    async def test_nrevrange(self, client: Redis, _s):
+        await client.timeseries.add("{s}ts1", 10, 1.0)
+        await client.timeseries.add("{s}ts1", 20, 2.0)
+        await client.timeseries.add("{s}ts2", 20, 3.0)
+        await client.timeseries.add("{s}ts2", 30, 4.0)
+
+        # Same rows as nrange, in decreasing timestamp order.
+        res = await client.timeseries.nrevrange(["{s}ts1", "{s}ts2"], "-", "+")
+        assert [row[0] for row in res] == [30, 20, 10]
+        assert math.isnan(res[0][1][0]) and res[0][1][1] == 4.0
+        assert res[1][1] == [2.0, 3.0]
+        assert res[2][1][0] == 1.0 and math.isnan(res[2][1][1])
+
+    async def test_nrevrange_count_keeps_highest_timestamps(self, client: Redis, _s):
+        for i in range(5):
+            await client.timeseries.add("{s}ts1", i, i)
+        # COUNT is applied in reply order, so the highest timestamps survive --
+        # the opposite end from nrange.
+        assert await client.timeseries.nrevrange(["{s}ts1"], "-", "+", count=2) == [
+            (4, [4.0]),
+            (3, [3.0]),
+        ]
+
+    async def test_nrevrange_aggregation(self, client: Redis, _s):
+        for timestamp, value in [(0, 1.0), (1, 2.0), (10, 3.0), (11, 4.0)]:
+            await client.timeseries.add("{s}ts1", timestamp, value)
+        for timestamp, value in [(0, 5.0), (1, 6.0), (10, 7.0), (11, 8.0)]:
+            await client.timeseries.add("{s}ts2", timestamp, value)
+
+        assert await client.timeseries.nrevrange(
+            ["{s}ts1", "{s}ts2"],
+            0,
+            20,
+            aggregators=[PureToken.MAX, PureToken.MIN],
+            bucketduration=10,
+        ) == [(10, [4.0, 7.0]), (0, [2.0, 5.0])]
+
+
+@module_targets()
+@pytest.mark.min_module_version("timeseries", "8.10.0")
+class TestTimeseriesRead:
+    async def test_read(self, client: Redis, _s):
+        await client.timeseries.create("ts1")
+        await client.timeseries.add("ts1", 100, 1.0)
+        await client.timeseries.add("ts1", 200, 2.0)
+        await client.timeseries.add("ts1", 300, 3.0)
+
+        assert await client.timeseries.read("ts1", 0) == ((100, 1.0), (200, 2.0), (300, 3.0))
+        # The cursor is inclusive.
+        assert await client.timeseries.read("ts1", 200) == ((200, 2.0), (300, 3.0))
+
+    async def test_read_max_count(self, client: Redis, _s):
+        await client.timeseries.create("ts1")
+        await client.timeseries.add("ts1", 100, 1.0)
+        await client.timeseries.add("ts1", 200, 2.0)
+        await client.timeseries.add("ts1", 300, 3.0)
+
+        # Bounded paging: read the oldest ``max_count``, then resume past the
+        # last timestamp seen.
+        assert await client.timeseries.read("ts1", "-", max_count=2) == ((100, 1.0), (200, 2.0))
+        assert await client.timeseries.read("ts1", 201, max_count=2) == ((300, 3.0),)
+
+    async def test_read_sentinels(self, client: Redis, _s):
+        await client.timeseries.create("ts1")
+        await client.timeseries.add("ts1", 100, 1.0)
+        await client.timeseries.add("ts1", 200, 2.0)
+        await client.timeseries.add("ts1", 300, 3.0)
+
+        # ``+`` resolves to the latest sample and is inclusive ...
+        assert await client.timeseries.read("ts1", "+") == ((300, 3.0),)
+        # ... and ``-`` starts from the earliest.
+        assert len(await client.timeseries.read("ts1", "-")) == 3
+
+    async def test_read_empty(self, client: Redis, _s):
+        await client.timeseries.create("ts1")
+        await client.timeseries.add("ts1", 100, 1.0)
+
+        # A cursor past the newest sample is a successful empty reply ...
+        assert await client.timeseries.read("ts1", 301) == ()
+        # ... as is a missing key.
+        assert await client.timeseries.read("missing", 0) == ()
+
+    async def test_read_block(self, client: Redis, _s):
+        await client.timeseries.create("ts1")
+        await client.timeseries.add("ts1", 100, 1.0)
+        await client.timeseries.add("ts1", 200, 2.0)
+        await client.timeseries.add("ts1", 300, 3.0)
+
+        # min_count is already satisfied, so this returns immediately.
+        assert len(await client.timeseries.read("ts1", 0, block=1000, min_count=1)) == 3
+        # min_count can never be reached; the available samples flush on timeout.
+        assert await client.timeseries.read("ts1", 101, block=100, min_count=10) == (
+            (200, 2.0),
+            (300, 3.0),
+        )
+        # Blocking with nothing available is a successful empty reply.
+        assert await client.timeseries.read("ts1", 301, block=100, min_count=1) == ()
+
+    async def test_read_block_requires_min_count(self, client: Redis, _s):
+        # BLOCK is all-or-nothing on the wire, so coredis requires both halves.
+        with pytest.raises(MutuallyInclusiveParametersMissing):
+            await client.timeseries.read("ts1", 0, min_count=5)
+
+
+@module_targets()
+@pytest.mark.min_module_version("timeseries", "8.10.0")
+class TestTimeseriesQueryLabels:
+    #: ``TS.QUERYLABELS`` carries no keys and reports on the whole keyspace.
+    pytestmark = pytest.mark.nocluster
+
+    async def test_querylabels(self, client: Redis, _s):
+        await client.timeseries.create(
+            "ts1", labels={"type": "sensor", "location": "LivingRoom", "sensortype": "temp"}
+        )
+        await client.timeseries.create(
+            "ts2", labels={"type": "sensor", "location": "Kitchen", "sensortype": "temp"}
+        )
+        await client.timeseries.create("ts3", labels={"type": "gauge", "location": "BedRoom"})
+
+        # LABELS mode returns the union of label names across matching series,
+        # including the label used in the filter itself.
+        assert await client.timeseries.querylabels(filters=["type=sensor"]) == {
+            _s("location"),
+            _s("sensortype"),
+            _s("type"),
+        }
+        # Omitting the filter queries every indexed series.
+        assert await client.timeseries.querylabels() == {
+            _s("location"),
+            _s("sensortype"),
+            _s("type"),
+        }
+        # A filter matching nothing is an empty reply, not an error.
+        assert await client.timeseries.querylabels(filters=["type=missing"]) == set()
+
+    async def test_querylabel_values(self, client: Redis, _s):
+        await client.timeseries.create("ts1", labels={"type": "sensor", "location": "LivingRoom"})
+        await client.timeseries.create("ts2", labels={"type": "sensor", "location": "Kitchen"})
+        await client.timeseries.create("ts3", labels={"type": "gauge", "location": "BedRoom"})
+
+        # VALUES mode returns the deduplicated values of a single label.
+        assert await client.timeseries.querylabels("location", filters=["type=sensor"]) == {
+            _s("Kitchen"),
+            _s("LivingRoom"),
+        }
+        assert await client.timeseries.querylabels("location") == {
+            _s("BedRoom"),
+            _s("Kitchen"),
+            _s("LivingRoom"),
+        }
+        # A label no matching series carries yields an empty reply.
+        assert await client.timeseries.querylabels("nonexistent", filters=["type=sensor"]) == set()
+
+        # Label values are never coerced away from strings.
+        await client.timeseries.create("ts4", labels={"type": "sensor", "code": "123"})
+        assert await client.timeseries.querylabels("code", filters=["type=sensor"]) == {_s("123")}
+
+    async def test_querylabels_invalid_filter(self, client: Redis, _s):
+        # Filter parsing happens server side and surfaces unchanged.
+        with pytest.raises(ResponseError):
+            await client.timeseries.querylabels("location", filters=["badexpr"])
+
+
+@module_targets()
+@pytest.mark.min_module_version("timeseries", "8.10.0")
+class TestTimeseriesExcludeEmpty:
+    pytestmark = pytest.mark.nocluster
+
+    @pytest.fixture(autouse=True)
+    async def sample_series(self, client: Redis):
+        for key in ("s", "t", "u"):
+            await client.timeseries.create(key, labels={"sensor": "1", "type": "demo"})
+        await client.timeseries.madd(
+            [
+                ("s", 100, 100),
+                ("t", 100, 100),
+                ("s", 200, 200),
+                ("t", 300, 300),
+                ("s", 400, 400),
+                ("t", 400, 400),
+                ("u", 2000, 2000),
+            ]
+        )
+
+    async def test_mrange_exclude_empty(self, client: Redis, _s):
+        # Without EXCLUDEEMPTY, "u" matches the filter but has no samples in range.
+        res = await client.timeseries.mrange("-", 500, filters=["sensor=1"])
+        assert set(res) == {_s("s"), _s("t"), _s("u")}
+
+        # With EXCLUDEEMPTY it is dropped from the top level reply.
+        res = await client.timeseries.mrange("-", 500, filters=["sensor=1"], exclude_empty=True)
+        assert set(res) == {_s("s"), _s("t")}
+
+        # Composing with WITHLABELS does not change which series are reported.
+        res = await client.timeseries.mrange(
+            "-", 500, filters=["sensor=1"], withlabels=True, exclude_empty=True
+        )
+        assert set(res) == {_s("s"), _s("t")}
+
+        # Neither does composing with AGGREGATION.
+        res = await client.timeseries.mrange(
+            "-",
+            500,
+            filters=["sensor=1"],
+            aggregator=PureToken.MIN,
+            bucketduration=100,
+            exclude_empty=True,
+        )
+        assert set(res) == {_s("s"), _s("t")}
+
+        # When every matching series is empty nothing is reported at all.
+        assert await client.timeseries.mrange(1, 50, filters=["sensor=1"], exclude_empty=True) == {}
+
+    async def test_mrevrange_exclude_empty(self, client: Redis, _s):
+        res = await client.timeseries.mrevrange("-", 500, filters=["sensor=1"])
+        assert set(res) == {_s("s"), _s("t"), _s("u")}
+
+        res = await client.timeseries.mrevrange("-", 500, filters=["sensor=1"], exclude_empty=True)
+        assert set(res) == {_s("s"), _s("t")}
+
+        assert (
+            await client.timeseries.mrevrange(1, 50, filters=["sensor=1"], exclude_empty=True) == {}
+        )
+
+    async def test_exclude_empty_with_groupby(self, client: Redis, _s):
+        # EXCLUDEEMPTY and GROUPBY are mutually exclusive, rejected client side.
+        with pytest.raises(MutuallyExclusiveParametersError):
+            await client.timeseries.mrange(
+                "-",
+                500,
+                filters=["sensor=1"],
+                groupby="type",
+                reducer=PureToken.MAX,
+                exclude_empty=True,
+            )
+        with pytest.raises(MutuallyExclusiveParametersError):
+            await client.timeseries.mrevrange(
+                "-",
+                500,
+                filters=["sensor=1"],
+                groupby="type",
+                reducer=PureToken.MAX,
+                exclude_empty=True,
+            )

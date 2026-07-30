@@ -1322,5 +1322,5 @@ class Search(ModuleGroup[AnyStr]):
         """
 
         return self.client.create_request(
-            CommandName.FT_ALIASLIST, index, callback=SetCallback[AnyStr]()
+            CommandName.FT_ALIASLIST, Key(index), callback=SetCallback[AnyStr]()
         )

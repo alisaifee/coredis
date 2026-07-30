@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from tests.conftest import targets
 
 
@@ -139,3 +141,43 @@ class TestSet:
         assert members == {_s("1"), _s("2"), _s("3")}
         async for member in client.sscan_iter("a", match="1"):
             assert member == _s("1")
+
+
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_cluster",
+    "redis_cluster_raw",
+    "redis_cached",
+    "redis_cluster_cached",
+    "dragonfly",
+    "valkey",
+)
+@pytest.mark.min_server_version("8.10.0")
+class TestSetCardinality:
+    async def test_sdiffcard(self, client, _s):
+        await client.sadd("s0{foo}", ["a", "b", "c", "d", "e"])
+        await client.sadd("s1{foo}", ["c", "d", "x"])
+        await client.sadd("s2{foo}", ["e", "y"])
+        # Exact difference cardinality: {a, b}
+        assert await client.sdiffcard(["s0{foo}", "s1{foo}", "s2{foo}"]) == 2
+        # LIMIT caps the reply, allowing the server to exit early.
+        assert await client.sdiffcard(["s0{foo}", "s1{foo}", "s2{foo}"], limit=1) == 1
+        # A missing subtrahend subtracts nothing ...
+        assert await client.sdiffcard(["s0{foo}", "missing{foo}"]) == 5
+        # ... but a missing first key makes the whole difference empty.
+        assert await client.sdiffcard(["missing{foo}", "s0{foo}"]) == 0
+
+    async def test_sunioncard(self, client, _s):
+        await client.sadd("s1{foo}", ["a", "b", "c"])
+        await client.sadd("s2{foo}", ["c", "d"])
+        # Exact union cardinality: {a, b, c, d}
+        assert await client.sunioncard(["s1{foo}", "s2{foo}"]) == 4
+        # APPROX estimates the union with a HLL, still an integer reply.
+        assert await client.sunioncard(["s1{foo}", "s2{foo}"], approx=True) == 4
+        # A missing key is an empty set.
+        assert await client.sunioncard(["s1{foo}", "missing{foo}"]) == 3
+        # LIMIT caps the exact reply ...
+        assert await client.sunioncard(["s1{foo}", "s2{foo}"], limit=3) == 3
+        # ... and is never exceeded when combined with APPROX.
+        assert await client.sunioncard(["s1{foo}", "s2{foo}"], limit=3, approx=True) <= 3

@@ -7,7 +7,7 @@ import anyio
 import pytest
 
 from coredis import PureToken
-from coredis.exceptions import CommandSyntaxError
+from coredis.exceptions import CommandSyntaxError, ResponseError
 from tests.conftest import server_deprecation_warning, targets
 
 
@@ -350,3 +350,63 @@ class TestHash:
         assert dic == {_s("a"): _s("1"), _s("b"): _s("2"), _s("c"): _s("3")}
         async for data in client.hscan_iter("a", match="a"):
             assert dict([data]) == {_s("a"): _s("1")}
+
+
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_cluster",
+    "redis_cluster_raw",
+    "redis_cached",
+    "redis_cluster_cached",
+    "dragonfly",
+    "valkey",
+)
+@pytest.mark.min_server_version("8.10.0")
+class TestHashImport:
+    #: ``HIMPORT`` fieldsets are session (connection) local and ``HIMPORT PREPARE``
+    #: carries no key, so these are only meaningful against a single node.
+    pytestmark = pytest.mark.nocluster
+
+    async def test_himport_prepare_and_set(self, client, _s):
+        # A fieldset names an ordered list of hash fields for this connection.
+        assert await client.himport_prepare("fs", ["name", "email", "age"]) == _s("OK")
+        # HIMPORT SET supplies only the values, positionally, in fieldset order.
+        assert await client.himport_set("u:1", "fs", ["alice", "alice@example.com", 30]) == _s("OK")
+        assert await client.hgetall("u:1") == {
+            _s("name"): _s("alice"),
+            _s("email"): _s("alice@example.com"),
+            _s("age"): _s("30"),
+        }
+        # The fieldset is reusable for any number of hashes.
+        await client.himport_set("u:2", "fs", ["bob", "bob@example.com", 41])
+        assert await client.hgetall("u:2") == {
+            _s("name"): _s("bob"),
+            _s("email"): _s("bob@example.com"),
+            _s("age"): _s("41"),
+        }
+
+    async def test_himport_set_unknown_fieldset(self, client, _s):
+        # The fieldset must have been prepared on this connection first.
+        with pytest.raises(ResponseError):
+            await client.himport_set("u:1", "nosuchfieldset", ["alice"])
+
+    async def test_himport_set_value_count_mismatch(self, client, _s):
+        await client.himport_prepare("fs", ["name", "email"])
+        with pytest.raises(ResponseError):
+            await client.himport_set("u:1", "fs", ["alice"])
+
+    async def test_himport_discard(self, client, _s):
+        await client.himport_prepare("fs", ["name", "email"])
+        assert await client.himport_discard("fs") is True
+        # Discarding an unknown fieldset reports that nothing was removed.
+        assert await client.himport_discard("fs") is False
+        with pytest.raises(ResponseError):
+            await client.himport_set("u:1", "fs", ["alice", "a@example.com"])
+
+    async def test_himport_discardall(self, client, _s):
+        await client.himport_prepare("fs1", ["name"])
+        await client.himport_prepare("fs2", ["email"])
+        assert await client.himport_discardall() == 2
+        # ... and the connection is left with no fieldsets at all.
+        assert await client.himport_discardall() == 0

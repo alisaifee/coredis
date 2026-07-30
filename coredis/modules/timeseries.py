@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from deprecated.sphinx import versionadded
 
+from coredis.exceptions import CommandSyntaxError
 from coredis.typing import (
     AnyStr,
     CommandArgList,
@@ -1121,7 +1122,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         )
 
     @mutually_inclusive_parameters("min_value", "max_value")
-    @mutually_inclusive_parameters("aggregator", "bucketduration")
+    @mutually_inclusive_parameters("aggregators", "bucketduration")
     @module_command(
         CommandName.TS_NRANGE,
         group=COMMAND_GROUP,
@@ -1140,7 +1141,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         min_value: int | float | None = None,
         max_value: int | float | None = None,
         count: int | None = None,
-        aggregator: None | Aggregator | Parameters[Aggregator] = None,
+        aggregators: Parameters[Aggregator | Parameters[Aggregator]] | None = None,
         bucketduration: int | timedelta | None = None,
         align: int | StringT | None = None,
         buckettimestamp: StringT | None = None,
@@ -1159,7 +1160,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param min_value: Minimum value to filter samples by.
         :param max_value: Maximum value to filter samples by.
         :param count: Limits the number of returned samples.
-        :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+        :param aggregators: Aggregates samples into time buckets by the provided aggregation type.
          Redis 8.8+ supports multiple aggregators.
         :param bucketduration: Duration of each bucket in milliseconds.
         :param align: Time bucket alignment control for :paramref:`aggregator`.
@@ -1173,7 +1174,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :return:
 
         """
-        _keys: list[KeyT] = list(keys)
+        _keys: list[Key] = [Key(k) for k in keys]
         command_arguments: CommandArgList = [
             len(_keys),
             *_keys,
@@ -1189,30 +1190,35 @@ class TimeSeries(ModuleGroup[AnyStr]):
             command_arguments.extend([PureToken.FILTER_BY_VALUE, min_value, max_value])
         if count is not None:
             command_arguments.extend([PrefixToken.COUNT, count])
-        if aggregator and bucketduration is not None:
-            if align is not None:
-                command_arguments.extend([PrefixToken.ALIGN, align])
-            _agg = aggregator if isinstance(aggregator, PureToken) else b",".join(aggregator)
-            command_arguments.extend(
-                [
-                    PrefixToken.AGGREGATION,
-                    _agg,
-                    normalized_milliseconds(bucketduration),
-                ]
-            )
-            if buckettimestamp is not None:
-                command_arguments.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
-            if empty is not None:
-                command_arguments.append(PureToken.EMPTY)
+        if align is not None:
+            command_arguments.extend([PrefixToken.ALIGN, align])
+        if aggregators is not None and bucketduration is not None:
+            _aggs = list(aggregators)
+            if len(_aggs) != len(_keys):
+                raise CommandSyntaxError(
+                    set(),
+                    "AGGREGATION requires exactly one aggregation spec per key!",
+                )
+            command_arguments.append(PrefixToken.AGGREGATION)
+            for aggregator in _aggs:
+                if isinstance(aggregator, PureToken):
+                    command_arguments.append(aggregator)
+                else:
+                    command_arguments.append(b",".join(aggregator))
+            command_arguments.append(normalized_milliseconds(bucketduration))
+        if buckettimestamp is not None:
+            command_arguments.extend([PrefixToken.BUCKETTIMESTAMP, buckettimestamp])
+        if empty is not None:
+            command_arguments.append(PureToken.EMPTY)
 
         return self.client.create_request(
             CommandName.TS_NRANGE, *command_arguments, callback=NSamplesCallback()
         )
 
     @mutually_inclusive_parameters("min_value", "max_value")
-    @mutually_inclusive_parameters("aggregator", "bucketduration")
+    @mutually_inclusive_parameters("aggregators", "bucketduration")
     @module_command(
-        CommandName.TS_NRANGE,
+        CommandName.TS_NREVRANGE,
         group=COMMAND_GROUP,
         version_introduced="8.10.0",
         module=MODULE,
@@ -1229,7 +1235,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         min_value: int | float | None = None,
         max_value: int | float | None = None,
         count: int | None = None,
-        aggregator: None | Aggregator | Parameters[Aggregator] = None,
+        aggregators: Parameters[Aggregator | Parameters[Aggregator]] | None = None,
         bucketduration: int | timedelta | None = None,
         align: int | StringT | None = None,
         buckettimestamp: StringT | None = None,
@@ -1248,7 +1254,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :param min_value: Minimum value to filter samples by.
         :param max_value: Maximum value to filter samples by.
         :param count: Limits the number of returned samples.
-        :param aggregator: Aggregates samples into time buckets by the provided aggregation type.
+        :param aggregators: Aggregates samples into time buckets by the provided aggregation type.
          Redis 8.8+ supports multiple aggregators.
         :param bucketduration: Duration of each bucket in milliseconds.
         :param align: Time bucket alignment control for :paramref:`aggregator`.
@@ -1262,7 +1268,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         :return:
 
         """
-        _keys: list[KeyT] = list(keys)
+        _keys: list[Key] = [Key(k) for k in keys]
         command_arguments: CommandArgList = [
             len(_keys),
             *_keys,
@@ -1278,21 +1284,26 @@ class TimeSeries(ModuleGroup[AnyStr]):
             command_arguments.extend([PureToken.FILTER_BY_VALUE, min_value, max_value])
         if count is not None:
             command_arguments.extend([PrefixToken.COUNT, count])
-        if aggregator and bucketduration is not None:
-            if align is not None:
-                command_arguments.extend([PrefixToken.ALIGN, align])
-            _agg = aggregator if isinstance(aggregator, PureToken) else b",".join(aggregator)
-            command_arguments.extend(
-                [
-                    PrefixToken.AGGREGATION,
-                    _agg,
-                    normalized_milliseconds(bucketduration),
-                ]
-            )
-            if buckettimestamp is not None:
-                command_arguments.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
-            if empty is not None:
-                command_arguments.append(PureToken.EMPTY)
+        if align is not None:
+            command_arguments.extend([PrefixToken.ALIGN, align])
+        if aggregators is not None and bucketduration is not None:
+            _aggs = list(aggregators)
+            if len(_aggs) != len(_keys):
+                raise CommandSyntaxError(
+                    set(),
+                    "AGGREGATION requires exactly one aggregation spec per key!",
+                )
+            command_arguments.append(PrefixToken.AGGREGATION)
+            for aggregator in _aggs:
+                if isinstance(aggregator, PureToken):
+                    command_arguments.append(aggregator)
+                else:
+                    command_arguments.append(b",".join(aggregator))
+            command_arguments.append(normalized_milliseconds(bucketduration))
+        if buckettimestamp is not None:
+            command_arguments.extend([PrefixToken.BUCKETTIMESTAMP, buckettimestamp])
+        if empty is not None:
+            command_arguments.append(PureToken.EMPTY)
 
         return self.client.create_request(
             CommandName.TS_NREVRANGE, *command_arguments, callback=NSamplesCallback()
@@ -1327,10 +1338,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
          multiple aggregators ``(timestamp, value1, value2, ...)``.
 
         """
-        command_arguments: CommandArgList = [key, normalized_timestamp(timestamp)]
+        command_arguments: CommandArgList = [Key(key), normalized_timestamp(timestamp)]
         if block is not None:
             assert min_count is not None
-            command_arguments.extend([PrefixToken.BLOCK, min_count])
+            command_arguments.extend([PrefixToken.BLOCK, normalized_milliseconds(block), min_count])
         if max_count is not None:
             command_arguments.extend([PrefixToken.MAX_COUNT, max_count])
 

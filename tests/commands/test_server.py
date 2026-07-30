@@ -345,3 +345,107 @@ async def test_failover(fake_redis):
     assert await fake_redis.failover("target", 6379, force=True)
     assert await fake_redis.failover(abort=True)
     assert await fake_redis.failover("target", 6379, timeout=datetime.timedelta(seconds=1))
+
+
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_cluster",
+    "valkey",
+)
+@pytest.mark.min_server_version("8.10.0")
+class TestBackup:
+    #: ``BACKUP`` acts on a single server's on disk files.
+    pytestmark = pytest.mark.nocluster
+
+    @pytest.fixture(autouse=True)
+    async def idle_backup_state(self, client, _s):
+        # A backup left running would leak into the next test, so return the
+        # server to idle whatever the test did.
+        yield
+        with client.ignore_replies():
+            await client.backup_abort()
+            await client.backup_cleanup()
+
+    async def wait_for_state(self, client, _s, state):
+        # A freshly started backup passes through a snapshot phase before it is
+        # ready to be sealed.
+        for _ in range(100):
+            status = await client.backup_status()
+            if status[_s("state")] == _s(state):
+                return status
+            await anyio.sleep(0.1)
+        raise AssertionError(f"backup did not reach {state}: {status}")
+
+    async def test_backup_lifecycle(self, client, _s):
+        # Nothing pinned while the server is idle.
+        assert (await client.backup_status())[_s("state")] == _s("idle")
+        assert await client.backup_list() == []
+
+        assert await client.backup_start() == _s("OK")
+        status = await self.wait_for_state(client, _s, "incrementing")
+        assert status[_s("start_time")] > 0
+        # The base rdb is pinned as soon as the snapshot completes.
+        assert len(await client.backup_list()) >= 1
+
+        assert await client.backup_seal() == _s("OK")
+        status = await client.backup_status()
+        assert status[_s("state")] == _s("sealed")
+        assert status[_s("end_time")] > 0
+        # A sealed backup pins the base rdb, the incremental aof and the manifest.
+        assert len(await client.backup_list()) >= 3
+
+        # CLEANUP discards the sealed files and returns the server to idle.
+        assert await client.backup_cleanup() == _s("OK")
+        assert (await client.backup_status())[_s("state")] == _s("idle")
+        assert await client.backup_list() == []
+
+    async def test_backup_start_twice(self, client, _s):
+        await client.backup_start()
+        # Only one backup may be in flight at a time.
+        with pytest.raises(ResponseError):
+            await client.backup_start()
+
+    async def test_backup_abort(self, client, _s):
+        await client.backup_start()
+        assert await client.backup_abort() == _s("OK")
+        # An aborted backup is reported as failed, with the reason retained ...
+        status = await client.backup_status()
+        assert status[_s("state")] == _s("failed")
+        assert status[_s("error")] == _s("aborted by user")
+        # ... until CLEANUP discards it.
+        assert await client.backup_cleanup() == _s("OK")
+        assert (await client.backup_status())[_s("state")] == _s("idle")
+        # Aborting when nothing is running is an error.
+        with pytest.raises(ResponseError):
+            await client.backup_abort()
+
+
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_cluster",
+    "valkey",
+)
+@pytest.mark.min_server_version("8.10.0")
+class TestSlowlogArgumentCount:
+    pytestmark = pytest.mark.nocluster
+
+    async def test_slowlog_get_argument_count(self, client, _s):
+        current_config = await client.config_get(["*"])
+        old_slower_than = current_config[_s("slowlog-log-slower-than")]
+        old_max_length = current_config[_s("slowlog-max-len")]
+        await client.config_set({"slowlog-log-slower-than": 0})
+        await client.config_set({"slowlog-max-len": 128})
+        try:
+            await client.slowlog_reset()
+            await client.get("argument-count")
+            slowlog = await client.slowlog_get()
+            get_entry = [
+                entry for entry in slowlog if entry.command == [_s("GET"), _s("argument-count")]
+            ].pop()
+            # 8.10 appends the total argument count of the logged command.
+            assert get_entry.argument_count == 2
+        finally:
+            await client.config_set({"slowlog-log-slower-than": old_slower_than})
+            await client.config_set({"slowlog-max-len": old_max_length})

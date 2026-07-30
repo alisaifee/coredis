@@ -38,6 +38,7 @@ from coredis.commands.request import CommandRequest
 from coredis.commands.types import Predicate
 from coredis.exceptions import (
     AuthorizationError,
+    CommandSyntaxError,
     DataError,
     RedisError,
 )
@@ -6285,8 +6286,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         if count is not None:
             command_arguments.append(PrefixToken.COUNT)
             command_arguments.append(count)
-        command_arguments.append(PrefixToken.STREAMS)
-        ids: CommandArgList = []
 
         if max_count is not None:
             command_arguments.append(PrefixToken.MAXCOUNT)
@@ -6295,6 +6294,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         if max_size is not None:
             command_arguments.append(PrefixToken.MAXSIZE)
             command_arguments.append(max_size)
+
+        command_arguments.append(PrefixToken.STREAMS)
+        ids: CommandArgList = []
 
         for partial_stream in streams.items():
             command_arguments.append(Key(partial_stream[0]))
@@ -10250,8 +10252,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param values: values to insert into the hash
 
         """
-        command_arguments: CommandArgList = [key, fieldset_name]
-        command_arguments.extend(*values)
+        command_arguments: CommandArgList = [Key(key), fieldset_name]
+        command_arguments.extend(values)
         return self.create_request(
             CommandName.HIMPORT_SET, *command_arguments, callback=NoopCallback()
         )
@@ -10287,8 +10289,6 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(CommandName.HIMPORT_DISCARDALL, callback=IntCallback())
 
     @mutually_exclusive_parameters("count", "exactly")
-    @mutually_inclusive_parameters("count", "ordering")
-    @mutually_inclusive_parameters("exactly", "ordering")
     @versionadded(version="6.9.0")
     @redis_command(CommandName.LMOVEM, version_introduced="8.10.0", group=CommandGroup.LIST)
     def lmovem(
@@ -10315,21 +10315,32 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: the moved elements in destination order
 
         """
-        command_arguments: CommandArgList = [source, destination, wherefrom, whereto]
+        command_arguments: CommandArgList = [Key(source), Key(destination), wherefrom, whereto]
         if count is not None:
             command_arguments.extend([PrefixToken.COUNT, count])
         if exactly is not None:
             command_arguments.extend([PrefixToken.EXACTLY, exactly])
         if ordering is not None:
             command_arguments.append(ordering)
+            if count is None and exactly is None:
+                raise CommandSyntaxError(
+                    set(), "The `ordering` parameter requires either passing `count` or `exactly`!"
+                )
+        else:  # ordering not provided
+            if count is not None:
+                raise CommandSyntaxError(
+                    set(), "The `ordering` parameter is required when passing `count`!"
+                )
+            if exactly is not None:
+                raise CommandSyntaxError(
+                    set(), "The `ordering` parameter is required when passing `exactly`!"
+                )
 
         return self.create_request(
             CommandName.LMOVEM, *command_arguments, callback=OptionalListCallback[AnyStr]()
         )
 
     @mutually_exclusive_parameters("count", "exactly")
-    @mutually_inclusive_parameters("count", "ordering")
-    @mutually_inclusive_parameters("exactly", "ordering")
     @versionadded(version="6.9.0")
     @redis_command(
         CommandName.BLMOVEM,
@@ -10364,8 +10375,8 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         """
         command_arguments: CommandArgList = [
-            source,
-            destination,
+            Key(source),
+            Key(destination),
             wherefrom,
             whereto,
             normalized_seconds(timeout or 0),
@@ -10376,6 +10387,15 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.extend([PrefixToken.EXACTLY, exactly])
         if ordering is not None:
             command_arguments.append(ordering)
+        else:  # ordering not provided
+            if count is not None:
+                raise CommandSyntaxError(
+                    set(), "The `ordering` parameter is required when passing `count`!"
+                )
+            if exactly is not None:
+                raise CommandSyntaxError(
+                    set(), "The `ordering` parameter is required when passing `exactly`!"
+                )
 
         return self.create_request(
             CommandName.BLMOVEM, *command_arguments, callback=OptionalListCallback[AnyStr]()
@@ -10404,7 +10424,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: cardinality of the union of sets
 
         """
-        _keys: list[KeyT] = list(keys)
+        _keys: list[Key] = [Key(k) for k in keys]
         command_arguments: CommandArgList = [len(_keys), *_keys]
         if approx:
             command_arguments.append(PureToken.APPROX)
@@ -10436,7 +10456,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :return: cardinality of the difference between the sets
 
         """
-        _keys: list[KeyT] = list(keys)
+        _keys: list[Key] = [Key(k) for k in keys]
         command_arguments: CommandArgList = [len(_keys), *_keys]
         if limit is not None:
             command_arguments.extend([PrefixToken.LIMIT, limit])
