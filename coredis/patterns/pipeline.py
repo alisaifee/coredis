@@ -286,7 +286,7 @@ class Pipeline(Client[AnyStr]):
             yield self
             await self._execute()
         finally:
-            await self._clear()
+            await self._reset()
             if self._connection:
                 self.client.connection_pool.release(self._connection)
 
@@ -352,15 +352,18 @@ class Pipeline(Client[AnyStr]):
     ) -> Awaitable[R]:
         raise NotImplementedError
 
+    async def _reset(self) -> None:
+        # Reset connection state if we were watching something.
+        if self.watches and self._connection:
+            await self._connection.create_request(CommandName.UNWATCH, decode=False)
+
     async def _clear(self) -> None:
         """
         Clear the pipeline and reset state.
         """
         self.command_stack.clear()
         self.scripts.clear()
-        # Reset connection state if we were watching something.
-        if self.watches and self._connection:
-            await self._connection.create_request(CommandName.UNWATCH, decode=False)
+        await self._reset()
         self.watches.clear()
         self.explicit_transaction = False
 
@@ -532,6 +535,8 @@ class Pipeline(Client[AnyStr]):
                         "A connection error occurred while watching one or more keys"
                     ) from e
                 raise
+            finally:
+                await self._clear()
 
 
 @versionchanged(
