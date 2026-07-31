@@ -270,11 +270,9 @@ class Pipeline(Client[AnyStr]):
         self._connection: BaseConnection | None = None
         self._transaction = transaction
         self._raise_on_error = raise_on_error
-        self.watching = False
+        self._watching: bool = False
         self.command_stack: list[PipelineCommandRequest[Any]] = []
-        self.watches: list[KeyT] = []
         self.cache = None
-        self.explicit_transaction = False
         self.scripts: set[Script[AnyStr]] = set()
         self.timeout = timeout
         self.type_adapter = client.type_adapter
@@ -282,10 +280,13 @@ class Pipeline(Client[AnyStr]):
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        yield self
-        await self._execute()
-        if self._connection:
-            self.client.connection_pool.release(self._connection)
+        try:
+            yield self
+            await self._execute()
+        finally:
+            await self._reset()
+            if self._connection:
+                self.client.connection_pool.release(self._connection)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{repr(self._connection)}>"
@@ -321,15 +322,14 @@ class Pipeline(Client[AnyStr]):
             raise WatchError("Unable to add a watch after pipeline commands have been added")
         if not self._connection:
             self._connection = await self.client.connection_pool.get_connection()
-        self.watches.extend(keys)
         await self._immediate_execute_command(
             self.client.create_request(
                 CommandName.WATCH,
-                *[Key(watch) for watch in self.watches],
+                *[Key(key) for key in keys],
                 callback=SimpleStringCallback(),
             )
         )
-        self.explicit_transaction = True
+        self._watching = True
         yield
         await self._execute()
 
@@ -349,17 +349,19 @@ class Pipeline(Client[AnyStr]):
     ) -> Awaitable[R]:
         raise NotImplementedError
 
+    async def _reset(self) -> None:
+        # Reset connection state if we were watching something.
+        if self._watching and self._connection:
+            await self._connection.create_request(CommandName.UNWATCH, decode=False)
+
     async def _clear(self) -> None:
         """
         Clear the pipeline and reset state.
         """
         self.command_stack.clear()
         self.scripts.clear()
-        # Reset connection state if we were watching something.
-        if self.watches and self._connection:
-            await self._connection.create_request(CommandName.UNWATCH, decode=False)
-        self.watches.clear()
-        self.explicit_transaction = False
+        await self._reset()
+        self._watching = False
 
     async def _immediate_execute_command(
         self,
@@ -516,7 +518,7 @@ class Pipeline(Client[AnyStr]):
         ):
             if self.scripts:
                 await self._load_scripts()
-            if self._transaction or self.explicit_transaction:
+            if self._transaction or self._watching:
                 exec = self._execute_transaction
             else:
                 exec = self._execute_pipeline
@@ -524,7 +526,7 @@ class Pipeline(Client[AnyStr]):
             try:
                 return await exec(self._connection, self.command_stack)
             except (ConnectionError, TimeoutError) as e:
-                if self.watches:
+                if self._watching:
                     raise WatchError(
                         "A connection error occurred while watching one or more keys"
                     ) from e
