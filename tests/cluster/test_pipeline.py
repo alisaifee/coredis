@@ -117,6 +117,33 @@ class TestPipeline:
                     await client.set("a{fu}", 1)
                     pipe.set("a{fu}", 2)
 
+    async def test_watch_body_error_releases_connection(self, client):
+        in_use = client.connection_pool.statistics.in_use_connections
+        with pytest.raises(RuntimeError, match="body error"):
+            async with client.pipeline(transaction=False) as pipe:
+                async with pipe.watch("a{fu}"):
+                    assert client.connection_pool.statistics.in_use_connections == in_use + 1
+                    raise RuntimeError("body error")
+        assert client.connection_pool.statistics.in_use_connections == in_use
+        # Connection must not still be watched when reused from the pool.
+        async with client.pipeline(transaction=False) as pipe:
+            async with pipe.watch("a{fu}"):
+                pipe.set("a{fu}", "ok")
+        assert await client.get("a{fu}") == "ok"
+
+    async def test_watch_error_releases_connection(self, client):
+        await client.set("a{fu}", "0")
+        in_use = client.connection_pool.statistics.in_use_connections
+        with pytest.raises(WatchError):
+            async with client.pipeline(transaction=False) as pipe:
+                async with pipe.watch("a{fu}"):
+                    await client.set("a{fu}", "-1")
+                    pipe.set("a{fu}", "1")
+        assert client.connection_pool.statistics.in_use_connections == in_use
+        async with client.pipeline(transaction=False) as pipe:
+            pipe.set("a{fu}", "2")
+        assert await client.get("a{fu}") == "2"
+
     async def test_pipeline_transaction(self, client):
         async with client.pipeline(transaction=True) as pipe:
             a = pipe.set("a{fu}", "a1")

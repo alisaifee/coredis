@@ -324,3 +324,22 @@ class TestPipelineConnectionRelease:
         await client.set("a", "-1")
         async with client.pipeline() as pipe:
             pipe.set("a", "1")
+
+    async def test_commands_after_watch_form_separate_batch(self, client: Redis[str]):
+        await client.set("a", "0")
+        async with client.pipeline(transaction=False) as pipe:
+            async with pipe.watch("a"):
+                pipe.set("a", "1")
+            after = pipe.get("a")
+        assert await after == "1"
+
+    async def test_outer_body_error_after_successful_watch(self, client: Redis[str]):
+        await client.set("a", "0")
+        in_use = client.connection_pool.statistics.in_use_connections
+        with pytest.raises(RuntimeError, match="after watch"):
+            async with client.pipeline(transaction=False) as pipe:
+                async with pipe.watch("a"):
+                    pipe.set("a", "1")
+                raise RuntimeError("after watch")
+        assert client.connection_pool.statistics.in_use_connections == in_use
+        assert await client.get("a") == "1"

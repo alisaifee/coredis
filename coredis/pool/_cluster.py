@@ -269,8 +269,10 @@ class ClusterConnectionPool(BaseConnectionPool[ClusterConnection]):
         :param primary: If False a connection from the replica will be returned
         """
         connection = await self.get_connection(node=node, primary=primary, **options)
-        yield connection
-        self.release(connection)
+        try:
+            yield connection
+        finally:
+            self.release(connection)
 
     def release(self, connection: ClusterConnection) -> None:
         """Releases the connection back to the pool"""

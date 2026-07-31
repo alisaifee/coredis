@@ -284,9 +284,10 @@ class Pipeline(Client[AnyStr]):
             yield self
             await self._execute()
         finally:
-            await self._reset()
+            await self._unwatch()
             if self._connection:
                 self.client.connection_pool.release(self._connection)
+                self._connection = None
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}<{repr(self._connection)}>"
@@ -315,8 +316,8 @@ class Pipeline(Client[AnyStr]):
     async def watch(self, *keys: KeyT) -> AsyncGenerator[None]:
         """
         The given keys will be watched for changes within this context and the
-        commands stacked within the context will be automatically executed when the
-        context exits.
+        commands stacked within the context will be automatically executed when
+        the context exits. On abort, watches are cleared without executing.
         """
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
@@ -330,8 +331,11 @@ class Pipeline(Client[AnyStr]):
             )
         )
         self._watching = True
-        yield
-        await self._execute()
+        try:
+            yield
+            await self._execute()
+        finally:
+            await self._unwatch()
 
     @property
     def results(self) -> tuple[Any, ...] | None:
@@ -349,10 +353,17 @@ class Pipeline(Client[AnyStr]):
     ) -> Awaitable[R]:
         raise NotImplementedError
 
-    async def _reset(self) -> None:
-        # Reset connection state if we were watching something.
-        if self._watching and self._connection:
-            await self._connection.create_request(CommandName.UNWATCH, decode=False)
+    async def _unwatch(self) -> None:
+        """
+        Clear WATCH state on the held connection, if any.
+        """
+        if not self._watching:
+            return
+        try:
+            if self._connection:
+                await self._connection.create_request(CommandName.UNWATCH, decode=False)
+        finally:
+            self._watching = False
 
     async def _clear(self) -> None:
         """
@@ -360,8 +371,7 @@ class Pipeline(Client[AnyStr]):
         """
         self.command_stack.clear()
         self.scripts.clear()
-        await self._reset()
-        self._watching = False
+        await self._unwatch()
 
     async def _immediate_execute_command(
         self,
@@ -575,8 +585,7 @@ class ClusterPipeline(Client[AnyStr]):
         self._transaction = transaction
         self._watched_node: ClusterNodeLocation | None = None
         self._watched_connection: BaseConnection | None = None
-        self.watches: list[KeyT] = []
-        self.explicit_transaction = False
+        self._watching: bool = False
         self.cache = None
         self.scripts: set[Script[AnyStr]] = set()
         self.timeout = timeout
@@ -585,8 +594,11 @@ class ClusterPipeline(Client[AnyStr]):
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        yield self
-        await self._execute()
+        try:
+            yield self
+            await self._execute()
+        finally:
+            await self._unwatch()
 
     def create_request(
         self,
@@ -613,8 +625,8 @@ class ClusterPipeline(Client[AnyStr]):
     async def watch(self, *keys: KeyT) -> AsyncGenerator[None]:
         """
         The given keys will be watched for changes within this context and the
-        commands stacked within the context will be automatically executed when the
-        context exits.
+        commands stacked within the context will be automatically executed when
+        the context exits. On abort, watches are cleared without executing.
         """
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
@@ -623,15 +635,19 @@ class ClusterPipeline(Client[AnyStr]):
                 b"WATCH", *[Key(key) for key in keys], callback=NoopCallback()
             )
         )
-        self.watches.extend(keys)
         async with self.connection_pool.acquire(
             node=self._watched_node
         ) as self._watched_connection:
-            await self._watched_connection.create_request(CommandName.WATCH, *keys)
-            self.explicit_transaction = True
-            yield
-            await self._execute()
-            await self._watched_connection.create_request(CommandName.UNWATCH, decode=False)
+            try:
+                await self._watched_connection.create_request(CommandName.WATCH, *keys)
+                self._watching = True
+                yield
+                await self._execute()
+            finally:
+                # Must run before acquire releases the connection back to the pool.
+                await self._unwatch()
+        self._watched_connection = None
+        self._watched_node = None
 
     @property
     def results(self) -> tuple[Any, ...] | None:
@@ -649,14 +665,25 @@ class ClusterPipeline(Client[AnyStr]):
     ) -> Awaitable[R]:
         raise NotImplementedError
 
+    async def _unwatch(self) -> None:
+        """
+        Clear WATCH state on the watched connection, if any.
+        """
+        if not self._watching:
+            return
+        try:
+            if self._watched_connection:
+                await self._watched_connection.create_request(CommandName.UNWATCH, decode=False)
+        finally:
+            self._watching = False
+
     async def _clear(self) -> None:
         """
         Clear the pipeline and reset state.
         """
         self.command_stack = []
         self.scripts.clear()
-        self.watches.clear()
-        self.explicit_transaction = False
+        await self._unwatch()
 
     def _raise_first_error(self) -> None:
         for c in self.command_stack:
@@ -696,7 +723,7 @@ class ClusterPipeline(Client[AnyStr]):
                 self.client.connection_pool.read_from_replicas
                 and all(cmd.readonly for cmd in self.command_stack)
             )
-            if self._transaction or self.explicit_transaction:
+            if self._transaction or self._watching:
                 execute = self._send_cluster_transaction
             else:
                 execute = self._send_cluster_commands
