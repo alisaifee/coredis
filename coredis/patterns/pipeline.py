@@ -284,7 +284,7 @@ class Pipeline(Client[AnyStr]):
             yield self
             await self._execute()
         finally:
-            await self._unwatch()
+            self._unwatch()
             if self._connection:
                 self.client.connection_pool.release(self._connection)
                 self._connection = None
@@ -335,7 +335,7 @@ class Pipeline(Client[AnyStr]):
             yield
             await self._execute()
         finally:
-            await self._unwatch()
+            self._unwatch()
 
     @property
     def results(self) -> tuple[Any, ...] | None:
@@ -353,15 +353,14 @@ class Pipeline(Client[AnyStr]):
     ) -> Awaitable[R]:
         raise NotImplementedError
 
-    async def _unwatch(self) -> None:
-        """
-        Clear WATCH state on the held connection, if any.
-        """
+    def _unwatch(self) -> None:
         if not self._watching:
             return
         try:
-            if self._connection:
-                await self._connection.create_request(CommandName.UNWATCH, decode=False)
+            if self._connection and self._connection.usable:
+                # The response is not awaited to make this function safe for finally blocks.
+                # noreply is intentionally not used since this doesn't work for dragonfly :(
+                self._connection.create_request(CommandName.UNWATCH, decode=False)
         finally:
             self._watching = False
 
@@ -371,7 +370,7 @@ class Pipeline(Client[AnyStr]):
         """
         self.command_stack.clear()
         self.scripts.clear()
-        await self._unwatch()
+        self._unwatch()
 
     async def _immediate_execute_command(
         self,
@@ -598,7 +597,7 @@ class ClusterPipeline(Client[AnyStr]):
             yield self
             await self._execute()
         finally:
-            await self._unwatch()
+            self._unwatch()
 
     def create_request(
         self,
@@ -644,8 +643,7 @@ class ClusterPipeline(Client[AnyStr]):
                 yield
                 await self._execute()
             finally:
-                # Must run before acquire releases the connection back to the pool.
-                await self._unwatch()
+                self._unwatch()
         self._watched_connection = None
         self._watched_node = None
 
@@ -665,15 +663,14 @@ class ClusterPipeline(Client[AnyStr]):
     ) -> Awaitable[R]:
         raise NotImplementedError
 
-    async def _unwatch(self) -> None:
-        """
-        Clear WATCH state on the watched connection, if any.
-        """
+    def _unwatch(self) -> None:
         if not self._watching:
             return
         try:
-            if self._watched_connection:
-                await self._watched_connection.create_request(CommandName.UNWATCH, decode=False)
+            if self._watched_connection and self._watched_connection.usable:
+                # The response is not awaited to make this function safe for finally blocks.
+                # noreply is intentionally not used since this doesn't work for dragonfly :(
+                self._watched_connection.create_request(CommandName.UNWATCH, decode=False)
         finally:
             self._watching = False
 
@@ -683,7 +680,7 @@ class ClusterPipeline(Client[AnyStr]):
         """
         self.command_stack = []
         self.scripts.clear()
-        await self._unwatch()
+        self._unwatch()
 
     def _raise_first_error(self) -> None:
         for c in self.command_stack:
