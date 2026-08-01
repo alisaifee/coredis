@@ -103,7 +103,7 @@ dev = [
   "Jinja2==3.1.5",
   "memray; implementation_name != 'pypy'",
   "mypy==2.3.0; implementation_name != 'pypy'",
-  "ruff",
+  "ruff>=0.15,<0.16",
   "types-deprecated",
   "ipython",
   {include-group = "test"},
