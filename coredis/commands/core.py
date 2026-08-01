@@ -6290,7 +6290,12 @@ class CoreCommands(CommandMixin[AnyStr]):
             callback=MultiStreamRangeCallback[AnyStr](),
         )
 
-    @redis_command(CommandName.XREADGROUP, group=CommandGroup.STREAM, flags={CommandFlag.BLOCKING})
+    @redis_command(
+        CommandName.XREADGROUP,
+        group=CommandGroup.STREAM,
+        flags={CommandFlag.BLOCKING},
+        arguments={"claim": {"version_introduced": "8.4.0"}},
+    )
     def xreadgroup(
         self,
         group: StringT,
@@ -6310,8 +6315,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param count: Max entries to return per stream.
         :param block: Block up to this many milliseconds (or timedelta) for new data.
         :param noack: If ``True``, do not add messages to PEL (no XACK needed).
-        :param claim: Claim messages that have been idle for at least this many ms before reading.
-
+        :param claim: Reclaim pending entries idle for at least this long (milliseconds
+         or timedelta) before reading new ones.
         :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = [PrefixToken.GROUP, group, consumer]

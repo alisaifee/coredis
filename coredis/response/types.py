@@ -206,8 +206,14 @@ class StreamEntry(NamedTuple):
     Structure representing an entry in a redis stream
     """
 
+    #: Stream entry ID
     identifier: StringT
+    #: Field/value pairs for the entry
     field_values: OrderedDict[StringT, StringT]
+    #: Milliseconds since last delivery
+    idle: int | None = None
+    #: Number of times this entry was previously delivered
+    delivered: int | None = None
 
 
 #: Details of a stream

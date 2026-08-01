@@ -210,6 +210,32 @@ class TestStreams:
             1
         ] == (message_id2,)
 
+    @pytest.mark.min_server_version("8.4")
+    async def test_xreadgroup_claim(self, client, _s):
+        stream = "stream"
+        group = "group"
+        message_id = await client.xadd(stream, {"john": "wick"})
+        message = await get_stream_message(client, stream, message_id)
+        await client.xgroup_create(stream, group, "0")
+        await client.xreadgroup(group, "consumer1", streams={stream: ">"})
+
+        assert not await client.xreadgroup(group, "consumer2", streams={stream: ">"})
+
+        claimed = (await client.xreadgroup(group, "consumer2", streams={stream: ">"}, claim=0))[
+            _s(stream)
+        ][0]
+        assert claimed[:2] == message[:2]
+        assert claimed.idle >= 0
+        assert claimed.delivered == 1
+
+        new_id = await client.xadd(stream, {"john": "new"})
+        fresh = (await client.xreadgroup(group, "consumer2", streams={stream: ">"}, claim=0))[
+            _s(stream)
+        ][-1]
+        assert fresh[:2] == (new_id, {_s("john"): _s("new")})
+        assert fresh.idle == 0
+        assert fresh.delivered == 0
+
     async def test_xrange(self, client, _s):
         for idx in range(1, 10):
             await client.xadd(

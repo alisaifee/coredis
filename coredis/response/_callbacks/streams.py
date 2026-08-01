@@ -72,13 +72,13 @@ class AutoClaimCallback(
 
 class MultiStreamRangeCallback(
     ResponseCallback[
-        dict[StringT, list[list[list[StringT] | StringT]]] | None,
+        dict[StringT, list[list[list[StringT] | StringT | int]]] | None,
         dict[AnyStr, tuple[StreamEntry, ...]] | None,
     ]
 ):
     def transform(
         self,
-        response: dict[StringT, list[list[list[StringT] | StringT]]] | None,
+        response: dict[StringT, list[list[list[StringT] | StringT | int]]] | None,
     ) -> dict[AnyStr, tuple[StreamEntry, ...]] | None:
         if response:
             mapping: dict[AnyStr, tuple[StreamEntry, ...]] = {}
@@ -86,7 +86,10 @@ class MultiStreamRangeCallback(
             for stream_id, entries in response.items():
                 mapping[cast(AnyStr, stream_id)] = tuple(
                     StreamEntry(
-                        cast(StringT, r[0]), flat_pairs_to_ordered_dict(cast(list[StringT], r[1]))
+                        cast(StringT, r[0]),
+                        flat_pairs_to_ordered_dict(cast(list[StringT], r[1])),
+                        cast(int, r[2]) if len(r) > 2 else None,
+                        cast(int, r[3]) if len(r) > 3 else None,
                     )
                     for r in entries
                 )
