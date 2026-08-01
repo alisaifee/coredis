@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import time
 import warnings
 from typing import TYPE_CHECKING, Any
 
@@ -23,7 +22,7 @@ def normalized_seconds(value: int | datetime.timedelta) -> int:
 
 def normalized_milliseconds(value: int | datetime.timedelta) -> int:
     if isinstance(value, datetime.timedelta):
-        ms = int(value.microseconds / 1000)
+        ms = value.microseconds // 1000
         value = (value.seconds + value.days * 24 * 3600) * 1000 + ms
 
     return value
@@ -31,16 +30,14 @@ def normalized_milliseconds(value: int | datetime.timedelta) -> int:
 
 def normalized_time_seconds(value: int | datetime.datetime) -> int:
     if isinstance(value, datetime.datetime):
-        s = int(value.microsecond / 1000000)
-        value = int(time.mktime(value.timetuple())) + s
+        value = int(value.timestamp())
 
     return value
 
 
 def normalized_time_milliseconds(value: int | datetime.datetime) -> int:
     if isinstance(value, datetime.datetime):
-        ms = int(value.microsecond / 1000)
-        value = int(time.mktime(value.timetuple())) * 1000 + ms
+        value = int(value.timestamp() * 1000)
 
     return value
 

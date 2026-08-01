@@ -275,8 +275,10 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
            using this context manager.
         """
         connection = await self.get_connection()
-        yield connection
-        self.release(connection)
+        try:
+            yield connection
+        finally:
+            self.release(connection)
 
     def release(self, connection: ConnectionT) -> None:
         """

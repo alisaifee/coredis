@@ -6316,6 +6316,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         arguments={
             "max_count": {"version_introduced": "6.9.0"},
             "max_size": {"version_introduced": "6.9.0"},
+            "claim": {"version_introduced": "6.9.0"},
         },
     )
     def xreadgroup(
@@ -6328,6 +6329,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         noack: bool | None = None,
         max_count: int | None = None,
         max_size: int | None = None,
+        claim: int | datetime.timedelta | None = None,
     ) -> CommandRequest[dict[AnyStr, tuple[StreamEntry, ...]] | None]:
         """
         Read entries from streams as a consumer in a group, with IDs greater than the given IDs.
@@ -6340,6 +6342,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param noack: If ``True``, do not add messages to PEL (no XACK needed).
         :param max_count: cap the total number of entries returned across all streams.
         :param max_size: a soft cap on the total server reply size in bytes across all streams.
+        :param claim: Claim messages that have been idle for at least this many ms before reading.
 
         :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
@@ -6363,6 +6366,10 @@ class CoreCommands(CommandMixin[AnyStr]):
 
         if noack:
             command_arguments.append(PureToken.NOACK)
+
+        if claim is not None:
+            command_arguments.append(PrefixToken.CLAIM)
+            command_arguments.append(normalized_milliseconds(claim))
 
         command_arguments.append(PrefixToken.STREAMS)
         ids: CommandArgList = []

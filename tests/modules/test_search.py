@@ -11,7 +11,6 @@ from coredis._concurrency import gather
 from coredis.commands._validators import MutuallyExclusiveParametersError
 from coredis.exceptions import ResponseError
 from coredis.modules.response.types import (
-    SearchAggregationResult,
     SearchDocument,
     SearchResult,
 )
@@ -1020,14 +1019,14 @@ class TestAggregation:
                 ),
             ]
 
-        assert await gather(*results) == (
-            1,
-            1,
-            SearchAggregationResult(
-                [
-                    {_s("name"): _s("hello"), _s("count"): _s("1")},
-                    {_s("name"): _s("world"), _s("count"): _s("1")},
-                ],
-                None,
-            ),
+        # Aggregation group order is not defined without SORTBY
+        added_1, added_2, aggregation = await gather(*results)
+        assert (added_1, added_2) == (1, 1)
+        assert aggregation.cursor is None
+        assert sorted(aggregation.results, key=lambda row: row[_s("name")]) == sorted(
+            [
+                {_s("name"): _s("hello"), _s("count"): _s("1")},
+                {_s("name"): _s("world"), _s("count"): _s("1")},
+            ],
+            key=lambda row: row[_s("name")],
         )
