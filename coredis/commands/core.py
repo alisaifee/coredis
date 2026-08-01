@@ -6314,9 +6314,9 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.STREAM,
         flags={CommandFlag.BLOCKING},
         arguments={
-            "max_count": {"version_introduced": "6.9.0"},
-            "max_size": {"version_introduced": "6.9.0"},
-            "claim": {"version_introduced": "6.9.0"},
+            "max_count": {"version_introduced": "8.10.0"},
+            "max_size": {"version_introduced": "8.10.0"},
+            "claim": {"version_introduced": "8.4.0"},
         },
     )
     def xreadgroup(
@@ -6342,8 +6342,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param noack: If ``True``, do not add messages to PEL (no XACK needed).
         :param max_count: cap the total number of entries returned across all streams.
         :param max_size: a soft cap on the total server reply size in bytes across all streams.
-        :param claim: Claim messages that have been idle for at least this many ms before reading.
-
+        :param claim: Reclaim pending entries idle for at least this long (milliseconds
+         or timedelta) before reading new ones.
         :return: Mapping of stream key to tuple of entries; ``None`` if block timeout is exceeded.
         """
         command_arguments: CommandArgList = [PrefixToken.GROUP, group, consumer]
