@@ -420,9 +420,10 @@ class TypeAdapter:
             candidate: tuple[AdaptableType, Callable[[R], RedisValueT] | None] = (object, None)
 
             for t in self.__serializers:
-                if is_bearable(value.value, t):
-                    if not candidate[1] or is_subhint(t, candidate[0]):
-                        candidate = (t, self.__serializers[t][0])
+                if is_bearable(value.value, t) and (
+                    not candidate[1] or is_subhint(t, candidate[0])
+                ):
+                    candidate = (t, self.__serializers[t][0])
             if candidate[1]:
                 transform_function = candidate[1]
                 self.__serializer_cache[value_type] = transform_function

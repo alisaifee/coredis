@@ -611,9 +611,8 @@ class BaseConnection(TelemetryAttributeProvider):
                         exc_info=True,
                     )
 
-            if self._db:
-                if await self.create_request(b"SELECT", self._db, decode=False) != b"OK":
-                    raise ConnectionError(f"Invalid Database {self._db}")
+            if self._db and await self.create_request(b"SELECT", self._db, decode=False) != b"OK":
+                raise ConnectionError(f"Invalid Database {self._db}")
 
             if self.client_name is not None and (
                 await self.create_request(b"CLIENT SETNAME", self.client_name, decode=False)

@@ -317,12 +317,16 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _keepalive(self) -> None:
         while True:
-            if (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds:
-                if self._connection and await self._connection.create_request(CommandName.PING) in {
+            if (
+                (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds
+                and self._connection
+                and await self._connection.create_request(CommandName.PING)
+                in {
                     b"PONG",
                     "PONG",
-                }:
-                    self._last_checkin = time.monotonic()
+                }
+            ):
+                self._last_checkin = time.monotonic()
             await sleep(max(1, self._max_idle_seconds - idle))
 
     async def _consume_push_messages(self) -> None:
@@ -377,12 +381,14 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                 channel=target,
                 data=cast(int, response[2]),
             )
-            if message_type in SUBSCRIBE_MESSAGE_TYPES:
-                if waiters := self._subscription_waiters.get(target, []):
-                    waiters.pop(-1).set()
-            if message_type in UNSUBSCRIBE_MESSAGE_TYPES:
-                if waiters := self._unsubscription_waiters.get(target, []):
-                    waiters.pop(-1).set()
+            if message_type in SUBSCRIBE_MESSAGE_TYPES and (
+                waiters := self._subscription_waiters.get(target, [])
+            ):
+                waiters.pop(-1).set()
+            if message_type in UNSUBSCRIBE_MESSAGE_TYPES and (
+                waiters := self._unsubscription_waiters.get(target, [])
+            ):
+                waiters.pop(-1).set()
 
         elif message_type in PUBLISH_MESSAGE_TYPES:
             if message_type == PubSubMessageTypes.PMESSAGE:
@@ -833,9 +839,11 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         while True:
             if (
                 idle := time.monotonic() - self._last_checkins[connection.location]
-            ) >= self._max_idle_seconds:
-                if await connection.create_request(CommandName.PING) in {b"PONG", "PONG"}:
-                    self._last_checkins[connection.location] = time.monotonic()
+            ) >= self._max_idle_seconds and await connection.create_request(CommandName.PING) in {
+                b"PONG",
+                "PONG",
+            }:
+                self._last_checkins[connection.location] = time.monotonic()
             await sleep(max(1, self._max_idle_seconds - idle))
 
     async def _cleanup(self) -> None:

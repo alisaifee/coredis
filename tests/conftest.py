@@ -153,17 +153,26 @@ async def check_test_constraints(request, client):
         await get_module_versions(client)
     client_version = REDIS_VERSIONS[str(client)]
     for marker in request.node.iter_markers():
-        if marker.name == "min_python" and marker.args:
-            if PY_VERSION < version.parse(marker.args[0]):
-                return pytest.skip(f"Skipped for python versions < {marker.args[0]}")
+        if (
+            marker.name == "min_python"
+            and marker.args
+            and PY_VERSION < version.parse(marker.args[0])
+        ):
+            return pytest.skip(f"Skipped for python versions < {marker.args[0]}")
 
-        if marker.name == "min_server_version" and marker.args:
-            if client_version < version.parse(marker.args[0]):
-                return pytest.skip(f"Skipped for versions < {marker.args[0]}")
+        if (
+            marker.name == "min_server_version"
+            and marker.args
+            and client_version < version.parse(marker.args[0])
+        ):
+            return pytest.skip(f"Skipped for versions < {marker.args[0]}")
 
-        if marker.name == "max_server_version" and marker.args:
-            if client_version > version.parse(marker.args[0]):
-                return pytest.skip(f"Skipped for versions > {marker.args[0]}")
+        if (
+            marker.name == "max_server_version"
+            and marker.args
+            and client_version > version.parse(marker.args[0])
+        ):
+            return pytest.skip(f"Skipped for versions > {marker.args[0]}")
 
         if marker.name == "min_module_version" and marker.args:
             name, ver = marker.args[0], marker.args[1]

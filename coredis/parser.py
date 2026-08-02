@@ -286,9 +286,8 @@ class Parser:
                         f"Protocol Error: Unknown RESP data type: {chr(marker)!r}"
                     )
             if self.current_node:
-                if self.current_node.depth > 0:
-                    if self.current_node.append(response) > 1:
-                        continue
+                if self.current_node.depth > 0 and self.current_node.append(response) > 1:
+                    continue
                 while len(self.nodes) > 1 and self.current_node.depth == 0:
                     self.nodes[-2].append(self.current_node.container)
                     self.nodes.pop()
