@@ -198,11 +198,11 @@ class RoleCallback(
         def _parse_replica(response: Any) -> Any:
             host, port, status, offset = response[1:]
 
-            return dict(
-                role=role,
-                status=status,
-                offset=offset,
-            )
+            return {
+                "role": role,
+                "status": status,
+                "offset": offset,
+            }
 
         def _parse_sentinel(response: Any) -> Any:
             return {"role": role, "masters": response[1]}

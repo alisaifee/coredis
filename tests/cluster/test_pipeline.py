@@ -40,8 +40,8 @@ class TestPipeline:
         async with client.pipeline() as pipe:
             a = pipe.set("a", "a1")
             b = pipe.get("a")
-            c = pipe.zadd("z", dict(z1=1))
-            d = pipe.zadd("z", dict(z2=4))
+            c = pipe.zadd("z", {"z1": 1})
+            d = pipe.zadd("z", {"z2": 4})
             e = pipe.zincrby("z", "z1", 1)
             f = pipe.zrange("z", 0, 5, withscores=True)
         assert (

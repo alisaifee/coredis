@@ -344,7 +344,7 @@ class TestHash:
 
     async def test_hscan_iter(self, client, _s):
         await client.hset("a", {"a": 1, "b": 2, "c": 3})
-        dic = dict()
+        dic = {}
         async for data in client.hscan_iter("a"):
             dic.update(dict([data]))
         assert dic == {_s("a"): _s("1"), _s("b"): _s("2"), _s("c"): _s("3")}

@@ -254,7 +254,7 @@ class BaseConnection(TelemetryAttributeProvider):
 
         self._connect_callbacks: list[
             (Callable[[Self], Awaitable[None]] | Callable[[Self], None])
-        ] = list()
+        ] = []
 
         # server version as reported by the server
         self.server_version: str | None = None
