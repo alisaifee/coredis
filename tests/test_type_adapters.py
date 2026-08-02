@@ -123,8 +123,8 @@ class TestTransformers:
         def _(value: int) -> Decimal:
             return Decimal(value)
 
-        assert await client.set("fubar", Serializable(Decimal(1.23)))
-        assert Decimal(1.23) == await client.get("fubar").transform(Decimal)
+        assert await client.set("fubar", Serializable(Decimal("1.23")))
+        assert Decimal("1.23") == await client.get("fubar").transform(Decimal)
 
         assert await client.set("fubar", Serializable({1: 2}))
         assert {"1": 2} == json.loads(await client.get("fubar"))
