@@ -90,10 +90,10 @@ RedisT = TypeVar("RedisT", bound="Redis[Any]")
 
 class Client(
     AsyncContextManagerMixin,
-    Generic[AnyStr],
     CoreCommands[AnyStr],
     ModuleMixin[AnyStr],
     SentinelCommands[AnyStr],
+    Generic[AnyStr],
 ):
     connection_pool: BaseConnectionPool[Any]
     decode_responses: bool
