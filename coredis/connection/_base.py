@@ -615,12 +615,11 @@ class BaseConnection(TelemetryAttributeProvider):
                 if await self.create_request(b"SELECT", self._db, decode=False) != b"OK":
                     raise ConnectionError(f"Invalid Database {self._db}")
 
-            if self.client_name is not None:
-                if (
-                    await self.create_request(b"CLIENT SETNAME", self.client_name, decode=False)
-                    != b"OK"
-                ):
-                    raise ConnectionError(f"Failed to set client name: {self.client_name}")
+            if self.client_name is not None and (
+                await self.create_request(b"CLIENT SETNAME", self.client_name, decode=False)
+                != b"OK"
+            ):
+                raise ConnectionError(f"Failed to set client name: {self.client_name}")
 
             if self._noevict:
                 await self.create_request(b"CLIENT NO-EVICT", b"ON")

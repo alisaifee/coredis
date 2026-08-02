@@ -87,9 +87,8 @@ class RetryPolicy(ABC):
         last_error: BaseException | None = None
         for attempt in self.attempts():
             try:
-                if before_hook:
-                    if cb := before_hook():
-                        await cb
+                if before_hook and (cb := before_hook()):
+                    await cb
                 return await func()
             except BaseException as e:
                 if self.will_retry(e):
@@ -265,9 +264,8 @@ class CompositeRetryPolicy(RetryPolicy):
         while True:
             try:
                 total_attempts += 1
-                if before_hook:
-                    if cb := before_hook():
-                        await cb
+                if before_hook and (cb := before_hook()):
+                    await cb
                 return await func()
             except BaseException as e:
                 retry_delays = []
