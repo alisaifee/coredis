@@ -286,7 +286,6 @@ class TestPipeline:
             (ClusterPipeline.bgsave, (), {}),
             (ClusterPipeline.keys, ("*",), {}),
             (ClusterPipeline.flushdb, (), {}),
-            (ClusterPipeline.flushdb, (), {}),
             (ClusterPipeline.flushall, (), {}),
         ],
     )
