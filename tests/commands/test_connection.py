@@ -71,41 +71,43 @@ class TestConnection:
             assert await client.client_no_touch(PureToken.OFF)
 
     async def test_client_tracking(self, client, _s, cloner):
-        async with await cloner(client) as clone:
-            async with clone.connection_pool.acquire() as clone_connection:
-                clone_id = clone_connection.client_id
-                assert await client.client_tracking(PureToken.ON, redirect=clone_id, noloop=True)
-                assert clone_id == await client.client_getredir()
-                assert await client.client_tracking(PureToken.OFF)
-                assert -1 == await client.client_getredir()
-                with pytest.raises(ResponseError, match="does not exist"):
-                    clients = await client.client_list()
-                    invalid_client_id = max(c["id"] for c in clients) + 100
-                    await client.client_tracking(PureToken.ON, redirect=invalid_client_id)
-                assert await client.client_tracking(PureToken.ON, bcast=True, redirect=clone_id)
-                assert await client.client_tracking(PureToken.OFF)
+        async with (
+            await cloner(client) as clone,
+            clone.connection_pool.acquire() as clone_connection,
+        ):
+            clone_id = clone_connection.client_id
+            assert await client.client_tracking(PureToken.ON, redirect=clone_id, noloop=True)
+            assert clone_id == await client.client_getredir()
+            assert await client.client_tracking(PureToken.OFF)
+            assert -1 == await client.client_getredir()
+            with pytest.raises(ResponseError, match="does not exist"):
+                clients = await client.client_list()
+                invalid_client_id = max(c["id"] for c in clients) + 100
+                await client.client_tracking(PureToken.ON, redirect=invalid_client_id)
+            assert await client.client_tracking(PureToken.ON, bcast=True, redirect=clone_id)
+            assert await client.client_tracking(PureToken.OFF)
+            assert await client.client_tracking(
+                PureToken.ON, "fu:", "bar:", bcast=True, redirect=clone_id
+            )
+            assert await client.client_tracking(PureToken.OFF)
+            with pytest.raises(ResponseError, match="'fu' overlaps"):
                 assert await client.client_tracking(
-                    PureToken.ON, "fu:", "bar:", bcast=True, redirect=clone_id
+                    PureToken.ON, "fu", "fuu", bcast=True, redirect=clone_id
                 )
-                assert await client.client_tracking(PureToken.OFF)
-                with pytest.raises(ResponseError, match="'fu' overlaps"):
-                    assert await client.client_tracking(
-                        PureToken.ON, "fu", "fuu", bcast=True, redirect=clone_id
-                    )
-                assert await client.client_tracking(PureToken.ON, optin=True, redirect=clone_id)
-                with pytest.raises(ResponseError, match="in OPTOUT mode"):
-                    await client.client_caching(PureToken.NO)
-                assert await client.client_tracking(PureToken.ON, optin=True, redirect=clone_id)
-                assert await client.client_caching(PureToken.YES)
+            assert await client.client_tracking(PureToken.ON, optin=True, redirect=clone_id)
+            with pytest.raises(ResponseError, match="in OPTOUT mode"):
+                await client.client_caching(PureToken.NO)
+            assert await client.client_tracking(PureToken.ON, optin=True, redirect=clone_id)
+            assert await client.client_caching(PureToken.YES)
 
-                with pytest.raises(ResponseError, match="You can't switch"):
-                    await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
-                assert await client.client_tracking(PureToken.OFF)
-                assert await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
-                with pytest.raises(ResponseError, match="in OPTIN mode"):
-                    await client.client_caching(PureToken.YES)
-                assert await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
-                assert await client.client_caching(PureToken.NO)
+            with pytest.raises(ResponseError, match="You can't switch"):
+                await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
+            assert await client.client_tracking(PureToken.OFF)
+            assert await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
+            with pytest.raises(ResponseError, match="in OPTIN mode"):
+                await client.client_caching(PureToken.YES)
+            assert await client.client_tracking(PureToken.ON, optout=True, redirect=clone_id)
+            assert await client.client_caching(PureToken.NO)
 
     async def test_client_getredir(self, client, _s, cloner):
         assert await client.client_getredir() == -1
