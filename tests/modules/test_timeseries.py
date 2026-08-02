@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import anyio
 import pytest
@@ -710,7 +710,7 @@ class TestTimeseries:
         await client.timeseries.createrule(
             "ts1{a}", "ts1{a}-avg", PureToken.AVG, timedelta(seconds=60)
         )
-        ref = datetime.fromtimestamp(0)
+        ref = datetime.fromtimestamp(0, tz=timezone.utc)
 
         for i in range(140):
             await client.timeseries.add("ts1{a}", ref + timedelta(seconds=i), i)

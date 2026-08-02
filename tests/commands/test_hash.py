@@ -198,7 +198,7 @@ class TestHash:
 
     @pytest.mark.min_server_version("8.0.0")
     async def test_hgetex(self, client, _s):
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.timezone.utc)
         await client.hset("a", {"1": 1, "2": 2, "3": 3})
         assert (_s("1"),) == await client.hgetex("a", ["1"], ex=10)
         assert 0 < (await client.httl("a", ["1"]))[0] <= 10
@@ -269,7 +269,7 @@ class TestHash:
 
     @pytest.mark.min_server_version("8.0.0")
     async def test_hsetex(self, client, _s):
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.timezone.utc)
         assert await client.hsetex("a", {"1": 1}, condition=PureToken.FNX, keepttl=True)
         assert not await client.hsetex("a", {"1": 1}, condition=PureToken.FNX, keepttl=True)
         assert await client.hsetex("a", {"1": 1}, condition=PureToken.FXX, keepttl=True)

@@ -456,10 +456,12 @@ class TestGeneric:
             await client.expiretime("c")
         with pytest.raises(DataError):
             await client.expiretime("b")
-        set_time = datetime.datetime(now.year + 1, now.month, 1, 0, 0, 1, 1000)
+        set_time = datetime.datetime(
+            now.year + 1, now.month, 1, 0, 0, 1, 1000, tzinfo=datetime.timezone.utc
+        )
         await client.pexpireat("a", set_time)
         expire_time = await client.expiretime("a")
-        assert set_time.replace(microsecond=0) == expire_time
+        assert set_time.replace(microsecond=0) == expire_time.astimezone(datetime.timezone.utc)
 
     async def test_keys(self, client, _s):
         assert await client.keys() == set()
@@ -522,10 +524,12 @@ class TestGeneric:
             await client.expiretime("c")
         with pytest.raises(DataError):
             await client.expiretime("b")
-        set_time = datetime.datetime(now.year + 1, now.month, 1, 0, 0, 1, 1000)
+        set_time = datetime.datetime(
+            now.year + 1, now.month, 1, 0, 0, 1, 1000, tzinfo=datetime.timezone.utc
+        )
         await client.pexpireat("a", set_time)
         expire_time = await client.pexpiretime("a")
-        assert set_time == expire_time
+        assert set_time == expire_time.astimezone(datetime.timezone.utc)
 
     async def test_randomkey(self, client, _s):
         assert await client.randomkey() is None
