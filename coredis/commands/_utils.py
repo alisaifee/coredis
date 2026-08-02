@@ -47,8 +47,10 @@ def check_version(
     function_name: str,
     command_details: CommandDetails,
     deprecation_reason: str | None = None,
-    kwargs: dict[str, Any] = {},
+    kwargs: dict[str, Any] = None,
 ) -> None:
+    if kwargs is None:
+        kwargs = {}
     if Config.optimized or not any(
         [
             command_details.version_introduced,

@@ -981,7 +981,9 @@ def _s(client):
 
 @pytest.fixture
 def cloner():
-    async def _cloner(client, connection_kwargs={}, **kwargs):
+    async def _cloner(client, connection_kwargs=None, **kwargs):
+        if connection_kwargs is None:
+            connection_kwargs = {}
         cache = kwargs.pop("cache", None)
         pool = kwargs.pop("connection_pool", None)
         if isinstance(client, coredis.client.Redis):

@@ -287,9 +287,11 @@ class SimpleStringCallback(ResponseCallback[StringT | None, bool]):
         self,
         raise_on_error: type[Exception] | None = None,
         prefix_match: bool = False,
-        ok_values: set[str] = {"OK"},
+        ok_values: set[str] = None,
         **options: Any,
     ):
+        if ok_values is None:
+            ok_values = {"OK"}
         self.raise_on_error = raise_on_error
         self.prefix_match = prefix_match
         self.ok_values = {b(v) for v in ok_values}
