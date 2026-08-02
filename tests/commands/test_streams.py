@@ -284,6 +284,8 @@ class TestStreams:
         assert entries[_s("test_stream")][0] == (
             _s("3-0"),
             {_s("k1"): _s("v1"), _s("k2"): _s("1")},
+            None,
+            None,
         )
 
     async def test_xgroup_createconsumer(self, client, _s):
@@ -501,10 +503,14 @@ class TestStreams:
         assert xinfo["first-entry"] == (
             _s("1-0"),
             {_s("k1"): _s("v1"), _s("k2"): _s("1")},
+            None,
+            None,
         )
         assert xinfo["last-entry"] == (
             _s("1-0"),
             {_s("k1"): _s("v1"), _s("k2"): _s("1")},
+            None,
+            None,
         )
         assert await client.xadd(
             "test_stream", field_values={"k1": "v2", "k2": "2"}, identifier="1-1"
@@ -514,10 +520,14 @@ class TestStreams:
         assert xinfo["first-entry"] == (
             _s("1-0"),
             {_s("k1"): _s("v1"), _s("k2"): _s("1")},
+            None,
+            None,
         )
         assert xinfo["last-entry"] == (
             _s("1-1"),
             {_s("k1"): _s("v2"), _s("k2"): _s("2")},
+            None,
+            None,
         )
 
     async def test_xinfo_stream_full(self, client, _s):
