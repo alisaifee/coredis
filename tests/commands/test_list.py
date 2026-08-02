@@ -295,7 +295,7 @@ class TestList:
             await client.rpush(key, value)
 
         # check that KEYS returns all the keys as they are
-        assert sorted(await client.keys("*")) == [_s(k) for k in sorted(list(iter(mapping.keys())))]
+        assert sorted(await client.keys("*")) == [_s(k) for k in sorted(iter(mapping.keys()))]
 
         # check that it is possible to get list content by key name
 
