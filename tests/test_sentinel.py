@@ -223,7 +223,7 @@ class TestSentinelCommand:
 
     async def test_sentinel_replicas(self, client):
         assert not any(
-            [k["is_master"] for k in (await client.sentinels[0].sentinel_replicas("mymaster"))]
+            k["is_master"] for k in (await client.sentinels[0].sentinel_replicas("mymaster"))
         )
 
     async def test_no_replicas(self, client: Sentinel, mocker):
