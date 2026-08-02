@@ -764,7 +764,7 @@ class TestAggregation:
             verbatim=True,
             timeout=timedelta(seconds=1),
         )
-        assert {k[_s("name")] for k in results.results} == {_s(c) for c in city_index.keys()}
+        assert {k[_s("name")] for k in results.results} == {_s(c) for c in city_index}
 
     async def test_aggregation_dialect_3_hash(self, client: Redis, city_index, _s):
         results = await client.search.aggregate(
