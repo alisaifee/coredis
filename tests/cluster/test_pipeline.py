@@ -30,7 +30,7 @@ class TestPipeline:
             ):
                 await a
             with pytest.raises(RuntimeError, match="Pipeline results are not available"):
-                pipe.results
+                _ = pipe.results
 
     async def test_empty_pipeline(self, client):
         async with client.pipeline():
