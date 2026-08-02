@@ -190,9 +190,9 @@ class TestScripting:
         def default_get(key: KeyT, default: RedisValueT) -> CommandRequest[RedisValueT]: ...
 
         await client.set("key", "redis")
-        await default_get("key", "coredis") == "redis"
+        assert await default_get("key", "coredis") == "redis"
         await client.delete(["key"])
-        await default_get("key", "coredis") == "coredis"
+        assert await default_get("key", "coredis") == "coredis"
 
     async def test_wraps_function_with_callback(self, client):
         script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
@@ -201,9 +201,9 @@ class TestScripting:
         def int_get(key: KeyT, default: RedisValueT) -> CommandRequest[int]: ...
 
         await client.set("key", 1)
-        await int_get("key", 2) == 1
+        assert await int_get("key", 2) == 1
         await client.delete(["key"])
-        await int_get("key", 2) == 2
+        assert await int_get("key", 2) == 2
 
     async def test_wraps_function_key_value_type_checking(self, client):
         script = client.register_script("return redis.call('GET', KEYS[1]) or ARGV[1]")
@@ -233,9 +233,9 @@ class TestScripting:
             ) -> CommandRequest[str]: ...
 
         await client.set("key", "redis")
-        await Wrapper.default_get(client, "key", "coredis") == "redis"
+        assert await Wrapper.default_get(client, "key", "coredis") == "redis"
         await client.delete(["key"])
-        await Wrapper.default_get(client, "key", "coredis") == "coredis"
-        await Wrapper.default_get(client, "key") == "coredis"
+        assert await Wrapper.default_get(client, "key", "coredis") == "coredis"
+        assert await Wrapper.default_get(client, "key") == "coredis"
         with pytest.raises(BeartypeCallHintParamViolation):
-            await Wrapper.default_get(client, "key", 1) == "coredis"
+            await Wrapper.default_get(client, "key", 1)

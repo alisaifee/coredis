@@ -63,7 +63,7 @@ class TestCluster:
             with pytest.raises(MovedError):
                 await node_client.get("fubar")
             await node_client.readonly()
-            await node_client.get("fubar") == _s(1)
+            assert await node_client.get("fubar") == _s(1)
             await node_client.readwrite()
             with pytest.raises(MovedError):
                 await node_client.get("fubar")

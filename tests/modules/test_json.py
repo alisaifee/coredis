@@ -247,7 +247,7 @@ class TestJson:
         assert await client.json.get("doc2", "$..a") == [4, 6, [None]]
 
         # Test mget with single path
-        await client.json.mget(["doc1"], "$..a") == [1, 3, None]
+        assert await client.json.mget(["doc1"], "$..a") == [1, 3, None]
         # Test mget with multi path
         res = await client.json.mget(["doc1", "doc2"], "$..a")
         assert res == [[1, 3, None], [4, 6, [None]]]
@@ -284,18 +284,18 @@ class TestJson:
             {"a": "foo", "nested1": {"a": "hello"}, "nested2": {"a": 31}},
         )
         # Test multi
-        await client.json.strappend("doc1", "bar", "$..a") == [6, 8, None]
+        assert await client.json.strappend("doc1", "bar", "$..a") == [6, 8, None]
 
-        await client.json.get("doc1", LEGACY_ROOT_PATH) == {
+        assert await client.json.get("doc1", LEGACY_ROOT_PATH) == {
             "a": "foobar",
             "nested1": {"a": "hellobar"},
             "nested2": {"a": 31},
         }
 
         # Test single
-        await client.json.strappend("doc1", "baz", "$.nested1.a") == [11]
+        assert await client.json.strappend("doc1", "baz", "$.nested1.a") == [11]
 
-        await client.json.get("doc1", LEGACY_ROOT_PATH) == {
+        assert await client.json.get("doc1", LEGACY_ROOT_PATH) == {
             "a": "foobar",
             "nested1": {"a": "hellobarbaz"},
             "nested2": {"a": 31},
@@ -306,8 +306,8 @@ class TestJson:
             await client.json.strappend("non_existing_doc", "$..a", "err")
 
         # Test multi
-        await client.json.strappend("doc1", "bar", ".*.a") == 8
-        await client.json.get("doc1", LEGACY_ROOT_PATH) == {
+        assert await client.json.strappend("doc1", "bar", ".*.a") == 8
+        assert await client.json.get("doc1", LEGACY_ROOT_PATH) == {
             "a": "foo",
             "nested1": {"a": "hellobar"},
             "nested2": {"a": 31},
@@ -331,8 +331,8 @@ class TestJson:
         assert res1 == res2
 
         # Test single
-        await client.json.strlen("doc1", "$.nested1.a") == [8]
-        await client.json.strlen("doc1", "$.nested2.a") == [None]
+        assert await client.json.strlen("doc1", "$.nested1.a") == [8]
+        assert await client.json.strlen("doc1", "$.nested2.a") == [None]
 
         # Test missing key
         with pytest.raises(ResponseError):
@@ -353,7 +353,7 @@ class TestJson:
             },
         )
         # Test multi
-        await client.json.arrappend("doc1", ["bar", "racuda"], "$..a") == [3, 5, None]
+        assert await client.json.arrappend("doc1", ["bar", "racuda"], "$..a") == [3, 5, None]
         assert await client.json.get("doc1", LEGACY_ROOT_PATH) == {
             "a": ["foo", "bar", "racuda"],
             "nested1": {"a": ["hello", None, "world", "bar", "racuda"]},
@@ -556,7 +556,7 @@ class TestJson:
             },
         )
         # Test multi (all paths are updated, but return result of last path)
-        await client.json.arrpop("doc1", "..a", 1) is None
+        assert await client.json.arrpop("doc1", "..a", 1) is None
         assert await client.json.get("doc1", LEGACY_ROOT_PATH) == {
             "a": [],
             "nested1": {"a": ["hello", "world"]},

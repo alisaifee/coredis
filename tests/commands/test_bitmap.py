@@ -106,9 +106,9 @@ class TestBitmap:
         key = "key:bitpos:wrong:args"
         await client.set(key, b"\xff\xf0\x00")
         with pytest.raises(RedisError):
-            await client.bitpos(key, 0, end=1) == 12
+            await client.bitpos(key, 0, end=1)
         with pytest.raises(RedisError):
-            await client.bitpos(key, 7) == 12
+            await client.bitpos(key, 7)
 
     async def test_bitfield_set(self, client, _s):
         key = "key:bitfield:set"
