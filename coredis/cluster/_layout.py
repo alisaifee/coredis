@@ -108,7 +108,7 @@ class ClusterLayout:
         if primary and primary_node:
             return primary_node
         elif replica_nodes:
-            return list(sorted(replica_nodes, key=lambda v: v.priority))[-1]
+            return sorted(replica_nodes, key=lambda v: v.priority)[-1]
         # Last resort, if there is no replica, return the primary
         elif primary_node:
             return primary_node

@@ -102,4 +102,4 @@ def check_version(
 
 
 def redis_command_link(command: CommandName) -> str:
-    return f"`{str(command)} <https://redis.io/commands/{str(command).lower().replace(' ', '-')}>`_"
+    return f"`{command!s} <https://redis.io/commands/{str(command).lower().replace(' ', '-')}>`_"

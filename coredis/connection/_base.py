@@ -71,8 +71,6 @@ class Location(ABC):
     Abstract location
     """
 
-    ...
-
     @abstractmethod
     async def check(self) -> bool:
         """
@@ -559,7 +557,7 @@ class BaseConnection(TelemetryAttributeProvider):
                 raise ConnectionError("Unable to toggle client tracking")
             self.tracking_client_id = client_id
             return True
-        except UnknownCommandError:  # noqa
+        except UnknownCommandError:
             raise
         except Exception:  # noqa
             return False

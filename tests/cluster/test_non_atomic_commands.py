@@ -11,8 +11,8 @@ pytestmarks = pytest.mark.asyncio
 @pytest.fixture
 async def existing_keys(client):
     keys = []
-    for k in {"a", "b", "c"}:
-        for shard in {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"}:
+    for k in ("a", "b", "c"):
+        for shard in ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"):
             keys.append(f"{k}{{{shard}}}")
             await client.set(f"{k}{{{shard}}}", 1)
     return tuple(keys)
@@ -21,8 +21,8 @@ async def existing_keys(client):
 @pytest.fixture
 async def missing_keys(client):
     keys = []
-    for k in {"d", "e", "f"}:
-        for shard in {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"}:
+    for k in ("d", "e", "f"):
+        for shard in ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"):
             keys.append(f"{k}{{{shard}}}")
     return tuple(keys)
 

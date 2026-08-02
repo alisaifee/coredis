@@ -46,9 +46,9 @@ class CommandMixin(Generic[AnyStr], ABC):
 
 
 __all__ = [
+    "BitFieldOperation",
     "CommandRequest",
     "CommandResponseT",
-    "BitFieldOperation",
     "Function",
     "Library",
     "Predicate",

@@ -94,15 +94,15 @@ class ModuleMixin(CommandMixin[AnyStr]):
 
 
 __all__ = [
+    "BloomFilter",
+    "CountMinSketch",
+    "CuckooFilter",
+    "Json",
     "RediSearch",
     "RedisBloom",
     "RedisJSON",
     "RedisTimeSeries",
-    "Json",
-    "BloomFilter",
-    "CuckooFilter",
-    "CountMinSketch",
-    "TopK",
     "TDigest",
     "TimeSeries",
+    "TopK",
 ]

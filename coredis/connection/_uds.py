@@ -53,8 +53,6 @@ class UnixDomainSocketConnection(BaseConnection):
     def telemetry_attributes(self, provider: TelemetryProvider) -> dict[str, str | int]:
         return {
             **super().telemetry_attributes(provider),
-            **{
-                "network.peer.hostname": self.location.path,
-                "server.address": self.location.path,
-            },
+            "network.peer.hostname": self.location.path,
+            "server.address": self.location.path,
         }

@@ -270,6 +270,5 @@ class TestSentinelCommand:
             with primary.ensure_replication(1):
                 await primary.set("fubar", 1)
 
-            with pytest.raises(ReplicationError):
-                with primary.ensure_replication(2):
-                    await primary.set("fubar", 1)
+            with pytest.raises(ReplicationError), primary.ensure_replication(2):
+                await primary.set("fubar", 1)

@@ -27,7 +27,6 @@ class AbstractCredentialProvider(ABC):
         Returns an instance of :class:`coredis.credentials.UserPass` for
         establishing a connection to the redis server.
         """
-        pass
 
 
 class UserPassCredentialProvider(AbstractCredentialProvider):

@@ -290,7 +290,7 @@ class Pipeline(Client[AnyStr]):
                 self._connection = None
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}<{repr(self._connection)}>"
+        return f"{type(self).__name__}<{self._connection!r}>"
 
     def create_request(
         self,
@@ -489,7 +489,9 @@ class Pipeline(Client[AnyStr]):
         if exception:
             cmd = command.decode("latin-1")
             args = " ".join(map(str, args))
-            msg = f"Command # {number} ({cmd} {args}) of pipeline caused error: {str(exception.args[0])}"
+            msg = (
+                f"Command # {number} ({cmd} {args}) of pipeline caused error: {exception.args[0]!s}"
+            )
             exception.args = (msg,) + exception.args[1:]
 
     async def _load_scripts(self) -> None:

@@ -292,7 +292,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     async def get_message(
         self,
         ignore_subscribe_messages: bool = False,
-        timeout: int | float | None = None,
+        timeout: float | None = None,
     ) -> PubSubMessage | None:
         """
         Gets the next message if one is available, otherwise None.
@@ -400,7 +400,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                     data=cast(StringT, response[2]),
                 )
         else:
-            raise PubSubError(f"Unknown message type {message_type_str}")  # noqa
+            raise PubSubError(f"Unknown message type {message_type_str}")
 
         # if this is an unsubscribe message, remove it from memory
         if message_type in UNSUBSCRIBE_MESSAGE_TYPES:

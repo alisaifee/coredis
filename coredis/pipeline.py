@@ -9,4 +9,4 @@ warnings.warn(
     DeprecationWarning,
     stacklevel=2,
 )
-__all__ = ["Pipeline", "ClusterPipeline"]
+__all__ = ["ClusterPipeline", "Pipeline"]

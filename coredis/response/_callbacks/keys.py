@@ -38,7 +38,7 @@ class ScanCallback(ResponseCallback[list[StringT | list[StringT]], tuple[int, tu
 class ExpiryCallback(DateTimeCallback):
     def transform(
         self,
-        response: int | float,
+        response: float,
     ) -> datetime:
         if response > 0:
             return super().transform(response)

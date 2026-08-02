@@ -28,7 +28,7 @@ class Autocomplete(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         string: StringT,
-        score: int | float,
+        score: float,
         increment_score: bool | None = None,
         payload: StringT | None = None,
     ) -> CommandRequest[int]:

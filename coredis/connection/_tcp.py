@@ -78,10 +78,8 @@ class TCPConnection(BaseConnection):
     def telemetry_attributes(self, provider: TelemetryProvider) -> dict[str, str | int]:
         return {
             **super().telemetry_attributes(provider),
-            **{
-                "network.peer.hostname": self.location.host,
-                "network.peer.port": self.location.port,
-                "server.address": self.location.host,
-                "server.port": self.location.port,
-            },
+            "network.peer.hostname": self.location.host,
+            "network.peer.port": self.location.port,
+            "server.address": self.location.host,
+            "server.port": self.location.port,
         }

@@ -655,7 +655,7 @@ class TestJson:
         await client.json.set("obj", LEGACY_ROOT_PATH, obj)
         keys = await client.json.objkeys("obj", LEGACY_ROOT_PATH)
         keys.sort()
-        exp = [_s(k) for k in obj.keys()]
+        exp = [_s(k) for k in obj]
         exp.sort()
         assert exp == keys
 
@@ -701,7 +701,6 @@ class TestJson:
         await client.json.set("obj", LEGACY_ROOT_PATH, obj)
         assert len(obj) == await client.json.objlen("obj", LEGACY_ROOT_PATH)
 
-        #
         await client.json.set(
             "doc1",
             LEGACY_ROOT_PATH,

@@ -141,7 +141,7 @@ class BaseConnectionPool(TelemetryAttributeProvider, Generic[ConnectionT]):
                 self._counter += 1
             return self
 
-    async def __aexit__(self, *args: Any) -> None:
+    async def __aexit__(self, *args: object) -> None:
         self._counter -= 1
         if self._counter == 0:
             assert self._task_group

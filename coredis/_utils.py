@@ -439,7 +439,7 @@ def hash_slot(key: bytes) -> int:
 
 
 __all__ = [
+    "EncodingInsensitiveDict",
     "hash_slot",
     "logger",
-    "EncodingInsensitiveDict",
 ]

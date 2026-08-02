@@ -217,7 +217,7 @@ class CommandRequest(Awaitable[CommandResponseT]):
             execution_parameters=(
                 self.execution_parameters
                 if decode_response is None
-                else {**self.execution_parameters, **{"decode": decode_response}}
+                else {**self.execution_parameters, "decode": decode_response}
             ),
             resolver=self.resolver,
             type_adapter=self.type_adapter,

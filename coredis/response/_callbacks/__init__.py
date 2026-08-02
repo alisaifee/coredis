@@ -43,7 +43,7 @@ class ResponseCallback(ABC, Generic[RESP3, R]):
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        setattr(cls, "transform", add_runtime_checks(getattr(cls, "transform")))
+        cls.transform = add_runtime_checks(cls.transform)
 
     def __call__(
         self,
@@ -64,7 +64,7 @@ class NoopCallback(ResponseCallback[R, R]):
 class ClusterMultiNodeCallback(ABC, Generic[R]):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        setattr(cls, "combine", add_runtime_checks(getattr(cls, "combine")))
+        cls.combine = add_runtime_checks(cls.combine)
 
     def __call__(
         self,
@@ -326,7 +326,7 @@ class AnyStrCallback(ResponseCallback[StringT, AnyStr]):
 
 
 class FloatCallback(ResponseCallback[StringT | int | float, float]):
-    def transform(self, response: StringT | int | float, **options: Any) -> float:
+    def transform(self, response: StringT | float, **options: Any) -> float:
         if isinstance(response, float):
             return response
         if isinstance(response, (int, bytes, str)):
@@ -387,7 +387,7 @@ class ListCallback(ResponseCallback[list[ResponseType], list[R]]):
 class DateTimeCallback(ResponseCallback[int | float, datetime.datetime]):
     def transform(
         self,
-        response: int | float,
+        response: float,
     ) -> datetime.datetime:
         ts = float(response) if not isinstance(response, float) else response
         if self.options.get("unit") == "milliseconds":
@@ -468,7 +468,7 @@ class OptionalFloatCallback(
 ):
     def transform(
         self,
-        response: StringT | int | float | None,
+        response: StringT | float | None,
         **options: Any,
     ) -> float | None:
         if response is None:

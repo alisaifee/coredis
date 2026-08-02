@@ -51,9 +51,8 @@ class TestACL:
     @pytest.mark.novalkey
     @pytest.mark.nocluster
     async def test_acl_log(self, client, _s):
-        with pytest.warns(UserWarning):
-            with pytest.raises(AuthenticationError):
-                await client.auth("wrong", "wrong")
+        with pytest.warns(UserWarning), pytest.raises(AuthenticationError):
+            await client.auth("wrong", "wrong")
         log = await client.acl_log()
         assert len(log) == 1
         log = await client.acl_log(count=0)

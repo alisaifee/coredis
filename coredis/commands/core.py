@@ -379,7 +379,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         return self.create_request(CommandName.INCRBY, Key(key), increment, callback=IntCallback())
 
     @redis_command(CommandName.INCRBYFLOAT, group=CommandGroup.STRING, flags={CommandFlag.FAST})
-    def incrbyfloat(self, key: KeyT, increment: int | float) -> CommandRequest[float]:
+    def incrbyfloat(self, key: KeyT, increment: float) -> CommandRequest[float]:
         """
         Increment the float value of a key by the given amount.
 
@@ -399,8 +399,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         *,
         increment: int | None = ...,
         saturate: bool = ...,
-        lowerbound: int | float | None = ...,
-        upperbound: int | float | None = ...,
+        lowerbound: float | None = ...,
+        upperbound: float | None = ...,
         ex: int | datetime.timedelta | None = ...,
         px: int | datetime.timedelta | None = ...,
         exat: int | datetime.datetime | None = ...,
@@ -416,8 +416,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         *,
         increment: float = ...,
         saturate: bool = ...,
-        lowerbound: int | float | None = ...,
-        upperbound: int | float | None = ...,
+        lowerbound: float | None = ...,
+        upperbound: float | None = ...,
         ex: int | datetime.timedelta | None = ...,
         px: int | datetime.timedelta | None = ...,
         exat: int | datetime.datetime | None = ...,
@@ -438,10 +438,10 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         key: KeyT,
         *,
-        increment: int | float | None = None,
+        increment: float | None = None,
         saturate: bool = False,
-        lowerbound: int | float | None = None,
-        upperbound: int | float | None = None,
+        lowerbound: float | None = None,
+        upperbound: float | None = None,
         ex: int | datetime.timedelta | None = None,
         px: int | datetime.timedelta | None = None,
         exat: int | datetime.datetime | None = None,
@@ -1803,9 +1803,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     def georadius(
         self,
         key: KeyT,
-        longitude: int | float,
-        latitude: int | float,
-        radius: int | float,
+        longitude: float,
+        latitude: float,
+        radius: float,
         unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
     ) -> CommandRequest[tuple[AnyStr, ...]]: ...
 
@@ -1813,9 +1813,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     def georadius(
         self,
         key: KeyT,
-        longitude: int | float,
-        latitude: int | float,
-        radius: int | float,
+        longitude: float,
+        latitude: float,
+        radius: float,
         unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         withcoord: Literal[True],
@@ -1827,9 +1827,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     def georadius(
         self,
         key: KeyT,
-        longitude: int | float,
-        latitude: int | float,
-        radius: int | float,
+        longitude: float,
+        latitude: float,
+        radius: float,
         unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         withcoord: bool | None = ...,
@@ -1841,9 +1841,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     def georadius(
         self,
         key: KeyT,
-        longitude: int | float,
-        latitude: int | float,
-        radius: int | float,
+        longitude: float,
+        latitude: float,
+        radius: float,
         unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         withcoord: bool | None = ...,
@@ -1855,9 +1855,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     def georadius(
         self,
         key: KeyT,
-        longitude: int | float,
-        latitude: int | float,
-        radius: int | float,
+        longitude: float,
+        latitude: float,
+        radius: float,
         unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         store: KeyT,
@@ -1867,9 +1867,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     def georadius(
         self,
         key: KeyT,
-        longitude: int | float,
-        latitude: int | float,
-        radius: int | float,
+        longitude: float,
+        latitude: float,
+        radius: float,
         unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         withcoord: bool | None = ...,
@@ -1894,9 +1894,9 @@ class CoreCommands(CommandMixin[AnyStr]):
     def georadius(
         self,
         key: KeyT,
-        longitude: int | float,
-        latitude: int | float,
-        radius: int | float,
+        longitude: float,
+        latitude: float,
+        radius: float,
         unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         *,
         withcoord: bool | None = None,
@@ -1963,7 +1963,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         key: KeyT,
         member: ValueT,
-        radius: int | float,
+        radius: float,
         unit: Literal[PureToken.FT, PureToken.KM, PureToken.M, PureToken.MI],
         withcoord: bool | None = None,
         withdist: bool | None = None,
@@ -2090,12 +2090,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         self,
         key: KeyT,
         member: ValueT | None = None,
-        longitude: int | float | None = None,
-        latitude: int | float | None = None,
-        radius: int | float | None = None,
+        longitude: float | None = None,
+        latitude: float | None = None,
+        radius: float | None = None,
         circle_unit: None | (Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]) = None,
-        width: int | float | None = None,
-        height: int | float | None = None,
+        width: float | None = None,
+        height: float | None = None,
         box_unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None = None,
         order: Literal[PureToken.ASC, PureToken.DESC] | None = None,
         count: int | None = None,
@@ -2158,12 +2158,12 @@ class CoreCommands(CommandMixin[AnyStr]):
         destination: KeyT,
         source: KeyT,
         member: ValueT | None = None,
-        longitude: int | float | None = None,
-        latitude: int | float | None = None,
-        radius: int | float | None = None,
+        longitude: float | None = None,
+        latitude: float | None = None,
+        radius: float | None = None,
         circle_unit: None | (Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI]) = None,
-        width: int | float | None = None,
-        height: int | float | None = None,
+        width: float | None = None,
+        height: float | None = None,
         box_unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None = None,
         order: Literal[PureToken.ASC, PureToken.DESC] | None = None,
         count: int | None = None,
@@ -2217,11 +2217,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         command: Literal[CommandName.GEOSEARCH],
         *args: Key | ValueT,
         member: ValueT | None = ...,
-        longitude: int | float | None = ...,
-        latitude: int | float | None = ...,
-        radius: int | float | None = ...,
-        width: int | float | None = ...,
-        height: int | float | None = ...,
+        longitude: float | None = ...,
+        latitude: float | None = ...,
+        radius: float | None = ...,
+        width: float | None = ...,
+        height: float | None = ...,
         unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None = ...,
         order: Literal[PureToken.ASC, PureToken.DESC] | None = ...,
         count: int | None = ...,
@@ -2235,11 +2235,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         command: Literal[CommandName.GEOSEARCHSTORE],
         *args: Key | ValueT,
         member: ValueT | None = ...,
-        longitude: int | float | None = ...,
-        latitude: int | float | None = ...,
-        radius: int | float | None = ...,
-        width: int | float | None = ...,
-        height: int | float | None = ...,
+        longitude: float | None = ...,
+        latitude: float | None = ...,
+        radius: float | None = ...,
+        width: float | None = ...,
+        height: float | None = ...,
         unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None = ...,
         order: Literal[PureToken.ASC, PureToken.DESC] | None = ...,
         count: int | None = ...,
@@ -2252,11 +2252,11 @@ class CoreCommands(CommandMixin[AnyStr]):
         command: Literal[CommandName.GEOSEARCH, CommandName.GEOSEARCHSTORE],
         *args: Key | ValueT,
         member: ValueT | None = None,
-        longitude: int | float | None = None,
-        latitude: int | float | None = None,
-        radius: int | float | None = None,
-        width: int | float | None = None,
-        height: int | float | None = None,
+        longitude: float | None = None,
+        latitude: float | None = None,
+        radius: float | None = None,
+        width: float | None = None,
+        height: float | None = None,
         unit: Literal[PureToken.M, PureToken.KM, PureToken.FT, PureToken.MI] | None = None,
         order: Literal[PureToken.ASC, PureToken.DESC] | None = None,
         count: int | None = None,
@@ -2649,9 +2649,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.HINCRBYFLOAT, group=CommandGroup.HASH, flags={CommandFlag.FAST})
-    def hincrbyfloat(
-        self, key: KeyT, field: StringT, increment: int | float
-    ) -> CommandRequest[float]:
+    def hincrbyfloat(self, key: KeyT, field: StringT, increment: float) -> CommandRequest[float]:
         """
         Increment the float value of a hash field by the given amount.
 
@@ -3944,7 +3942,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         destination: KeyT,
         wherefrom: Literal[PureToken.LEFT, PureToken.RIGHT],
         whereto: Literal[PureToken.LEFT, PureToken.RIGHT],
-        timeout: int | float,
+        timeout: float,
     ) -> CommandRequest[AnyStr | None]:
         """
         Pop an element from a list, push it to another list, and return it; block until one is available.
@@ -3978,7 +3976,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     def blmpop(
         self,
         keys: Parameters[KeyT],
-        timeout: int | float,
+        timeout: float,
         where: Literal[PureToken.LEFT, PureToken.RIGHT],
         count: int | None = None,
     ) -> CommandRequest[list[AnyStr | list[AnyStr]] | None]:
@@ -4004,9 +4002,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.BLPOP, group=CommandGroup.LIST, flags={CommandFlag.BLOCKING})
-    def blpop(
-        self, keys: Parameters[KeyT], timeout: int | float
-    ) -> CommandRequest[list[AnyStr] | None]:
+    def blpop(self, keys: Parameters[KeyT], timeout: float) -> CommandRequest[list[AnyStr] | None]:
         """
         Remove and return the first element from the first non-empty list, or block until one is available.
 
@@ -4023,9 +4019,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.BRPOP, group=CommandGroup.LIST, flags={CommandFlag.BLOCKING})
-    def brpop(
-        self, keys: Parameters[KeyT], timeout: int | float
-    ) -> CommandRequest[list[AnyStr] | None]:
+    def brpop(self, keys: Parameters[KeyT], timeout: float) -> CommandRequest[list[AnyStr] | None]:
         """
         Remove and return the last element from the first non-empty list, or block until one is available.
 
@@ -4049,7 +4043,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.BLOCKING},
     )
     def brpoplpush(
-        self, source: KeyT, destination: KeyT, timeout: int | float
+        self, source: KeyT, destination: KeyT, timeout: float
     ) -> CommandRequest[AnyStr | None]:
         """
         Pop from the tail of source, push to the head of destination, and return the element; block until one is available.
@@ -4803,7 +4797,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     def bzmpop(
         self,
         keys: Parameters[KeyT],
-        timeout: int | float,
+        timeout: float,
         where: Literal[PureToken.MAX, PureToken.MIN],
         count: int | None = None,
     ) -> CommandRequest[tuple[AnyStr, tuple[ScoredMember, ...]] | None]:
@@ -4832,7 +4826,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.FAST, CommandFlag.BLOCKING},
     )
     def bzpopmax(
-        self, keys: Parameters[KeyT], timeout: int | float
+        self, keys: Parameters[KeyT], timeout: float
     ) -> CommandRequest[tuple[AnyStr, AnyStr, float] | None]:
         """
         Pop the member with the highest score from the first non-empty sorted set, or block until one is available.
@@ -4853,7 +4847,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         flags={CommandFlag.FAST, CommandFlag.BLOCKING},
     )
     def bzpopmin(
-        self, keys: Parameters[KeyT], timeout: int | float
+        self, keys: Parameters[KeyT], timeout: float
     ) -> CommandRequest[tuple[AnyStr, AnyStr, float] | None]:
         """
         Pop the member with the lowest score from the first non-empty sorted set, or block until one is available.
@@ -5394,8 +5388,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     def zrangebyscore(
         self,
         key: KeyT,
-        min_: int | float,
-        max_: int | float,
+        min_: float,
+        max_: float,
         withscores: bool | None = None,
         offset: int | None = None,
         count: int | None = None,
@@ -5547,9 +5541,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @redis_command(CommandName.ZREMRANGEBYSCORE, group=CommandGroup.SORTED_SET)
-    def zremrangebyscore(
-        self, key: KeyT, min_: int | float, max_: int | float
-    ) -> CommandRequest[int]:
+    def zremrangebyscore(self, key: KeyT, min_: float, max_: float) -> CommandRequest[int]:
         """
         Remove all members in the sorted set with scores between min and max (inclusive).
 
@@ -5649,8 +5641,8 @@ class CoreCommands(CommandMixin[AnyStr]):
     def zrevrangebyscore(
         self,
         key: KeyT,
-        max_: int | float,
-        min_: int | float,
+        max_: float,
+        min_: float,
         withscores: bool | None = None,
         offset: int | None = None,
         count: int | None = None,
@@ -9148,7 +9140,7 @@ class CoreCommands(CommandMixin[AnyStr]):
             ),
         ),
     )
-    def module_load(self, path: StringT, *args: str | bytes | int | float) -> CommandRequest[bool]:
+    def module_load(self, path: StringT, *args: str | bytes | float) -> CommandRequest[bool]:
         """
         Load a module
         """

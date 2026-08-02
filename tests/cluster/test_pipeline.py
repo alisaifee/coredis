@@ -104,10 +104,9 @@ class TestPipeline:
         assert await res == "1"
 
     async def test_pipeline_transaction_with_watch(self, client):
-        async with client.pipeline(transaction=False) as pipe:
-            async with pipe.watch("a{fu}", "b{fu}"):
-                await client.set("d{fu}", 1)
-                res = pipe.set("a{fu}", 2)
+        async with client.pipeline(transaction=False) as pipe, pipe.watch("a{fu}", "b{fu}"):
+            await client.set("d{fu}", 1)
+            res = pipe.set("a{fu}", 2)
         assert await res
 
     async def test_pipeline_transaction_with_watch_inline_fail(self, client):
@@ -126,9 +125,8 @@ class TestPipeline:
                     raise RuntimeError("body error")
         assert client.connection_pool.statistics.in_use_connections == in_use
         # Connection must not still be watched when reused from the pool.
-        async with client.pipeline(transaction=False) as pipe:
-            async with pipe.watch("a{fu}"):
-                pipe.set("a{fu}", "ok")
+        async with client.pipeline(transaction=False) as pipe, pipe.watch("a{fu}"):
+            pipe.set("a{fu}", "ok")
         assert await client.get("a{fu}") == "ok"
 
     async def test_watch_error_releases_connection(self, client):
@@ -274,10 +272,9 @@ class TestPipeline:
         report_errors = mocker.spy(clone.connection_pool.cluster_layout, "report_errors")
         mocker.patch.object(coredis.Redis, "cluster_slots", new=move_slot)
 
-        async with clone:
-            async with clone.pipeline() as pipe:
-                a = pipe.set("a{fu}", 1)
-                b = pipe.get("a{fu}")
+        async with clone, clone.pipeline() as pipe:
+            a = pipe.set("a{fu}", 1)
+            b = pipe.get("a{fu}")
 
         assert (True, _s("1")) == await gather(a, b)
         assert report_errors.call_count == 2

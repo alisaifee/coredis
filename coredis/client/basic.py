@@ -154,7 +154,7 @@ class Client(
             callback=callback,
             execution_parameters={
                 **(execution_parameters or {}),
-                **{"noreply": self.noreply},
+                "noreply": self.noreply,
             },
             resolver=self.execute_command,
             type_adapter=self.type_adapter,

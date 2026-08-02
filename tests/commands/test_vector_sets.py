@@ -142,7 +142,7 @@ class TestVectorSets:
         assert await client.vadd("test", "element", [1, 2, 3], attributes=attributes)
         for i in range(2, 5):
             assert await client.vadd(
-                "test", f"element-{i}", [1, 2, 3], attributes={**attributes, **{"a": i}}
+                "test", f"element-{i}", [1, 2, 3], attributes={**attributes, "a": i}
             )
         assert attributes == await client.vgetattr("test", "element")
         assert await client.vsetattr("test", "element", [1, 2, 3])

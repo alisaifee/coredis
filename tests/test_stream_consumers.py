@@ -113,7 +113,7 @@ class TestStreamConsumers:
             [await client.xadd("a", {"id": i}) for i in range(5, 10)]
             [await client.xadd("b", {"id": i}) for i in range(15, 20)]
             consumed = await consume_entries(consumer, 20)
-            assert list(range(0, 10)) == [
+            assert list(range(10)) == [
                 int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
             ]
             assert list(range(15, 20)) == [
@@ -126,7 +126,7 @@ class TestStreamConsumers:
         consumer = Consumer(client, ["a", "b"], a={"identifier": "0-0"}, b={"identifier": "0-0"})
         async with consumer:
             consumed = await consume_entries(consumer, 10)
-            assert list(range(0, 5)) == [
+            assert list(range(5)) == [
                 int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
             ]
             assert list(range(10, 15)) == [
@@ -134,7 +134,7 @@ class TestStreamConsumers:
             ]
         async with consumer:
             consumed = await consume_entries(consumer, 10)
-            assert list(range(0, 5)) == [
+            assert list(range(5)) == [
                 int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
             ]
             assert list(range(10, 15)) == [
@@ -193,30 +193,32 @@ class TestStreamConsumers:
         await client.xgroup_create("a", "group-a", "$", mkstream=True)
         await client.xgroup_create("b", "group-a", "$", mkstream=True)
 
-        async with GroupConsumer(
-            client, ["a", "b"], "group-a", "consumer-a", auto_create=False
-        ) as consumer:
-            async with GroupConsumer(
+        async with (
+            GroupConsumer(
+                client, ["a", "b"], "group-a", "consumer-a", auto_create=False
+            ) as consumer,
+            GroupConsumer(
                 client, ["a", "b"], "group-b", "consumer-autocreate", auto_create=True
-            ) as consumer_auto_create:
-                [await client.xadd("a", {"id": i}) for i in range(10)]
-                consumed = await consume_entries(consumer, 10)
-                assert list(range(10)) == [
-                    int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
-                ]
+            ) as consumer_auto_create,
+        ):
+            [await client.xadd("a", {"id": i}) for i in range(10)]
+            consumed = await consume_entries(consumer, 10)
+            assert list(range(10)) == [
+                int(entry.field_values[_s("id")]) for entry in consumed[_s("a")]
+            ]
 
-                with pytest.raises(StreamConsumerInitializationError):
-                    await consumer.add_stream("c")
+            with pytest.raises(StreamConsumerInitializationError):
+                await consumer.add_stream("c")
 
-                await client.xgroup_create("c", "group-a", "$", mkstream=True)
-                assert await consumer.add_stream("c")
-                assert await consumer_auto_create.add_stream("c")
+            await client.xgroup_create("c", "group-a", "$", mkstream=True)
+            assert await consumer.add_stream("c")
+            assert await consumer_auto_create.add_stream("c")
 
-                await client.xadd("c", {"id": 11})
-                consumed = await consume_entries(consumer, 1)
-                assert int(consumed[_s("c")][0].field_values[_s("id")]) == 11
-                consumed = await consume_entries(consumer_auto_create, 11)
-                assert int(consumed[_s("c")][-1].field_values[_s("id")]) == 11
+            await client.xadd("c", {"id": 11})
+            consumed = await consume_entries(consumer, 1)
+            assert int(consumed[_s("c")][0].field_values[_s("id")]) == 11
+            consumed = await consume_entries(consumer_auto_create, 11)
+            assert int(consumed[_s("c")][-1].field_values[_s("id")]) == 11
 
     async def test_single_group_consumer_auto_create_group_stream(self, client, _s):
         async with GroupConsumer(
@@ -233,25 +235,25 @@ class TestStreamConsumers:
             ]
 
     async def test_multiple_group_consumer_auto_create_group_stream(self, client, cloner, _s):
-        async with await cloner(client) as client_2:
-            async with (
-                GroupConsumer(
-                    client, ["a", "b"], "group-a", "consumer-1", auto_create=True
-                ) as consumer_1,
-                GroupConsumer(
-                    client_2, ["a", "b"], "group-a", "consumer-2", auto_create=True
-                ) as consumer_2,
-            ):
-                [await client.xadd("a", {"id": i}) for i in range(10)]
-                [await client.xadd("b", {"id": i}) for i in range(10, 20)]
-                consumed = await consume_entries(consumer_1, 20)
-                consumed = await consume_entries(consumer_2, 20, consumed)
-                assert list(range(10)) == sorted(
-                    int(e.field_values[_s("id")]) for e in consumed[_s("a")]
-                )
-                assert list(range(10, 20)) == sorted(
-                    int(e.field_values[_s("id")]) for e in consumed[_s("b")]
-                )
+        async with (
+            await cloner(client) as client_2,
+            GroupConsumer(
+                client, ["a", "b"], "group-a", "consumer-1", auto_create=True
+            ) as consumer_1,
+            GroupConsumer(
+                client_2, ["a", "b"], "group-a", "consumer-2", auto_create=True
+            ) as consumer_2,
+        ):
+            [await client.xadd("a", {"id": i}) for i in range(10)]
+            [await client.xadd("b", {"id": i}) for i in range(10, 20)]
+            consumed = await consume_entries(consumer_1, 20)
+            consumed = await consume_entries(consumer_2, 20, consumed)
+            assert list(range(10)) == sorted(
+                int(e.field_values[_s("id")]) for e in consumed[_s("a")]
+            )
+            assert list(range(10, 20)) == sorted(
+                int(e.field_values[_s("id")]) for e in consumed[_s("b")]
+            )
 
     async def test_group_consumer_start_from_pending_list(self, client, _s):
         async with GroupConsumer(

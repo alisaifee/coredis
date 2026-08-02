@@ -179,18 +179,18 @@ class TestBasicConnectionPoolConstruction:
                 assert isinstance(connection, TCPConnection)
 
     async def test_construction_with_host_port(self, redis_basic_server):
-        async with coredis.ConnectionPool(
-            host=redis_basic_server[0], port=redis_basic_server[1]
-        ) as pool:
-            async with pool.acquire() as connection:
-                assert isinstance(connection, TCPConnection)
+        async with (
+            coredis.ConnectionPool(host=redis_basic_server[0], port=redis_basic_server[1]) as pool,
+            pool.acquire() as connection,
+        ):
+            assert isinstance(connection, TCPConnection)
 
     async def test_construction_with_uds_location(self, redis_uds_server):
-        async with coredis.ConnectionPool(
-            location=UnixDomainSocketLocation(redis_uds_server)
-        ) as pool:
-            async with pool.acquire() as connection:
-                assert isinstance(connection, UnixDomainSocketConnection)
+        async with (
+            coredis.ConnectionPool(location=UnixDomainSocketLocation(redis_uds_server)) as pool,
+            pool.acquire() as connection,
+        ):
+            assert isinstance(connection, UnixDomainSocketConnection)
 
     async def test_failed_cache_initialization(self):
         pool = ConnectionPool(
@@ -235,11 +235,13 @@ class TestClusterPoolParameters:
 
 class TestClusterConnectionPoolConstruction:
     async def test_construction_with_startup_nodes(self, redis_cluster_server):
-        async with coredis.ClusterConnectionPool(
-            startup_nodes=[TCPLocation(*redis_cluster_server)]
-        ) as pool:
-            async with pool.acquire() as connection:
-                assert isinstance(connection, ClusterConnection)
+        async with (
+            coredis.ClusterConnectionPool(
+                startup_nodes=[TCPLocation(*redis_cluster_server)]
+            ) as pool,
+            pool.acquire() as connection,
+        ):
+            assert isinstance(connection, ClusterConnection)
 
     async def test_failed_initialization(self):
         pool = ClusterConnectionPool(

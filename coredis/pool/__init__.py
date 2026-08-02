@@ -8,9 +8,9 @@ from ._sentinel import SentinelConnectionPool
 __all__ = [
     "BaseConnectionPool",
     "BaseConnectionPoolParams",
-    "ConnectionPool",
-    "ConnectionPoolParams",
     "ClusterConnectionPool",
     "ClusterConnectionPoolParams",
+    "ConnectionPool",
+    "ConnectionPoolParams",
     "SentinelConnectionPool",
 ]

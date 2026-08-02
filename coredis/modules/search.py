@@ -347,7 +347,7 @@ class Search(ModuleGroup[AnyStr]):
         filter_expression: StringT | None = None,
         language: StringT | None = None,
         language_field: StringT | None = None,
-        score: int | float | None = None,
+        score: float | None = None,
         score_field: StringT | None = None,
         payload_field: StringT | None = None,
         maxtextfields: bool | None = None,
@@ -993,9 +993,9 @@ class Search(ModuleGroup[AnyStr]):
             command_arguments.append(PureToken.INORDER)
         if language:
             command_arguments.extend([PrefixToken.LANGUAGE, language])
-        if expander:  # noqa
+        if expander:
             command_arguments.extend([PrefixToken.EXPANDER, expander])
-        if scorer:  # noqa
+        if scorer:
             command_arguments.extend([PrefixToken.SCORER, scorer])
         if explainscore:
             command_arguments.append(PureToken.EXPLAINSCORE)

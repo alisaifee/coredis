@@ -57,7 +57,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
     def reserve(
         self,
         key: KeyT,
-        error_rate: int | float,
+        error_rate: float,
         capacity: int,
         expansion: int | None = None,
         nonscaling: bool | None = None,
@@ -130,7 +130,7 @@ class BloomFilter(ModuleGroup[AnyStr]):
         key: KeyT,
         items: Parameters[ValueT],
         capacity: int | None = None,
-        error: int | float | None = None,
+        error: float | None = None,
         expansion: int | None = None,
         nocreate: bool | None = None,
         nonscaling: bool | None = None,
@@ -644,9 +644,7 @@ class CountMinSketch(ModuleGroup[AnyStr]):
         version_introduced="2.0.0",
         module=MODULE,
     )
-    def initbyprob(
-        self, key: KeyT, error: int | float, probability: int | float
-    ) -> CommandRequest[bool]:
+    def initbyprob(self, key: KeyT, error: float, probability: float) -> CommandRequest[bool]:
         """
         Initializes a Count-Min Sketch to accommodate requested tolerances.
 
@@ -780,7 +778,7 @@ class TopK(ModuleGroup[AnyStr]):
         topk: int,
         width: int | None = None,
         depth: int | None = None,
-        decay: int | float | None = None,
+        decay: float | None = None,
     ) -> CommandRequest[bool]:
         """
         Reserve a TopK sketch with specified parameters.
@@ -1167,8 +1165,8 @@ class TDigest(ModuleGroup[AnyStr]):
     def trimmed_mean(
         self,
         key: KeyT,
-        low_cut_quantile: int | float,
-        high_cut_quantile: int | float,
+        low_cut_quantile: float,
+        high_cut_quantile: float,
     ) -> CommandRequest[float]:
         """
         Returns an estimation of the mean value from the sketch,

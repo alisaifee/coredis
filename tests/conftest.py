@@ -6,8 +6,9 @@ import os
 import platform
 import socket
 import time
+from collections.abc import Generator
 from functools import total_ordering
-from typing import Any, Generator
+from typing import Any
 
 import pytest
 import redis
@@ -1044,13 +1045,13 @@ def pytest_collection_modifyitems(items):
                     if token in item.config.getini("markers"):
                         item.add_marker(getattr(pytest.mark, token))
             elif client_name.startswith("dragonfly"):
-                item.add_marker(getattr(pytest.mark, "dragonfly"))
+                item.add_marker(pytest.mark.dragonfly)
                 tokens = client_name.replace("dragonfly_", "").split("_")
 
                 for token in tokens:
                     item.add_marker(getattr(pytest.mark, token))
             elif client_name.startswith("valkey"):
-                item.add_marker(getattr(pytest.mark, "valkey"))
+                item.add_marker(pytest.mark.valkey)
                 tokens = client_name.replace("valkey_", "").split("_")
 
                 for token in tokens:

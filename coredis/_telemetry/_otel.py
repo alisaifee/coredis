@@ -221,11 +221,11 @@ class OpenTelemetryProvider(TelemetryProvider):
             _default_attributes = self._default_attributes((), pool)
             yield Observation(
                 pool.statistics.in_use_connections,
-                {**_default_attributes, **{DB_CLIENT_CONNECTION_STATE: "used"}},
+                {**_default_attributes, DB_CLIENT_CONNECTION_STATE: "used"},
             )
             yield Observation(
                 pool.statistics.active_connections - pool.statistics.in_use_connections,
-                {**_default_attributes, **{DB_CLIENT_CONNECTION_STATE: "idle"}},
+                {**_default_attributes, DB_CLIENT_CONNECTION_STATE: "idle"},
             )
 
     def _connection_max_callback(self, _: CallbackOptions) -> Iterable[Observation]:

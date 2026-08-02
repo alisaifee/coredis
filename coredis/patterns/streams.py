@@ -316,7 +316,7 @@ class GroupConsumer(Consumer[AnyStr]):
                         await self.client.xgroup_create(
                             stream, self.group, PureToken.NEW_ID, mkstream=True
                         )
-                    except StreamDuplicateConsumerGroupError:  # noqa
+                    except StreamDuplicateConsumerGroupError:
                         pass
                 self._initialized_streams[stream] = True
                 self._state[stream].setdefault("identifier", ">")

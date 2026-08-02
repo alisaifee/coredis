@@ -286,9 +286,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    def numincrby(
-        self, key: KeyT, path: RedisValueT, value: int | float
-    ) -> CommandRequest[JsonType]:
+    def numincrby(self, key: KeyT, path: RedisValueT, value: float) -> CommandRequest[JsonType]:
         """
         Increments the numeric value at path by a value
 
@@ -308,9 +306,7 @@ class Json(ModuleGroup[AnyStr]):
         version_introduced="1.0.0",
         module=MODULE,
     )
-    def nummultby(
-        self, key: KeyT, path: RedisValueT, value: int | float
-    ) -> CommandRequest[JsonType]:
+    def nummultby(self, key: KeyT, path: RedisValueT, value: float) -> CommandRequest[JsonType]:
         """
         Multiplies the numeric value at path by a value
 
@@ -333,7 +329,7 @@ class Json(ModuleGroup[AnyStr]):
     def strappend(
         self,
         key: KeyT,
-        value: str | bytes | int | float | None,
+        value: str | bytes | float | None,
         path: KeyT | None = None,
     ) -> CommandRequest[int | list[int | None] | None]:
         """
@@ -430,7 +426,7 @@ class Json(ModuleGroup[AnyStr]):
         self,
         key: KeyT,
         path: RedisValueT,
-        value: str | bytes | int | float,
+        value: str | bytes | float,
         start: int | None = None,
         stop: int | None = None,
     ) -> CommandRequest[int | list[int | None] | None]:
