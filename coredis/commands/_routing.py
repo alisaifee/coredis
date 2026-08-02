@@ -206,7 +206,7 @@ class SlotRangeStrategy(RoutingStrategy[CommandResponseT]):
         if slot_arguments_range := command.execution_parameters.get("slot_arguments_range", None):
             slot_start, slot_end = slot_arguments_range
             arg_slots = command.serialized_arguments[slot_start : slot_end + 1]
-            all_slots = list(int(k) for k in arg_slots)
+            all_slots = [int(k) for k in arg_slots]
             affected_nodes = cluster_layout.nodes_for_slots(*all_slots)
             node_slots: dict[ClusterNodeLocation, list[int]] = {node: [] for node in affected_nodes}
             for slot in all_slots:

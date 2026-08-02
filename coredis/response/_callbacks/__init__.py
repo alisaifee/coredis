@@ -237,9 +237,7 @@ class ClusterMergeMapping(ClusterMultiNodeCallback[dict[R, S]]):
     ) -> dict[R, S]:
         response: dict[R, S] = {}
         for key in set(itertools.chain(*responses)):
-            values = list(
-                response[key] for idx, response in enumerate(responses) if key in response
-            )
+            values = [response[key] for idx, response in enumerate(responses) if key in response]
             response[key] = self.value_combine(values)
         return response
 

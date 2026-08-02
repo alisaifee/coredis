@@ -467,10 +467,10 @@ class RedisCluster(
         if connection_pool:
             pool = connection_pool
         else:
-            startup_nodes = list(
+            startup_nodes = [
                 node if isinstance(node, TCPLocation) else TCPLocation(node["host"], node["port"])
                 for node in startup_nodes or []
-            )
+            ]
 
             # Support host/port as argument
             if host and not startup_nodes:
@@ -654,7 +654,7 @@ class RedisCluster(
             yield self
 
     def __repr__(self) -> str:
-        servers = list(node.name for node in self.connection_pool.cluster_layout.nodes)
+        servers = [node.name for node in self.connection_pool.cluster_layout.nodes]
         servers.sort()
 
         return "{}<{}>".format(type(self).__name__, ", ".join(servers))
