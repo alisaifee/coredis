@@ -78,7 +78,7 @@ class ClusterLayout:
             if len(command.affected_slots) > 1:
                 raise ClusterCrossSlotError(command=command.name, keys=command.keys)
             else:
-                slot = list(command.slots_to_keys.keys())[0]
+                slot = next(iter(command.slots_to_keys.keys()))
                 return self.node_for_slot(slot, primary)
         elif command.name in {
             CommandName.FCALL,

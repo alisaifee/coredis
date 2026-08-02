@@ -284,7 +284,7 @@ class TestCluserConnectionPoolLayoutCache:
 
         async def remove_replica_for_slot_1(self, *args, **kwargs):
             values = await cluster_slots(self, *args, **kwargs)
-            slot_range, nodes = list(values.items())[0]
+            slot_range, nodes = next(iter(values.items()))
             values[slot_range] = nodes[:1]
             return values
 

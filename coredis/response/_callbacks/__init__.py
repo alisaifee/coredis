@@ -507,7 +507,7 @@ class OptionalListCallback(ResponseCallback[list[ResponseType], list[CR_co] | No
 class FirstValueCallback(ResponseCallback[dict[R, S], S]):
     def transform(self, response: dict[R, S], **options: Any) -> S:
         if response:
-            return list(response.values())[0]
+            return next(iter(response.values()))
         else:
             raise ValueError("Empty response")
 
