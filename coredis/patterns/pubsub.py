@@ -442,7 +442,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _ensure_subscribed(self, waiters: dict[StringT, Event]) -> None:
         with move_on_after(self._subscription_timeout) as cancel_scope:
-            for target, event in waiters.items():
+            for event in waiters.values():
                 await event.wait()
         if cancel_scope.cancelled_caught:
             raise TimeoutError(
@@ -453,7 +453,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _ensure_unsubscribed(self, waiters: dict[StringT, Event]) -> bool:
         with move_on_after(self._unsubscription_timeout) as cancel_scope:
-            for _, event in waiters.items():
+            for event in waiters.values():
                 await event.wait()
         if cancel_scope.cancelled_caught:
             logger.warning(
