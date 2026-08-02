@@ -196,7 +196,7 @@ async def check_test_constraints(request, client):
         if marker.name == "clusteronly" and not isinstance(client, coredis.RedisCluster):
             return pytest.skip("Skipped for non redis cluster")
 
-        if marker.name == "os" and not marker.args[0].lower() == platform.system().lower():
+        if marker.name == "os" and marker.args[0].lower() != platform.system().lower():
             return pytest.skip(f"Skipped for {platform.system()}")
 
         if marker.name == "nodragonfly" and SERVER_TYPES.get(str(client)) == "dragonfly":

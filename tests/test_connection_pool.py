@@ -316,7 +316,7 @@ class TestSharedConnectionPool:
                 connection_pool=primary.connection_pool,
             )
             assert primary.connection_pool == borrower.connection_pool
-            assert not client.connection_pool == borrower.connection_pool
+            assert client.connection_pool != borrower.connection_pool
             async with borrower:
                 await borrower.ping()
                 assert not connect_tcp.call_count
