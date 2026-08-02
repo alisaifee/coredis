@@ -348,4 +348,4 @@ class TestSharedConnectionPool:
         await client.get("a")
         async with borrower:
             await borrower.get("a")
-        create_request.assert_called_once
+        create_request.assert_called_once()
