@@ -392,7 +392,7 @@ class DateTimeCallback(ResponseCallback[int | float, datetime.datetime]):
         ts = float(response) if not isinstance(response, float) else response
         if self.options.get("unit") == "milliseconds":
             ts = ts / 1000.0
-        return datetime.datetime.fromtimestamp(ts)
+        return datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc)
 
 
 class DictCallback(

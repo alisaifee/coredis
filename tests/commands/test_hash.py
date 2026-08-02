@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import time
 
 import anyio
 import pytest
@@ -80,7 +79,7 @@ class TestHash:
     @pytest.mark.nodragonfly
     async def test_hexpireat(self, client, _s, redis_server_time):
         now = await redis_server_time(client)
-        now_int = int(time.mktime(now.timetuple()))
+        now_int = int(now.timestamp())
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (1,) == await client.hexpireat("a", now_int + 5, ["1"])
         assert (-2,) == await client.hexpireat("missing", now_int + 1, ["missing"])
@@ -101,7 +100,7 @@ class TestHash:
     @pytest.mark.nodragonfly
     async def test_hexpiretime(self, client, _s, redis_server_time):
         now = await redis_server_time(client)
-        now_int = int(time.mktime(now.timetuple()))
+        now_int = int(now.timestamp())
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (-2,) == await client.hexpiretime("missing", ["1"])
         assert (-1,) == await client.hexpiretime("a", ["1"])
@@ -139,7 +138,7 @@ class TestHash:
     @pytest.mark.nodragonfly
     async def test_hpexpireat(self, client, _s, redis_server_time):
         now = await redis_server_time(client)
-        now_ms = 1000 * int(time.mktime(now.timetuple()))
+        now_ms = int(now.timestamp() * 1000)
         await client.hset("a", {"1": 1, "2": 2, "3": 3, "4": 4})
         assert (1,) == await client.hpexpireat("a", now_ms + 5000, ["1"])
         assert (-2,) == await client.hpexpireat("missing", now_ms + 1000, ["missing"])
@@ -169,7 +168,7 @@ class TestHash:
         assert (-2,) == await client.hpexpiretime("missing", ["1"])
         assert (-1,) == await client.hpexpiretime("a", ["1"])
         now = await redis_server_time(client)
-        now_ms = 1000 * int(time.mktime(now.timetuple()))
+        now_ms = int(now.timestamp() * 1000)
         await client.hpexpire("a", 5000, ["1"])
         assert (
             pytest.approx(now_ms + 5000, abs=1000),

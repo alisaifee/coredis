@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import time
 
 import pytest
 
@@ -434,7 +433,7 @@ class TestGeneric:
     async def test_expireat_unixtime(self, client, redis_server_time):
         expire_at = await redis_server_time(client) + datetime.timedelta(minutes=1)
         await client.set("a", "foo")
-        expire_at_seconds = int(time.mktime(expire_at.timetuple()))
+        expire_at_seconds = int(expire_at.timestamp())
         assert await client.expireat("a", expire_at_seconds)
         assert 0 < await client.ttl("a") <= 61
 
@@ -461,7 +460,7 @@ class TestGeneric:
         )
         await client.pexpireat("a", set_time)
         expire_time = await client.expiretime("a")
-        assert set_time.replace(microsecond=0) == expire_time.astimezone(datetime.timezone.utc)
+        assert set_time.replace(microsecond=0) == expire_time
 
     async def test_keys(self, client, _s):
         assert await client.keys() == set()
@@ -502,7 +501,7 @@ class TestGeneric:
     async def test_pexpireat_unixtime(self, client, redis_server_time):
         expire_at = await redis_server_time(client) + datetime.timedelta(minutes=1)
         await client.set("a", "foo")
-        expire_at_seconds = int(time.mktime(expire_at.timetuple())) * 1000
+        expire_at_seconds = int(expire_at.timestamp() * 1000)
         assert await client.pexpireat("a", expire_at_seconds)
         assert 0 < await client.pttl("a") <= 61000
 
@@ -529,7 +528,7 @@ class TestGeneric:
         )
         await client.pexpireat("a", set_time)
         expire_time = await client.pexpiretime("a")
-        assert set_time == expire_time.astimezone(datetime.timezone.utc)
+        assert set_time == expire_time
 
     async def test_randomkey(self, client, _s):
         assert await client.randomkey() is None
