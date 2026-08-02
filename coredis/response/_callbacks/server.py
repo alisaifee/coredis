@@ -196,7 +196,7 @@ class RoleCallback(
             return res
 
         def _parse_replica(response: Any) -> Any:
-            host, port, status, offset = response[1:]
+            _host, _port, status, offset = response[1:]
 
             return {
                 "role": role,

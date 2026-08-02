@@ -121,7 +121,7 @@ class RetryPolicy(ABC):
     def _exception_matches(cls, needle: BaseException, *haystack: type[BaseException]) -> bool:
         if isinstance(needle, BaseExceptionGroup):
             for exc in haystack:
-                match, unmatched = needle.split(exc)
+                match, _unmatched = needle.split(exc)
                 if match:
                     return True
         else:

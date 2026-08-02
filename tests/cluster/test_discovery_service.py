@@ -31,7 +31,7 @@ class TestDiscoveryService:
             username=None,
             password="sekret",
         )
-        nodes, slots = await service.get_cluster_layout()
+        nodes, _slots = await service.get_cluster_layout()
         assert len(nodes) > 1
 
     async def test_partially_down_startup_nodes(self, redis_cluster_server, free_tcp_port_factory):
