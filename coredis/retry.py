@@ -293,7 +293,7 @@ class CompositeRetryPolicy(RetryPolicy):
                     logger.info(f"Retry attempt {total_attempts} due to error: {e}")
                     await sleep(max(retry_delays))
                     continue
-                raise e
+                raise
 
 
 def retryable(
