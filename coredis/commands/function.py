@@ -106,9 +106,7 @@ class Library(Generic[AnyStr]):
         Update the code of a library with :paramref:`new_code`
         """
         self.code = new_code
-        if await self.initialize(replace=True):
-            return True
-        return False
+        return bool(await self.initialize(replace=True))
 
     async def initialize(self, replace: bool = False) -> Self:
         from coredis.patterns.pipeline import ClusterPipeline, Pipeline

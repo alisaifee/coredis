@@ -234,6 +234,4 @@ class OpenTelemetryProvider(TelemetryProvider):
             yield Observation(pool.max_connections, _default_attributes)
 
     def _command_span_enabled(self, commands: Sequence[CommandRequest[Any]]) -> bool:
-        if len(commands) == 1 and commands[0].name in self.disabled_commands:
-            return False
-        return True
+        return not (len(commands) == 1 and commands[0].name in self.disabled_commands)

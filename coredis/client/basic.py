@@ -171,15 +171,11 @@ class Client(
 
     @property
     def requires_wait(self) -> bool:
-        if not hasattr(self, "_waitcontext") or not self._waitcontext.get():
-            return False
-        return True
+        return not (not hasattr(self, "_waitcontext") or not self._waitcontext.get())
 
     @property
     def requires_waitaof(self) -> bool:
-        if not hasattr(self, "_waitaof_context") or not self._waitaof_context.get():
-            return False
-        return True
+        return not (not hasattr(self, "_waitaof_context") or not self._waitaof_context.get())
 
     def _ensure_server_version(self, version: str | None) -> None:
         if self.verify_version and not Config.optimized and not self.server_version and version:
