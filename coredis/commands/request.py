@@ -38,7 +38,7 @@ def is_type_like(obj: object) -> TypeIs[type[Any]]:
     Return True if ``obj`` is type-like and should be treated as a
     deserialization target rather than a callable transformer.
     """
-    return isinstance(obj, type) or isinstance(obj, GenericAlias) or get_origin(obj) is not None
+    return isinstance(obj, (type, GenericAlias)) or get_origin(obj) is not None
 
 
 class CommandRequest(Awaitable[CommandResponseT]):
