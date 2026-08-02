@@ -18,7 +18,7 @@ from collections.abc import (
     MutableSequence,
     MutableSet,
     Sequence,
-    Set,
+    Set as AbstractSet,
     ValuesView,
 )
 from functools import cached_property
@@ -560,7 +560,11 @@ class SequenceNotString(Protocol[T_co]):
 
 
 Parameters = (
-    SequenceNotString[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iterator[T_co]
+    SequenceNotString[T_co]
+    | AbstractSet[T_co]
+    | tuple[T_co, ...]
+    | ValuesView[T_co]
+    | Iterator[T_co]
 )
 
 if sys.version_info >= (3, 12):

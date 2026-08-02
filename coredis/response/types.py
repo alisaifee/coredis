@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Set
+from collections.abc import Set as AbstractSet
 
 from coredis.typing import (
     Literal,
@@ -172,13 +172,13 @@ Command = TypedDict(
     {
         "name": str,
         "arity": int,
-        "flags": Set[str],
+        "flags": AbstractSet[str],
         "first-key": int,
         "last-key": int,
         "step": int,
-        "acl-categories": Set[str] | None,
-        "tips": Set[str] | None,
-        "key-specifications": Set[Mapping[str, int | str | Mapping]] | None,  # type: ignore
+        "acl-categories": AbstractSet[str] | None,
+        "tips": AbstractSet[str] | None,
+        "key-specifications": AbstractSet[Mapping[str, int | str | Mapping]] | None,  # type: ignore
         "sub-commands": tuple[str, ...] | None,
     },
 )
