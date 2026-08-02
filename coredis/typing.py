@@ -18,8 +18,10 @@ from collections.abc import (
     MutableSequence,
     MutableSet,
     Sequence,
-    Set as AbstractSet,
     ValuesView,
+)
+from collections.abc import (
+    Set as AbstractSet,
 )
 from functools import cached_property
 from types import GenericAlias, ModuleType, UnionType

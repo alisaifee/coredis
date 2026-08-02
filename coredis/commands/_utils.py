@@ -47,7 +47,7 @@ def check_version(
     function_name: str,
     command_details: CommandDetails,
     deprecation_reason: str | None = None,
-    kwargs: dict[str, Any] = None,
+    kwargs: dict[str, Any] | None = None,
 ) -> None:
     if kwargs is None:
         kwargs = {}

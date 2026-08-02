@@ -287,7 +287,7 @@ class SimpleStringCallback(ResponseCallback[StringT | None, bool]):
         self,
         raise_on_error: type[Exception] | None = None,
         prefix_match: bool = False,
-        ok_values: set[str] = None,
+        ok_values: set[str] | None = None,
         **options: Any,
     ):
         if ok_values is None:
