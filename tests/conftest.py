@@ -101,7 +101,7 @@ class NoopDockerServices:
 async def get_module_versions(client: Redis):
     if str(client) not in MODULE_VERSIONS:
         MODULE_VERSIONS[str(client)] = {}
-        try:
+        with contextlib.suppress(coredis.exceptions.RedisError):
             module_list = await client.module_list()
 
             for module in module_list:
@@ -114,8 +114,6 @@ async def get_module_versions(client: Redis):
                 MODULE_VERSIONS.setdefault(str(client), {})[name] = version.Version(
                     f"{major}.{minor}.{patch}"
                 )
-        except Exception:
-            pass
 
     return MODULE_VERSIONS[str(client)]
 
@@ -246,7 +244,7 @@ def get_client_test_args(request) -> dict[str, int]:
 def check_redis_cluster_ready(host, port):
     try:
         return redis.Redis(host, port).cluster("info")["cluster_state"] == "ok"
-    except Exception:
+    except (redis.RedisError, OSError):
         return False
 
 
@@ -254,7 +252,7 @@ def check_sentinel_ready(host, port):
     try:
         info = redis.Redis(host, port).sentinel_slaves("mymaster")
         return info[0]["flags"] == "slave" and info[0]["master-link-status"] == "ok"
-    except Exception:
+    except (redis.RedisError, OSError, IndexError, KeyError):
         return False
 
 
@@ -268,7 +266,7 @@ def ping_socket(host, port):
         s.connect((host, port))
 
         return True
-    except Exception:
+    except OSError:
         return False
 
 
@@ -278,7 +276,7 @@ def host_ip():
     try:
         s.connect(("10.255.255.255", 1))
         ip = s.getsockname()[0]
-    except Exception:
+    except OSError:
         ip = "127.0.0.1"
     finally:
         s.close()
