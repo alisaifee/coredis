@@ -247,7 +247,9 @@ extend-select = [
 # Keep int|float in signatures for beartype: it rejects int where only float
 # is annotated, unlike PEP 484 static checkers that accept int as float
 # (which is what PYI041 would collapse away).
-ignore = ["PYI041"]
+# B008: intentional construction of retry policies / callbacks / cluster
+# config in parameter defaults (shared module defaults are a poor fit).
+ignore = ["PYI041", "B008"]
 typing-modules = ["coredis.typing"]
 
 [tool.ruff.lint.isort]
