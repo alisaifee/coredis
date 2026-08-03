@@ -326,7 +326,7 @@ class AnyStrCallback(ResponseCallback[StringT, AnyStr]):
 
 
 class FloatCallback(ResponseCallback[StringT | int | float, float]):
-    def transform(self, response: StringT | float, **options: Any) -> float:
+    def transform(self, response: StringT | int | float, **options: Any) -> float:
         if isinstance(response, float):
             return response
         if isinstance(response, (int, bytes, str)):
@@ -387,7 +387,7 @@ class ListCallback(ResponseCallback[list[ResponseType], list[R]]):
 class DateTimeCallback(ResponseCallback[int | float, datetime.datetime]):
     def transform(
         self,
-        response: float,
+        response: int | float,
     ) -> datetime.datetime:
         ts = float(response) if not isinstance(response, float) else response
         if self.options.get("unit") == "milliseconds":
@@ -468,7 +468,7 @@ class OptionalFloatCallback(
 ):
     def transform(
         self,
-        response: StringT | float | None,
+        response: StringT | int | float | None,
         **options: Any,
     ) -> float | None:
         if response is None:

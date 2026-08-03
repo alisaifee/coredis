@@ -292,7 +292,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     async def get_message(
         self,
         ignore_subscribe_messages: bool = False,
-        timeout: float | None = None,
+        timeout: int | float | None = None,
     ) -> PubSubMessage | None:
         """
         Gets the next message if one is available, otherwise None.

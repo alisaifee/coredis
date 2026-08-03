@@ -244,6 +244,10 @@ exclude = ["doc/**","_version.py","coredis/_py_312_typing.py"]
 extend-select = [
   "T20",   # flake8-print: forbid print/pprint statements
 ]
+# Keep int|float in signatures for beartype: it rejects int where only float
+# is annotated, unlike PEP 484 static checkers that accept int as float
+# (which is what PYI041 would collapse away).
+ignore = ["PYI041"]
 typing-modules = ["coredis.typing"]
 
 [tool.ruff.lint.isort]

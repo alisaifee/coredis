@@ -145,6 +145,6 @@ class BZPopCallback(
 class ZAddCallback(ResponseCallback[int | float, int | float]):
     def transform(
         self,
-        response: float,
+        response: int | float,
     ) -> int | float:
         return response

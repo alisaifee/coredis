@@ -347,7 +347,7 @@ class Search(ModuleGroup[AnyStr]):
         filter_expression: StringT | None = None,
         language: StringT | None = None,
         language_field: StringT | None = None,
-        score: float | None = None,
+        score: int | float | None = None,
         score_field: StringT | None = None,
         payload_field: StringT | None = None,
         maxtextfields: bool | None = None,
