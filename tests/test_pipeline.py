@@ -245,7 +245,7 @@ class TestPipeline:
 
 
 @targets("redis_basic", "dragonfly", "valkey")
-class TestPipelineConnectionRelease:
+class TestPipelineConnection:
     @pytest.mark.parametrize("transaction", [False, True])
     async def test_pipeline_exit_no_exceptions(self, client: Redis[str], transaction: bool):
         await client.set("a", "0")
@@ -341,3 +341,12 @@ class TestPipelineConnectionRelease:
                 raise RuntimeError("after watch")
         assert client.connection_pool.statistics.in_use_connections == in_use
         assert await client.get("a") == "1"
+
+    @pytest.mark.parametrize("client_arguments", [{"max_connections": 1}])
+    async def test_pipeline_client_cmds(self, client: Redis[str], client_arguments: dict[str, int]):
+        client.connection_pool.timeout = 1
+
+        await client.set("a", "0")
+        async with client.pipeline(transaction=False) as pipe, pipe.watch("a"):
+            value = await pipe.client.get("a")
+            pipe.set("a", int(value) + 1)
