@@ -8,7 +8,7 @@ import socket
 import time
 from collections.abc import Generator
 from functools import total_ordering
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 import redis
@@ -833,7 +833,7 @@ async def redis_sentinel_auth_cred_provider(redis_sentinel_auth_server, request)
 @pytest.fixture
 def fake_redis():
     class _(coredis.client.Redis):
-        responses = {}
+        responses: ClassVar[dict] = {}
 
         def __init__(self):
             self.cache = None
@@ -859,7 +859,7 @@ def fake_redis():
 @pytest.fixture
 def fake_redis_cluster():
     class _(coredis.client.RedisCluster):
-        responses = {}
+        responses: ClassVar[dict] = {}
 
         def __init__(self):
             self.cache = None

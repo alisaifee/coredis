@@ -23,13 +23,13 @@ from collections.abc import (
 from collections.abc import (
     Set as AbstractSet,
 )
+from contextlib import AbstractAsyncContextManager as AsyncContextManager
 from functools import cached_property
 from types import GenericAlias, ModuleType, UnionType
 from typing import (
     TYPE_CHECKING,
     Any,
     AnyStr,
-    AsyncContextManager,
     ClassVar,
     Concatenate,
     Final,

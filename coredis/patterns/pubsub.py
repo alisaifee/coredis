@@ -145,7 +145,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     @property
     def connection(self) -> BaseConnection:
         if not self._connection:
-            raise Exception("Connection not initialized correctly!")
+            raise ConnectionError("Connection not initialized correctly!")
         return self._connection
 
     @property

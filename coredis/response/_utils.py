@@ -10,13 +10,13 @@ from coredis.typing import (
     TypeVar,
 )
 
-T_co = TypeVar("T_co")
+T = TypeVar("T")
 
 
 def flat_pairs_to_dict(
-    response: tuple[T_co, ...] | list[T_co],
-    value_transform: Callable[..., T_co] | None = None,
-) -> dict[T_co, T_co]:
+    response: tuple[T, ...] | list[T],
+    value_transform: Callable[..., T] | None = None,
+) -> dict[T, T]:
     """Creates a dict given a flat list of key/value pairs"""
     it = iter(response)
     if value_transform:
@@ -25,7 +25,7 @@ def flat_pairs_to_dict(
         return dict(zip(it, it))
 
 
-def flat_pairs_to_ordered_dict(response: Iterable[T_co]) -> OrderedDict[StringT, T_co]:
+def flat_pairs_to_ordered_dict(response: Iterable[T]) -> OrderedDict[StringT, T]:
     """Creates a dict given a flat list of key/value pairs"""
     it = iter(response)
-    return cast(OrderedDict[StringT, T_co], OrderedDict(zip(it, it)))
+    return cast(OrderedDict[StringT, T], OrderedDict(zip(it, it)))

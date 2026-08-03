@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections.abc import Hashable
 from io import BytesIO
-from typing import cast
+from typing import ClassVar, cast
 
 from coredis.constants.resp import SYM_CRLF, SYM_TRUE, DataType
 from coredis.exceptions import (
@@ -150,7 +150,7 @@ UnpackedResponse = RESPScalar | RESPContainer
 
 
 class Parser:
-    EXCEPTION_CLASSES: dict[str, type[RedisError] | dict[str, type[RedisError]]] = {
+    EXCEPTION_CLASSES: ClassVar[dict[str, type[RedisError] | dict[str, type[RedisError]]]] = {
         "ASK": AskError,
         "BUSYGROUP": StreamDuplicateConsumerGroupError,
         "CLUSTERDOWN": ClusterDownError,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 from anyio import AsyncContextManagerMixin
 from deprecated.sphinx import versionchanged
@@ -248,7 +248,7 @@ class Pipeline(Client[AnyStr]):
     If not the exception is caught and will be returned when awaiting the command that failed.
     """
 
-    QUEUED_RESPONSES = {b"QUEUED", "QUEUED"}
+    QUEUED_RESPONSES: ClassVar[set[bytes | str]] = {b"QUEUED", "QUEUED"}
 
     def __init__(
         self,
@@ -413,7 +413,7 @@ class Pipeline(Client[AnyStr]):
                 elif isinstance(queued_response, BaseException):
                     raise queued_response
                 else:
-                    raise Exception(
+                    raise ResponseError(
                         f"Abnormal response in pipeline for command {cmd.name!r}: {queued_response!r}"
                     )
         try:

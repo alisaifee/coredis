@@ -27,7 +27,8 @@ from coredis.typing import (
 from .constants import CommandFlag
 
 #: Covariant type used for generalizing :class:`~coredis.command.CommandRequest`
-CommandResponseT = TypeVar("CommandResponseT", covariant=True)
+CommandResponseT_co = TypeVar("CommandResponseT_co", covariant=True)
+CommandResponseT = CommandResponseT_co
 
 TransformedResponse = TypeVar("TransformedResponse")
 empty_adapter = TypeAdapter()
