@@ -43,7 +43,7 @@ class ResponseCallback(ABC, Generic[RESP3, R]):
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        cls.transform = add_runtime_checks(cls.transform)
+        setattr(cls, "transform", add_runtime_checks(getattr(cls, "transform")))
 
     def __call__(
         self,
@@ -64,7 +64,7 @@ class NoopCallback(ResponseCallback[R, R]):
 class ClusterMultiNodeCallback(ABC, Generic[R]):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        cls.combine = add_runtime_checks(cls.combine)
+        setattr(cls, "combine", add_runtime_checks(getattr(cls, "combine")))
 
     def __call__(
         self,

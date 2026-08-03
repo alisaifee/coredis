@@ -152,7 +152,7 @@ class FanoutStrategy(RoutingStrategy[CommandResponseT]):
         self,
         cluster_layout: ClusterLayout,
         primary: bool,
-        execution_parameters: ExecutionParameters = None,
+        execution_parameters: ExecutionParameters | None = None,
     ) -> list[ClusterNodeLocation]:
         if execution_parameters is None:
             execution_parameters = {}

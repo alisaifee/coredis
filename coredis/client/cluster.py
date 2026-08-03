@@ -115,9 +115,9 @@ class ClusterMeta(ABCMeta):
                     def __w(
                         func: Callable[P, Awaitable[R]],
                         *,
-                        cmd=cmd,
-                        method=method,
-                        doc_addition=doc_addition,
+                        cmd: Any = cmd,
+                        method: Any = method,
+                        doc_addition: str = doc_addition,
                     ) -> Callable[P, Awaitable[R]]:
                         @functools.wraps(func)
                         def _w(*a: P.args, **k: P.kwargs) -> Awaitable[R]:
@@ -141,6 +141,9 @@ class ClusterMeta(ABCMeta):
 {doc_addition}
                     """
         return kls
+
+
+RedisClusterT = TypeVar("RedisClusterT", bound="RedisCluster[Any]")
 
 
 class RedisCluster(
@@ -573,7 +576,7 @@ class RedisCluster(
 
     @classmethod
     def from_url(
-        cls,
+        cls: type[RedisClusterT],
         url: str,
         *,
         skip_full_coverage_check: bool = False,
@@ -598,7 +601,7 @@ class RedisCluster(
         type_adapter: TypeAdapter | None = None,
         pool_timeout: float | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> RedisClusterT:
         """
         Return a Cluster client object configured from the startup node in URL,
         which must use either the ``redis://`` scheme

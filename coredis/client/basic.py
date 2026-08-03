@@ -78,6 +78,7 @@ from coredis.typing import (
 
 P = ParamSpec("P")
 R = TypeVar("R")
+RedisT = TypeVar("RedisT", bound="Redis[Any]")
 
 if TYPE_CHECKING:
     import coredis.patterns.pipeline
@@ -815,7 +816,7 @@ class Redis(Client[AnyStr]):
 
     @classmethod
     def from_url(
-        cls,
+        cls: type[RedisT],
         url: str,
         db: int | None = None,
         *,
@@ -831,7 +832,7 @@ class Redis(Client[AnyStr]):
         cache: AbstractCache | None = None,
         pool_timeout: float | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> RedisT:
         """
         Return a Redis client object configured from the given URL, which must
         use either the `redis:// scheme

@@ -244,12 +244,15 @@ exclude = ["doc/**","_version.py","coredis/_py_312_typing.py"]
 extend-select = [
   "T20",   # flake8-print: forbid print/pprint statements
 ]
-# Keep int|float in signatures for beartype: it rejects int where only float
-# is annotated, unlike PEP 484 static checkers that accept int as float
-# (which is what PYI041 would collapse away).
-# B008: intentional construction of retry policies / callbacks / cluster
-# config in parameter defaults (shared module defaults are a poor fit).
-ignore = ["PYI041", "B008"]
+# Prefer mypy when ruff and mypy disagree on typing style.
+ignore = [
+  "PYI041",  # keep int|float for beartype (PEP 484 treats int as float statically)
+  "B008",  # intentional default construction of retry/callback/cluster configs
+  "PYI019",  # Self breaks from_url overloads (Redis[bytes] vs Redis[str])
+  "PLC0105",  # public TypeVar names (e.g. CommandResponseT) omit _co by design
+  "B009",  # setattr/getattr needed so mypy does not flag method-assign on wrappers
+  "B010",
+]
 typing-modules = ["coredis.typing"]
 
 [tool.ruff.lint.isort]
