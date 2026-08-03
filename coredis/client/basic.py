@@ -84,9 +84,6 @@ if TYPE_CHECKING:
     from coredis.patterns.lock import Lock
     from coredis.patterns.streams import Consumer, GroupConsumer, StreamParameters
 
-ClientT = TypeVar("ClientT", bound="Client[Any]")
-RedisT = TypeVar("RedisT", bound="Redis[Any]")
-
 
 class Client(
     AsyncContextManagerMixin,
@@ -366,7 +363,7 @@ class Client(
         return supported
 
     @contextlib.contextmanager
-    def ignore_replies(self: ClientT) -> Iterator[ClientT]:
+    def ignore_replies(self) -> Iterator[Self]:
         """
         Context manager to run commands without waiting for a reply.
 
@@ -384,9 +381,7 @@ class Client(
             self._noreplycontext.reset(noreply_reset_token)
 
     @contextlib.contextmanager
-    def ensure_replication(
-        self: ClientT, replicas: int = 1, timeout_ms: int = 100
-    ) -> Iterator[ClientT]:
+    def ensure_replication(self, replicas: int = 1, timeout_ms: int = 100) -> Iterator[Self]:
         """
         Context manager to ensure that commands executed within the context
         are replicated to atleast :paramref:`replicas` within
@@ -413,11 +408,11 @@ class Client(
     @versionadded(version="4.12.0")
     @contextlib.contextmanager
     def ensure_persistence(
-        self: ClientT,
+        self,
         local: Literal[0, 1] = 0,
         replicas: int = 0,
         timeout_ms: int = 100,
-    ) -> Iterator[ClientT]:
+    ) -> Iterator[Self]:
         """
         Context manager to ensure that commands executed within the context
         are synced to the AOF of a :paramref:`local` host and/or :paramref:`replicas`
@@ -820,7 +815,7 @@ class Redis(Client[AnyStr]):
 
     @classmethod
     def from_url(
-        cls: type[RedisT],
+        cls,
         url: str,
         db: int | None = None,
         *,
@@ -836,7 +831,7 @@ class Redis(Client[AnyStr]):
         cache: AbstractCache | None = None,
         pool_timeout: float | None = None,
         **kwargs: Any,
-    ) -> RedisT:
+    ) -> Self:
         """
         Return a Redis client object configured from the given URL, which must
         use either the `redis:// scheme

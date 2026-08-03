@@ -143,9 +143,6 @@ class ClusterMeta(ABCMeta):
         return kls
 
 
-RedisClusterT = TypeVar("RedisClusterT", bound="RedisCluster[Any]")
-
-
 class RedisCluster(
     Client[AnyStr],
     metaclass=ClusterMeta,
@@ -576,7 +573,7 @@ class RedisCluster(
 
     @classmethod
     def from_url(
-        cls: type[RedisClusterT],
+        cls,
         url: str,
         *,
         skip_full_coverage_check: bool = False,
@@ -601,7 +598,7 @@ class RedisCluster(
         type_adapter: TypeAdapter | None = None,
         pool_timeout: float | None = None,
         **kwargs: Any,
-    ) -> RedisClusterT:
+    ) -> Self:
         """
         Return a Cluster client object configured from the startup node in URL,
         which must use either the ``redis://`` scheme
