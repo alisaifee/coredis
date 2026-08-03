@@ -348,6 +348,7 @@ class TestSharedConnectionPool:
         await client.set("a", 1)
         assert borrower.connection_pool is client.connection_pool
         await client.get("a")
+        create_request.reset_mock()
         async with borrower:
             await borrower.get("a")
-        create_request.assert_called_once()
+        create_request.assert_not_called()

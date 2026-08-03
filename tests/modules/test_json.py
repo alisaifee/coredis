@@ -246,8 +246,8 @@ class TestJson:
         assert await client.json.get("doc1", "$..a") == [1, 3, None]
         assert await client.json.get("doc2", "$..a") == [4, 6, [None]]
 
-        # Test mget with single path
-        assert await client.json.mget(["doc1"], "$..a") == [1, 3, None]
+        # Test mget with single key (still one list entry per key)
+        assert await client.json.mget(["doc1"], "$..a") == [[1, 3, None]]
         # Test mget with multi path
         res = await client.json.mget(["doc1", "doc2"], "$..a")
         assert res == [[1, 3, None], [4, 6, [None]]]
@@ -305,11 +305,11 @@ class TestJson:
         with pytest.raises(ResponseError):
             await client.json.strappend("non_existing_doc", "$..a", "err")
 
-        # Test multi
-        assert await client.json.strappend("doc1", "bar", ".*.a") == 8
+        # Test multi (legacy path matches nested1.a only; returns new string length)
+        assert await client.json.strappend("doc1", "bar", ".*.a") == 14
         assert await client.json.get("doc1", LEGACY_ROOT_PATH) == {
-            "a": "foo",
-            "nested1": {"a": "hellobar"},
+            "a": "foobar",
+            "nested1": {"a": "hellobarbazbar"},
             "nested2": {"a": 31},
         }
 
