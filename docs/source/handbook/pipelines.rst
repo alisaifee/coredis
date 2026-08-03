@@ -67,7 +67,8 @@ could do something like this:
                 async with client.pipeline(transaction=False) as pipe:
                     # put a WATCH on the key that holds our sequence value
                     async with pipe.watch(key):
-                        current_value = await client.get(key)
+                        # pipe.client reuses watched connection
+                        current_value = await pipe.client.get(key)
                         next_value = int(current_value) + 1
                         pipe.set(key, next_value)
             except WatchError:
