@@ -112,7 +112,13 @@ class ClusterMeta(ABCMeta):
             if doc_addition and not hasattr(method, "__cluster_docs") and cmd:
                 if not getattr(method, "__coredis_module", None):
 
-                    def __w(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+                    def __w(
+                        func: Callable[P, Awaitable[R]],
+                        *,
+                        cmd=cmd,
+                        method=method,
+                        doc_addition=doc_addition,
+                    ) -> Callable[P, Awaitable[R]]:
                         @functools.wraps(func)
                         def _w(*a: P.args, **k: P.kwargs) -> Awaitable[R]:
                             if cmd.cluster.enabled:
