@@ -661,19 +661,16 @@ class RedisCluster(
 
     @property
     def all_nodes(self) -> Iterator[Redis[AnyStr]]:
-        """ """
         for node in self.connection_pool.cluster_layout.nodes:
             yield node.as_client(**self.connection_pool.connection_kwargs)
 
     @property
     def primaries(self) -> Iterator[Redis[AnyStr]]:
-        """ """
         for primary in self.connection_pool.cluster_layout.primaries:
             yield primary.as_client(**self.connection_pool.connection_kwargs)
 
     @property
     def replicas(self) -> Iterator[Redis[AnyStr]]:
-        """ """
         for replica in self.connection_pool.cluster_layout.replicas:
             yield replica.as_client(**self.connection_pool.connection_kwargs)
 

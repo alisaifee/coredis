@@ -96,7 +96,7 @@ class ListNode(RESPNode):
 
 
 class DictNode(RESPNode):
-    __slots__ = "container"
+    __slots__ = ("container",)
 
     def __init__(self, depth: int) -> None:
         self.container: dict[Hashable, ResponseType] = {}
@@ -150,8 +150,6 @@ UnpackedResponse = RESPScalar | RESPContainer
 
 
 class Parser:
-    """ """
-
     EXCEPTION_CLASSES: dict[str, type[RedisError] | dict[str, type[RedisError]]] = {
         "ASK": AskError,
         "BUSYGROUP": StreamDuplicateConsumerGroupError,

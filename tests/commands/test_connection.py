@@ -63,11 +63,13 @@ class TestConnection:
     async def test_client_no_evict(self, client, _s):
         with pytest.warns(UserWarning):
             assert await client.client_no_evict(PureToken.ON)
+        with pytest.warns(UserWarning):
             assert await client.client_no_evict(PureToken.OFF)
 
     async def test_client_no_touch(self, client, _s):
         with pytest.warns(UserWarning):
             assert await client.client_no_touch(PureToken.ON)
+        with pytest.warns(UserWarning):
             assert await client.client_no_touch(PureToken.OFF)
 
     async def test_client_tracking(self, client, _s, cloner):
@@ -225,6 +227,7 @@ class TestConnection:
     async def test_client_list_after_client_setinfo(self, client, _s):
         with pytest.warns(UserWarning):
             await client.client_setinfo(lib_name="lolwut")
+        with pytest.warns(UserWarning):
             await client.client_setinfo(lib_ver="12.12.12")
         clients = await client.client_list()
         assert ("lolwut", "12.12.12") in [(c["lib-name"], c["lib-ver"]) for c in clients]
@@ -235,7 +238,7 @@ class TestConnection:
     async def test_client_setname(self, client, _s):
         with pytest.warns(UserWarning):
             assert await client.client_setname("redis_py_test")
-            assert await client.client_getname() == _s("redis_py_test")
+        assert await client.client_getname() == _s("redis_py_test")
 
     @pytest.mark.novalkey
     async def test_client_pause(self, client, cloner):

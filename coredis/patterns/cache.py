@@ -439,7 +439,6 @@ class ClusterTrackingCache(TrackingCache[ClusterConnection]):
         cache: AbstractCache | None = None,
         max_idle_seconds: float = 15,
     ) -> None:
-        """ """
         super().__init__(connection_pool, cache or LRUCache())
         self.node_caches: dict[TCPLocation, NodeTrackingCache[ClusterConnection]] = {}
         self._nodes: list[coredis.client.Redis[Any]] = []

@@ -202,15 +202,12 @@ class NodeCommands(AsyncContextManagerMixin):
             multi_result = await self.multi_cmd
             success = multi_result in {b"OK", "OK"}
         if self.request_batch:
-            try:
-                responses = await self.request_batch
-                for command, response in zip(self.commands, responses):
-                    command.result = response
-                    command._response = PipelineResult(response)
-                    if isinstance(response, (ConnectionError, TimeoutError, RedisError)):
-                        success = False
-            except ExecAbortError:
-                raise
+            responses = await self.request_batch
+            for command, response in zip(self.commands, responses):
+                command.result = response
+                command._response = PipelineResult(response)
+                if isinstance(response, (ConnectionError, TimeoutError, RedisError)):
+                    success = False
         if self.in_transaction and self.exec_cmd:
             if success:
                 res = await self.exec_cmd

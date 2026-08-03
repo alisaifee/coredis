@@ -13,7 +13,7 @@ _otel_unavailable = False
 
 
 def get_telemetry_provider() -> TelemetryProvider:
-    global _noop_provider, _otel_unavailable, _otel_provider
+    global _otel_unavailable, _otel_provider
     if _otel_unavailable or not Config.otel_enabled:
         return _noop_provider
     try:

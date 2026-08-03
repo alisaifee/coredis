@@ -29,13 +29,20 @@ from tests.conftest import module_targets
 
 @pytest.fixture(scope="module")
 def query_vectors():
-    data = json.loads(open("tests/modules/data/vss_queries.json").read())
+    with open("tests/modules/data/vss_queries.json") as f:
+        data = json.loads(f.read())
     return {k["text"]: numpy.asarray(k.get("embedding", [])) for k in data}
 
 
+@pytest.fixture(scope="module")
+def city_index_data():
+    with open("tests/modules/data/city_index.json") as f:
+        return json.loads(f.read())
+
+
 @pytest.fixture
-async def city_index(client: Redis, _s):
-    data = json.loads(open("tests/modules/data/city_index.json").read())
+async def city_index(client: Redis, _s, city_index_data):
+    data = city_index_data
     with client.ignore_replies():
         await client.search.create(
             "{city}idx",
