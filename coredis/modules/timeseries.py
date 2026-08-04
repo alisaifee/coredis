@@ -710,7 +710,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         arguments={
             "latest": {"version_introduced": "1.8.0"},
             "empty": {"version_introduced": "1.8.0"},
-            "exclude_empty": {"version_introduced": "6.9.0"},
+            "exclude_empty": {"version_introduced": "8.10.0"},
         },
         module=MODULE,
         cluster=ClusterCommandConfig(
@@ -851,7 +851,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
         arguments={
             "latest": {"version_introduced": "1.8.0"},
             "empty": {"version_introduced": "1.8.0"},
-            "exclude_empty": {"version_introduced": "6.9.0"},
+            "exclude_empty": {"version_introduced": "8.10.0"},
         },
         module=MODULE,
         cluster=ClusterCommandConfig(
@@ -1190,9 +1190,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
             command_arguments.extend([PureToken.FILTER_BY_VALUE, min_value, max_value])
         if count is not None:
             command_arguments.extend([PrefixToken.COUNT, count])
-        if align is not None:
-            command_arguments.extend([PrefixToken.ALIGN, align])
         if aggregators is not None and bucketduration is not None:
+            if align is not None:
+                command_arguments.extend([PrefixToken.ALIGN, align])
             _aggs = list(aggregators)
             if len(_aggs) != len(_keys):
                 raise CommandSyntaxError(
@@ -1206,10 +1206,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 else:
                     command_arguments.append(b",".join(aggregator))
             command_arguments.append(normalized_milliseconds(bucketduration))
-        if buckettimestamp is not None:
-            command_arguments.extend([PrefixToken.BUCKETTIMESTAMP, buckettimestamp])
-        if empty is not None:
-            command_arguments.append(PureToken.EMPTY)
+            if buckettimestamp is not None:
+                command_arguments.extend([PrefixToken.BUCKETTIMESTAMP, buckettimestamp])
+            if empty:
+                command_arguments.append(PureToken.EMPTY)
 
         return self.client.create_request(
             CommandName.TS_NRANGE, *command_arguments, callback=NSamplesCallback()
@@ -1284,9 +1284,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
             command_arguments.extend([PureToken.FILTER_BY_VALUE, min_value, max_value])
         if count is not None:
             command_arguments.extend([PrefixToken.COUNT, count])
-        if align is not None:
-            command_arguments.extend([PrefixToken.ALIGN, align])
         if aggregators is not None and bucketduration is not None:
+            if align is not None:
+                command_arguments.extend([PrefixToken.ALIGN, align])
             _aggs = list(aggregators)
             if len(_aggs) != len(_keys):
                 raise CommandSyntaxError(
@@ -1300,10 +1300,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
                 else:
                     command_arguments.append(b",".join(aggregator))
             command_arguments.append(normalized_milliseconds(bucketduration))
-        if buckettimestamp is not None:
-            command_arguments.extend([PrefixToken.BUCKETTIMESTAMP, buckettimestamp])
-        if empty is not None:
-            command_arguments.append(PureToken.EMPTY)
+            if buckettimestamp is not None:
+                command_arguments.extend([PrefixToken.BUCKETTIMESTAMP, buckettimestamp])
+            if empty:
+                command_arguments.append(PureToken.EMPTY)
 
         return self.client.create_request(
             CommandName.TS_NREVRANGE, *command_arguments, callback=NSamplesCallback()

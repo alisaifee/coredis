@@ -6254,8 +6254,8 @@ class CoreCommands(CommandMixin[AnyStr]):
         group=CommandGroup.STREAM,
         flags={CommandFlag.READONLY, CommandFlag.BLOCKING},
         arguments={
-            "max_count": {"version_introduced": "6.9.0"},
-            "max_size": {"version_introduced": "6.9.0"},
+            "max_count": {"version_introduced": "8.10.0"},
+            "max_size": {"version_introduced": "8.10.0"},
         },
     )
     def xread(
@@ -10394,6 +10394,10 @@ class CoreCommands(CommandMixin[AnyStr]):
             command_arguments.extend([PrefixToken.EXACTLY, exactly])
         if ordering is not None:
             command_arguments.append(ordering)
+            if count is None and exactly is None:
+                raise CommandSyntaxError(
+                    set(), "The `ordering` parameter requires either passing `count` or `exactly`!"
+                )
         else:  # ordering not provided
             if count is not None:
                 raise CommandSyntaxError(
