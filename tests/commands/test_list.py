@@ -5,6 +5,7 @@ import pytest
 
 from coredis import PureToken
 from coredis._concurrency import gather
+from coredis.exceptions import CommandSyntaxError
 from tests.conftest import server_deprecation_warning, targets
 
 
@@ -301,3 +302,140 @@ class TestList:
 
         for key, value in mapping.items():
             assert await client.lrange(key, 0, -1) == [_s(v) for v in value]
+
+
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_cluster",
+    "redis_cluster_raw",
+    "redis_cached",
+    "redis_cluster_cached",
+)
+@pytest.mark.min_server_version("8.10.0")
+class TestListMove:
+    async def test_lmovem(self, client, _s):
+        await client.rpush("a{foo}", ["1", "2", "3", "4", "5"])
+        # Without a count a single element is moved, still as a list reply.
+        assert await client.lmovem("a{foo}", "b{foo}", PureToken.LEFT, PureToken.LEFT) == [_s("1")]
+        # OBO moves the elements one by one, so pushing left reverses them.
+        assert await client.lmovem(
+            "a{foo}",
+            "b{foo}",
+            PureToken.LEFT,
+            PureToken.LEFT,
+            count=3,
+            ordering=PureToken.OBO,
+        ) == [_s("4"), _s("3"), _s("2")]
+        assert await client.lrange("b{foo}", 0, -1) == [_s("4"), _s("3"), _s("2"), _s("1")]
+        # COUNT is an upper bound, and BULK preserves the relative order.
+        assert await client.lmovem(
+            "a{foo}",
+            "b{foo}",
+            PureToken.LEFT,
+            PureToken.LEFT,
+            count=5,
+            ordering=PureToken.BULK,
+        ) == [_s("5")]
+        # The source is deleted once it is drained ...
+        assert not await client.exists(["a{foo}"])
+        # ... and moving from an empty source moves nothing.
+        assert (
+            await client.lmovem(
+                "a{foo}",
+                "b{foo}",
+                PureToken.LEFT,
+                PureToken.LEFT,
+                count=2,
+                ordering=PureToken.BULK,
+            )
+            is None
+        )
+
+    async def test_lmovem_exactly(self, client, _s):
+        await client.rpush("names{foo}", ["john"])
+        # EXACTLY is all-or-nothing: too few elements moves none of them.
+        assert (
+            await client.lmovem(
+                "names{foo}",
+                "processed{foo}",
+                PureToken.LEFT,
+                PureToken.RIGHT,
+                exactly=2,
+                ordering=PureToken.BULK,
+            )
+            is None
+        )
+        assert await client.lrange("names{foo}", 0, -1) == [_s("john")]
+        await client.rpush("names{foo}", ["doe"])
+        assert await client.lmovem(
+            "names{foo}",
+            "processed{foo}",
+            PureToken.LEFT,
+            PureToken.RIGHT,
+            exactly=2,
+            ordering=PureToken.BULK,
+        ) == [_s("john"), _s("doe")]
+        assert await client.lrange("processed{foo}", 0, -1) == [_s("john"), _s("doe")]
+
+    async def test_lmovem_invalid_arguments(self, client, _s):
+        # ordering is mandatory whenever count/exactly is given, and vice versa.
+        with pytest.raises(CommandSyntaxError):
+            await client.lmovem("a{foo}", "b{foo}", PureToken.LEFT, PureToken.LEFT, count=2)
+        with pytest.raises(CommandSyntaxError):
+            await client.lmovem("a{foo}", "b{foo}", PureToken.LEFT, PureToken.LEFT, exactly=2)
+        with pytest.raises(CommandSyntaxError):
+            await client.lmovem(
+                "a{foo}", "b{foo}", PureToken.LEFT, PureToken.LEFT, ordering=PureToken.BULK
+            )
+        # count and exactly are two spellings of the same slot.
+        with pytest.raises(CommandSyntaxError):
+            await client.lmovem(
+                "a{foo}",
+                "b{foo}",
+                PureToken.LEFT,
+                PureToken.LEFT,
+                count=2,
+                exactly=2,
+                ordering=PureToken.BULK,
+            )
+
+    async def test_blmovem(self, client, _s):
+        await client.rpush("a{foo}", ["1", "2", "3", "4", "5"])
+        assert await client.blmovem(
+            "a{foo}", "b{foo}", PureToken.LEFT, PureToken.LEFT, timeout=1
+        ) == [_s("1")]
+        assert await client.blmovem(
+            "a{foo}",
+            "b{foo}",
+            PureToken.LEFT,
+            PureToken.RIGHT,
+            timeout=1,
+            count=3,
+            ordering=PureToken.BULK,
+        ) == [_s("2"), _s("3"), _s("4")]
+        # Up to count, with fewer available.
+        assert await client.blmovem(
+            "a{foo}",
+            "b{foo}",
+            PureToken.LEFT,
+            PureToken.RIGHT,
+            timeout=1,
+            count=5,
+            ordering=PureToken.BULK,
+        ) == [_s("5")]
+
+    async def test_blmovem_timeout(self, client, _s):
+        # Nothing to move: block for the timeout and then report nothing moved.
+        assert (
+            await client.blmovem(
+                "x{foo}",
+                "y{foo}",
+                PureToken.LEFT,
+                PureToken.RIGHT,
+                timeout=1,
+                count=2,
+                ordering=PureToken.BULK,
+            )
+            is None
+        )

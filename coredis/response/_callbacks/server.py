@@ -40,6 +40,7 @@ class SlowlogCallback(
                 command=cast(list[StringT], item[3]),
                 client_addr=cast(StringT, item[4]),
                 client_name=cast(StringT, item[5]),
+                argument_count=cast(int | None, item[6] if len(item) > 6 else None),
             )
             for item in response
         )

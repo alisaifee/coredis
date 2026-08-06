@@ -42,6 +42,21 @@ class SamplesCallback(
         return ()
 
 
+class NSamplesCallback(
+    ResponseCallback[
+        list[list[int | list[int | float]]],
+        list[tuple[int, list[int | float]]],
+    ],
+):
+    def transform(
+        self,
+        response: list[list[int | list[int | float]]] | None,
+    ) -> list[tuple[int, list[int | float]]]:
+        if response:
+            return [(cast(int, r[0]), cast(list[int | float], r[1])) for r in response]
+        return []
+
+
 class TimeSeriesCallback(
     ResponseCallback[
         dict[StringT, list[dict[StringT, StringT] | list[int | float]]],
