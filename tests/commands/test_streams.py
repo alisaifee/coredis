@@ -662,3 +662,75 @@ class TestStreams:
             for e in await client.xpending("test_stream", "group", start="-", end="+", count=10)
         }
         assert counters[ids[3]] == 7
+
+
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_cluster",
+    "redis_cluster_raw",
+    "dragonfly",
+    "valkey",
+)
+@pytest.mark.min_server_version("8.10.0")
+class TestStreamReadLimits:
+    async def test_xread_max_count(self, client, _s):
+        for idx in range(1, 6):
+            await client.xadd("test_stream", field_values={"k1": "v1"}, identifier=str(idx))
+        # max_count caps the total number of entries returned.
+        entries = await client.xread(streams={"test_stream": "0"}, max_count=2)
+        assert len(entries[_s("test_stream")]) == 2
+
+    async def test_xread_max_size(self, client, _s):
+        await client.xadd("test_stream", field_values={"k1": "v1"}, identifier="1")
+        # A generous soft cap returns the available entry.
+        entries = await client.xread(streams={"test_stream": "0"}, max_size=65536)
+        assert len(entries[_s("test_stream")]) == 1
+        # max_size is a *soft* cap: a lone entry larger than the cap is still
+        # returned rather than suppressed.
+        entries = await client.xread(streams={"test_stream": "0"}, max_size=1)
+        assert len(entries[_s("test_stream")]) == 1
+
+    async def test_xread_max_count_cumulative_across_streams(self, client, _s):
+        for idx in range(1, 4):
+            await client.xadd("stream1{foo}", field_values={"k1": "v1"}, identifier=str(idx))
+            await client.xadd("stream2{foo}", field_values={"k1": "v1"}, identifier=str(idx))
+        # count is per-stream (up to 3 each) while max_count caps the cumulative
+        # reply; streams are served in caller order, so the first contributes 3
+        # and the second 1.
+        entries = await client.xread(
+            streams={"stream1{foo}": "0", "stream2{foo}": "0"}, count=3, max_count=4
+        )
+        assert sum(len(v) for v in entries.values()) == 4
+
+    async def test_xreadgroup_max_count(self, client, _s):
+        for idx in range(1, 6):
+            await client.xadd("test_stream", field_values={"k1": "v1"}, identifier=str(idx))
+        assert await client.xgroup_create("test_stream", "test_group", "0")
+        entries = await client.xreadgroup(
+            "test_group", "consumer1", streams={"test_stream": ">"}, max_count=2
+        )
+        assert len(entries[_s("test_stream")]) == 2
+
+    async def test_xreadgroup_max_size(self, client, _s):
+        await client.xadd("test_stream", field_values={"k1": "v1"}, identifier="1")
+        assert await client.xgroup_create("test_stream", "test_group", "0")
+        entries = await client.xreadgroup(
+            "test_group", "consumer1", streams={"test_stream": ">"}, max_size=65536
+        )
+        assert len(entries[_s("test_stream")]) == 1
+
+    async def test_xreadgroup_max_count_cumulative_across_streams(self, client, _s):
+        for idx in range(1, 4):
+            await client.xadd("stream1{foo}", field_values={"k1": "v1"}, identifier=str(idx))
+            await client.xadd("stream2{foo}", field_values={"k1": "v1"}, identifier=str(idx))
+        assert await client.xgroup_create("stream1{foo}", "test_group", "0")
+        assert await client.xgroup_create("stream2{foo}", "test_group", "0")
+        entries = await client.xreadgroup(
+            "test_group",
+            "consumer1",
+            streams={"stream1{foo}": ">", "stream2{foo}": ">"},
+            count=3,
+            max_count=4,
+        )
+        assert sum(len(v) for v in entries.values()) == 4

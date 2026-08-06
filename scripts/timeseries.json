@@ -336,7 +336,7 @@
                 "type": "key"
             },
             {
-                "name": "value",
+                "name": "addend",
                 "type": "double"
             },
             {
@@ -352,9 +352,21 @@
                 "optional": true
             },
             {
-                "name": "uncompressed",
-                "type": "pure-token",
-                "token": "UNCOMPRESSED",
+                "token": "ENCODING",
+                "name": "enc",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "uncompressed",
+                        "type": "pure-token",
+                        "token": "UNCOMPRESSED"
+                    },
+                    {
+                        "name": "compressed",
+                        "type": "pure-token",
+                        "token": "COMPRESSED"
+                    }
+                ],
                 "optional": true
             },
             {
@@ -362,6 +374,60 @@
                 "token": "CHUNK_SIZE",
                 "name": "size",
                 "optional": true
+            },
+            {
+                "type": "oneof",
+                "token": "DUPLICATE_POLICY",
+                "name": "policy",
+                "arguments": [
+                    {
+                        "name": "block",
+                        "type": "pure-token",
+                        "token": "BLOCK"
+                    },
+                    {
+                        "name": "first",
+                        "type": "pure-token",
+                        "token": "FIRST"
+                    },
+                    {
+                        "name": "last",
+                        "type": "pure-token",
+                        "token": "LAST"
+                    },
+                    {
+                        "name": "min",
+                        "type": "pure-token",
+                        "token": "MIN"
+                    },
+                    {
+                        "name": "max",
+                        "type": "pure-token",
+                        "token": "MAX"
+                    },
+                    {
+                        "name": "sum",
+                        "type": "pure-token",
+                        "token": "SUM"
+                    }
+                ],
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "ignore",
+                "token": "IGNORE",
+                "optional": true,
+                "arguments": [
+                    {
+                        "type": "integer",
+                        "name": "ignoreMaxTimeDiff"
+                    },
+                    {
+                        "type": "double",
+                        "name": "ignoreMaxValDiff"
+                    }
+                ]
             },
             {
                 "type": "block",
@@ -393,7 +459,7 @@
                 "type": "key"
             },
             {
-                "name": "value",
+                "name": "subtrahend",
                 "type": "double"
             },
             {
@@ -409,9 +475,21 @@
                 "optional": true
             },
             {
-                "name": "uncompressed",
-                "type": "pure-token",
-                "token": "UNCOMPRESSED",
+                "token": "ENCODING",
+                "name": "enc",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "uncompressed",
+                        "type": "pure-token",
+                        "token": "UNCOMPRESSED"
+                    },
+                    {
+                        "name": "compressed",
+                        "type": "pure-token",
+                        "token": "COMPRESSED"
+                    }
+                ],
                 "optional": true
             },
             {
@@ -419,6 +497,60 @@
                 "token": "CHUNK_SIZE",
                 "name": "size",
                 "optional": true
+            },
+            {
+                "type": "oneof",
+                "token": "DUPLICATE_POLICY",
+                "name": "policy",
+                "arguments": [
+                    {
+                        "name": "block",
+                        "type": "pure-token",
+                        "token": "BLOCK"
+                    },
+                    {
+                        "name": "first",
+                        "type": "pure-token",
+                        "token": "FIRST"
+                    },
+                    {
+                        "name": "last",
+                        "type": "pure-token",
+                        "token": "LAST"
+                    },
+                    {
+                        "name": "min",
+                        "type": "pure-token",
+                        "token": "MIN"
+                    },
+                    {
+                        "name": "max",
+                        "type": "pure-token",
+                        "token": "MAX"
+                    },
+                    {
+                        "name": "sum",
+                        "type": "pure-token",
+                        "token": "SUM"
+                    }
+                ],
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "ignore",
+                "token": "IGNORE",
+                "optional": true,
+                "arguments": [
+                    {
+                        "type": "integer",
+                        "name": "ignoreMaxTimeDiff"
+                    },
+                    {
+                        "type": "double",
+                        "name": "ignoreMaxValDiff"
+                    }
+                ]
             },
             {
                 "type": "block",
@@ -661,6 +793,234 @@
             }
         ],
         "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.NRANGE": {
+        "summary": "Query a range across multiple time series in forward direction, returning the results pivoted by timestamp (one value column per key)",
+        "complexity": "O(numkeys*(n/m+k)) where n = Number of samples, m = Chunk size (samples per chunk), k = Number of samples that are in the requested range",
+        "arguments": [
+            {
+                "name": "numkeys",
+                "type": "integer"
+            },
+            {
+                "name": "key",
+                "type": "key",
+                "multiple": true
+            },
+            {
+                "name": "fromTimestamp",
+                "type": "string"
+            },
+            {
+                "name": "toTimestamp",
+                "type": "string"
+            },
+            {
+                "name": "LATEST",
+                "type": "string",
+                "optional": true
+            },
+            {
+                "token": "FILTER_BY_TS",
+                "name": "Timestamp",
+                "type": "integer",
+                "multiple": true,
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "fbv",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "FILTER_BY_VALUE",
+                        "type": "pure-token",
+                        "token": "FILTER_BY_VALUE"
+                    },
+                    {
+                        "type": "double",
+                        "name": "min"
+                    },
+                    {
+                        "type": "double",
+                        "name": "max"
+                    }
+                ]
+            },
+            {
+                "token": "COUNT",
+                "name": "count",
+                "type": "integer",
+                "optional": true
+            },
+            {
+                "name": "aggregation",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "token": "ALIGN",
+                        "name": "value",
+                        "type": "integer",
+                        "optional": true
+                    },
+                    {
+                        "type": "string",
+                        "token": "AGGREGATION",
+                        "name": "aggregators",
+                        "multiple": true
+                    },
+                    {
+                        "name": "bucketDuration",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "buckettimestamp",
+                        "type": "pure-token",
+                        "token": "BUCKETTIMESTAMP",
+                        "optional": true
+                    },
+                    {
+                        "name": "empty",
+                        "type": "pure-token",
+                        "token": "EMPTY",
+                        "optional": true
+                    }
+                ]
+            }
+        ],
+        "since": "8.10.0",
+        "group": "timeseries"
+    },
+    "TS.NREVRANGE": {
+        "summary": "Query a range across multiple time series in reverse direction, returning the results pivoted by timestamp (one value column per key)",
+        "complexity": "O(numkeys*(n/m+k)) where n = Number of samples, m = Chunk size (samples per chunk), k = Number of samples that are in the requested range",
+        "arguments": [
+            {
+                "name": "numkeys",
+                "type": "integer"
+            },
+            {
+                "name": "key",
+                "type": "key",
+                "multiple": true
+            },
+            {
+                "name": "fromTimestamp",
+                "type": "string"
+            },
+            {
+                "name": "toTimestamp",
+                "type": "string"
+            },
+            {
+                "name": "LATEST",
+                "type": "string",
+                "optional": true
+            },
+            {
+                "token": "FILTER_BY_TS",
+                "name": "Timestamp",
+                "type": "integer",
+                "multiple": true,
+                "optional": true
+            },
+            {
+                "type": "block",
+                "name": "fbv",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "FILTER_BY_VALUE",
+                        "type": "pure-token",
+                        "token": "FILTER_BY_VALUE"
+                    },
+                    {
+                        "type": "double",
+                        "name": "min"
+                    },
+                    {
+                        "type": "double",
+                        "name": "max"
+                    }
+                ]
+            },
+            {
+                "token": "COUNT",
+                "name": "count",
+                "type": "integer",
+                "optional": true
+            },
+            {
+                "name": "aggregation",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "token": "ALIGN",
+                        "name": "value",
+                        "type": "integer",
+                        "optional": true
+                    },
+                    {
+                        "type": "string",
+                        "token": "AGGREGATION",
+                        "name": "aggregators",
+                        "multiple": true
+                    },
+                    {
+                        "name": "bucketDuration",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "buckettimestamp",
+                        "type": "oneof",
+                        "token": "BUCKETTIMESTAMP",
+                        "optional": true,
+                        "arguments": [
+                            {
+                                "name": "-",
+                                "type": "pure-token",
+                                "token": "-"
+                            },
+                            {
+                                "name": "start",
+                                "type": "pure-token",
+                                "token": "start"
+                            },
+                            {
+                                "name": "+",
+                                "type": "pure-token",
+                                "token": "+"
+                            },
+                            {
+                                "name": "end",
+                                "type": "pure-token",
+                                "token": "end"
+                            },
+                            {
+                                "name": "~",
+                                "type": "pure-token",
+                                "token": "~"
+                            },
+                            {
+                                "name": "mid",
+                                "type": "pure-token",
+                                "token": "mid"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "empty",
+                        "type": "pure-token",
+                        "token": "EMPTY",
+                        "optional": true
+                    }
+                ]
+            }
+        ],
+        "since": "8.10.0",
         "group": "timeseries"
     },
     "TS.REVRANGE": {
@@ -960,6 +1320,13 @@
                         "name": "reducer"
                     }
                 ]
+            },
+            {
+                "name": "excludeempty",
+                "type": "pure-token",
+                "token": "EXCLUDEEMPTY",
+                "optional": true,
+                "since": "8.10.0"
             }
         ],
         "since": "1.0.0",
@@ -1137,6 +1504,13 @@
                         "name": "reducer"
                     }
                 ]
+            },
+            {
+                "name": "excludeempty",
+                "type": "pure-token",
+                "token": "EXCLUDEEMPTY",
+                "optional": true,
+                "since": "8.10.0"
             }
         ],
         "group": "timeseries"
@@ -1159,8 +1533,8 @@
         "since": "1.0.0",
         "group": "timeseries"
     },
-    "TS.BGET": {
-        "summary": "Blocking GET: wait up to `timeout` milliseconds and retrieve up to `count` samples with timestamp >= `timestamp`. Returns the oldest qualifying samples in ascending timestamp order. When `timeout` is 0 the command does not block and returns whatever is available now (possibly empty or fewer than `count`).",
+    "TS.READ": {
+        "summary": "Return up to `max_count` samples with timestamp >= `timestamp` in ascending order. With BLOCK, waits up to `milliseconds` ms until at least `min_count` qualifying samples exist; without BLOCK, returns immediately whatever is available. Defaults: `min_count` 1, `max_count` unlimited.",
         "complexity": "O(log(n)+k) where n is the number of samples in the series and k is the number of returned samples",
         "arguments": [
             {
@@ -1172,12 +1546,26 @@
                 "type": "string"
             },
             {
-                "name": "count",
-                "type": "integer"
+                "name": "BLOCK",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "milliseconds",
+                        "token": "BLOCK",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "min_count",
+                        "type": "integer"
+                    }
+                ]
             },
             {
-                "name": "timeout",
-                "type": "integer"
+                "name": "max_count",
+                "token": "MAX_COUNT",
+                "type": "integer",
+                "optional": true
             }
         ],
         "command_flags": [
@@ -1318,6 +1706,73 @@
             }
         ],
         "since": "1.0.0",
+        "group": "timeseries"
+    },
+    "TS.QUERYLABELS": {
+        "summary": "Get all label names, or all values of a given label, for time series matching a filter list, or all series",
+        "complexity": "O(n) where n is the number of time-series that match the filters (all indexed series when FILTER is omitted)",
+        "arguments": [
+            {
+                "name": "subtype",
+                "type": "oneof",
+                "arguments": [
+                    {
+                        "name": "LABELS",
+                        "type": "pure-token",
+                        "token": "LABELS"
+                    },
+                    {
+                        "type": "block",
+                        "name": "VALUES_BLOCK",
+                        "arguments": [
+                            {
+                                "name": "VALUES",
+                                "type": "pure-token",
+                                "token": "VALUES"
+                            },
+                            {
+                                "name": "label",
+                                "type": "string"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "filterExpr",
+                "token": "FILTER",
+                "type": "oneof",
+                "optional": true,
+                "arguments": [
+                    {
+                        "name": "l=v",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=v",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l=",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l=(v1,v2,...)",
+                        "type": "string"
+                    },
+                    {
+                        "name": "l!=(v1,v2,...)",
+                        "type": "string"
+                    }
+                ],
+                "multiple": true
+            }
+        ],
+        "since": "8.10.0",
         "group": "timeseries"
     }
 }

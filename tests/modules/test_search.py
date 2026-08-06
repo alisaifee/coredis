@@ -758,6 +758,38 @@ class TestSearch:
             ),
         )
 
+    @pytest.mark.min_module_version("search", "8.10.0")
+    async def test_aliaslist(self, client: Redis, _s):
+        assert await client.search.create("{a}idx", [Field("txt", PureToken.TEXT)])
+
+        # An index with no aliases lists an empty set rather than erroring.
+        assert await client.search.aliaslist("{a}idx") == set()
+
+        assert await client.search.aliasadd("{a}alias1", "{a}idx")
+        assert await client.search.aliasadd("{a}alias2", "{a}idx")
+        assert await client.search.aliaslist("{a}idx") == {_s("{a}alias1"), _s("{a}alias2")}
+
+        # Moving an alias to another index removes it from the previous listing.
+        assert await client.search.create("{a}idx2", [Field("txt", PureToken.TEXT)])
+        assert await client.search.aliasupdate("{a}alias1", "{a}idx2")
+        assert await client.search.aliaslist("{a}idx") == {_s("{a}alias2")}
+        assert await client.search.aliaslist("{a}idx2") == {_s("{a}alias1")}
+
+        # And deleting it removes it entirely.
+        assert await client.search.aliasdel("{a}alias2")
+        assert await client.search.aliaslist("{a}idx") == set()
+
+    @pytest.mark.min_module_version("search", "8.10.0")
+    async def test_aliaslist_requires_an_index(self, client: Redis, _s):
+        assert await client.search.create("{a}idx", [Field("txt", PureToken.TEXT)])
+        assert await client.search.aliasadd("{a}alias1", "{a}idx")
+
+        # A missing index errors, and an alias is not resolved client side.
+        with pytest.raises(ResponseError):
+            await client.search.aliaslist("{a}nonexistent")
+        with pytest.raises(ResponseError):
+            await client.search.aliaslist("{a}alias1")
+
 
 @pytest.mark.min_module_version("search", "2.6.1")
 @module_targets()
