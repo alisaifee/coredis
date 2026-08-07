@@ -384,13 +384,13 @@ class TestBackup:
         assert (await client.backup_status())[_s("state")] == _s("idle")
         assert await client.backup_list() == []
 
-        assert await client.backup_start() == _s("OK")
+        assert await client.backup_start() is True
         status = await self.wait_for_state(client, _s, "incrementing")
         assert status[_s("start_time")] > 0
         # The base rdb is pinned as soon as the snapshot completes.
         assert len(await client.backup_list()) >= 1
 
-        assert await client.backup_seal() == _s("OK")
+        assert await client.backup_seal() is True
         status = await client.backup_status()
         assert status[_s("state")] == _s("sealed")
         assert status[_s("end_time")] > 0
@@ -398,7 +398,7 @@ class TestBackup:
         assert len(await client.backup_list()) >= 3
 
         # CLEANUP discards the sealed files and returns the server to idle.
-        assert await client.backup_cleanup() == _s("OK")
+        assert await client.backup_cleanup() is True
         assert (await client.backup_status())[_s("state")] == _s("idle")
         assert await client.backup_list() == []
 
@@ -410,13 +410,13 @@ class TestBackup:
 
     async def test_backup_abort(self, client, _s):
         await client.backup_start()
-        assert await client.backup_abort() == _s("OK")
+        assert await client.backup_abort() is True
         # An aborted backup is reported as failed, with the reason retained ...
         status = await client.backup_status()
         assert status[_s("state")] == _s("failed")
         assert status[_s("error")] == _s("aborted by user")
         # ... until CLEANUP discards it.
-        assert await client.backup_cleanup() == _s("OK")
+        assert await client.backup_cleanup() is True
         assert (await client.backup_status())[_s("state")] == _s("idle")
         # Aborting when nothing is running is an error.
         with pytest.raises(ResponseError):

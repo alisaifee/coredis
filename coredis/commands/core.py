@@ -10233,24 +10233,26 @@ class CoreCommands(CommandMixin[AnyStr]):
     )
     def himport_prepare(
         self, fieldset_name: KeyT, fields: Parameters[KeyT]
-    ) -> CommandRequest[None]:
+    ) -> CommandRequest[bool]:
         """
         Defines a session-local fieldset that maps a name to a sorted set of field names.
 
         :param fieldset_name: fieldset to define schema for
         :param fields: field names for the schema
 
+        :return: ``True`` if the fieldset was defined successfully
+
         """
         command_arguments: CommandArgList = [fieldset_name, *fields]
         return self.create_request(
-            CommandName.HIMPORT_PREPARE, *command_arguments, callback=NoopCallback()
+            CommandName.HIMPORT_PREPARE, *command_arguments, callback=SimpleStringCallback()
         )
 
     @versionadded(version="6.9.0")
     @redis_command(CommandName.HIMPORT_SET, version_introduced="8.10.0", group=CommandGroup.HASH)
     def himport_set(
         self, key: KeyT, fieldset_name: KeyT, values: Parameters[KeyT]
-    ) -> CommandRequest[None]:
+    ) -> CommandRequest[bool]:
         """
         Creates a fieldset-based hash from values supplied in the order matching a previously prepared fieldset.
 
@@ -10258,11 +10260,13 @@ class CoreCommands(CommandMixin[AnyStr]):
         :param fieldset_name: fieldset containing schema for hash
         :param values: values to insert into the hash
 
+        :return: ``True`` if the hash was created successfully
+
         """
         command_arguments: CommandArgList = [Key(key), fieldset_name]
         command_arguments.extend(values)
         return self.create_request(
-            CommandName.HIMPORT_SET, *command_arguments, callback=NoopCallback()
+            CommandName.HIMPORT_SET, *command_arguments, callback=SimpleStringCallback()
         )
 
     @versionadded(version="6.9.0")
@@ -10478,12 +10482,14 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="6.9.0")
     @redis_command(CommandName.BACKUP_START, version_introduced="8.10.0", group=CommandGroup.SERVER)
-    def backup_start(self) -> CommandRequest[None]:
+    def backup_start(self) -> CommandRequest[bool]:
         """
         Start a new backup into the configured 'backupdirname'.
+
+        :return: ``True`` if the backup was started successfully
         """
 
-        return self.create_request(CommandName.BACKUP_START, callback=NoopCallback())
+        return self.create_request(CommandName.BACKUP_START, callback=SimpleStringCallback())
 
     @versionadded(version="6.9.0")
     @redis_command(
@@ -10515,29 +10521,35 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="6.9.0")
     @redis_command(CommandName.BACKUP_SEAL, version_introduced="8.10.0", group=CommandGroup.SERVER)
-    def backup_seal(self) -> CommandRequest[None]:
+    def backup_seal(self) -> CommandRequest[bool]:
         """
         Freeze the current backup (BASE + INCR + manifest).
+
+        :return: ``True`` if the backup was sealed successfully
         """
 
-        return self.create_request(CommandName.BACKUP_SEAL, callback=NoopCallback())
+        return self.create_request(CommandName.BACKUP_SEAL, callback=SimpleStringCallback())
 
     @versionadded(version="6.9.0")
     @redis_command(CommandName.BACKUP_ABORT, version_introduced="8.10.0", group=CommandGroup.SERVER)
-    def backup_abort(self) -> CommandRequest[None]:
+    def backup_abort(self) -> CommandRequest[bool]:
         """
         Cancel a backup that has not been sealed yet.
+
+        :return: ``True`` if the backup was aborted successfully
         """
 
-        return self.create_request(CommandName.BACKUP_ABORT, callback=NoopCallback())
+        return self.create_request(CommandName.BACKUP_ABORT, callback=SimpleStringCallback())
 
     @versionadded(version="6.9.0")
     @redis_command(
         CommandName.BACKUP_CLEANUP, version_introduced="8.10.0", group=CommandGroup.SERVER
     )
-    def backup_cleanup(self) -> CommandRequest[None]:
+    def backup_cleanup(self) -> CommandRequest[bool]:
         """
         Remove a sealed backup's files and return to idle.
+
+        :return: ``True`` if the backup was cleaned up successfully
         """
 
-        return self.create_request(CommandName.BACKUP_CLEANUP, callback=NoopCallback())
+        return self.create_request(CommandName.BACKUP_CLEANUP, callback=SimpleStringCallback())

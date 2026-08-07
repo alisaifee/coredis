@@ -369,9 +369,9 @@ class TestHashImport:
 
     async def test_himport_prepare_and_set(self, client, _s):
         # A fieldset names an ordered list of hash fields for this connection.
-        assert await client.himport_prepare("fs", ["name", "email", "age"]) == _s("OK")
+        assert await client.himport_prepare("fs", ["name", "email", "age"]) is True
         # HIMPORT SET supplies only the values, positionally, in fieldset order.
-        assert await client.himport_set("u:1", "fs", ["alice", "alice@example.com", 30]) == _s("OK")
+        assert await client.himport_set("u:1", "fs", ["alice", "alice@example.com", 30]) is True
         assert await client.hgetall("u:1") == {
             _s("name"): _s("alice"),
             _s("email"): _s("alice@example.com"),
