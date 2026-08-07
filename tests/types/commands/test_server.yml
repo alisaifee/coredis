@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/typeddjango/pytest-mypy-plugins/master/pytest_mypy_plugins/schema.json
+# BACKUP STATUS replies mix string fields (state, error) with integer
+# timestamps (start_time, end_time). The return type must not be dict[K, V]
+# with V = AnyStr only.
+- case: backup_status
+  with_client:
+      client_params: {}
+  main: |
+      status: dict[bytes, bytes | int] = await client.backup_status()
+- case: backup_status_decoded
+  with_client:
+      client_params: {decode_responses: True}
+  main: |
+      status: dict[str, str | int] = await client.backup_status()

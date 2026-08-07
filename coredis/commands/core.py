@@ -10495,16 +10495,17 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.BACKUP_STATUS, version_introduced="8.10.0", group=CommandGroup.SERVER
     )
-    def backup_status(self) -> CommandRequest[dict[AnyStr, AnyStr]]:
+    def backup_status(self) -> CommandRequest[dict[AnyStr, AnyStr | int]]:
         """
         Report the current backup state.
 
-        :return: mapping containing info about current backup state
+        :return: mapping of status fields. String values include ``state`` and
+         ``error``; integer values include ``start_time`` and ``end_time``.
 
         """
 
         return self.create_request(
-            CommandName.BACKUP_STATUS, callback=DictCallback[AnyStr, AnyStr]()
+            CommandName.BACKUP_STATUS, callback=DictCallback[AnyStr, AnyStr | int]()
         )
 
     @versionadded(version="6.9.0")
