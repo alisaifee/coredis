@@ -326,6 +326,17 @@ class TestTimeseries:
 
         assert all(math.isnan(k[1]) for k in res[10:20])
 
+    async def test_range_empty_false_omits_token(self, client: Redis):
+        # empty=False must not emit EMPTY (only a truthy empty does).
+        without = client.timeseries.range(
+            "ts1", 0, 10, aggregator=PureToken.AVG, bucketduration=10, empty=False
+        )
+        assert PureToken.EMPTY not in without.arguments
+        with_empty = client.timeseries.range(
+            "ts1", 0, 10, aggregator=PureToken.AVG, bucketduration=10, empty=True
+        )
+        assert PureToken.EMPTY in with_empty.arguments
+
     @pytest.mark.min_module_version("timeseries", "8.8")
     async def test_range_multi_aggregator(self, client: Redis):
         for i in range(10):
@@ -407,6 +418,16 @@ class TestTimeseries:
         )
 
         assert all(math.isnan(k[1]) for k in res[10:20])
+
+    async def test_revrange_empty_false_omits_token(self, client: Redis):
+        without = client.timeseries.revrange(
+            "ts1", 0, 10, aggregator=PureToken.AVG, bucketduration=10, empty=False
+        )
+        assert PureToken.EMPTY not in without.arguments
+        with_empty = client.timeseries.revrange(
+            "ts1", 0, 10, aggregator=PureToken.AVG, bucketduration=10, empty=True
+        )
+        assert PureToken.EMPTY in with_empty.arguments
 
     async def test_mrange(self, client: Redis, _s):
         await client.timeseries.create("ts1", labels={"Test": "This", "team": "ny"})

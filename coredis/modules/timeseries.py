@@ -602,7 +602,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             )
             if buckettimestamp is not None:
                 command_arguments.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
-            if empty is not None:
+            if empty:
                 command_arguments.append(PureToken.EMPTY)
 
         return self.client.create_request(
@@ -691,7 +691,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
             )
             if buckettimestamp is not None:
                 command_arguments.extend([PureToken.BUCKETTIMESTAMP, buckettimestamp])
-            if empty is not None:
+            if empty:
                 command_arguments.append(PureToken.EMPTY)
 
         return self.client.create_request(
