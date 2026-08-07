@@ -9,14 +9,14 @@ from ._uds import UnixDomainSocketConnection, UnixDomainSocketLocation
 #: For backward compatibility
 Connection = TCPConnection
 __all__ = [
-    "BaseConnectionParams",
     "BaseConnection",
-    "Connection",
-    "TCPConnection",
-    "Location",
-    "TCPLocation",
-    "SentinelManagedConnection",
-    "UnixDomainSocketLocation",
-    "UnixDomainSocketConnection",
+    "BaseConnectionParams",
     "ClusterConnection",
+    "Connection",
+    "Location",
+    "SentinelManagedConnection",
+    "TCPConnection",
+    "TCPLocation",
+    "UnixDomainSocketConnection",
+    "UnixDomainSocketLocation",
 ]

@@ -10,6 +10,12 @@ lint-fix:
 	uv run ruff format coredis tests
 	uv run mypy coredis
 
+lint-unsafe-fix:
+	uv run ruff check --select I --fix coredis tests
+	uv run ruff check --fix coredis tests --unsafe-fixes
+	uv run ruff format coredis tests
+	uv run mypy coredis
+
 DEBUG := False
 
 coverage-docs:

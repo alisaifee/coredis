@@ -283,8 +283,7 @@ class TestServer:
     async def test_save(self, client):
         assert await client.save()
         assert (
-            (await client.lastsave()).replace(tzinfo=datetime.timezone.utc)
-            - datetime.datetime.now(datetime.timezone.utc)
+            (await client.lastsave()) - datetime.datetime.now(datetime.timezone.utc)
         ) < datetime.timedelta(minutes=1)
 
     @pytest.mark.nocluster
@@ -302,12 +301,14 @@ class TestServer:
     async def test_slaveof(self, client, _s):
         with pytest.warns(DeprecationWarning):
             assert await client.slaveof()
-            try:
+        try:
+            with pytest.warns(DeprecationWarning):
                 await client.slaveof("nowhere", 6666)
-                with pytest.raises(ReadOnlyError):
-                    await client.set("fubar", 1)
-            finally:
-                # reset to replica of self
+            with pytest.raises(ReadOnlyError):
+                await client.set("fubar", 1)
+        finally:
+            # reset to replica of self
+            with pytest.warns(DeprecationWarning):
                 await client.slaveof()
 
     @pytest.mark.nocluster
@@ -315,11 +316,12 @@ class TestServer:
         await client.set("fubar", 1)
         with pytest.warns(UserWarning):
             await client.select(1)
-            await client.set("fubar", 2)
+        await client.set("fubar", 2)
+        with pytest.warns(UserWarning):
             await client.select(0)
-            assert await client.get("fubar") == _s(1)
-            assert await client.swapdb(0, 1)
-            assert await client.get("fubar") == _s(2)
+        assert await client.get("fubar") == _s(1)
+        assert await client.swapdb(0, 1)
+        assert await client.get("fubar") == _s(2)
 
     @pytest.mark.nocluster
     @pytest.mark.max_server_version("7.1")

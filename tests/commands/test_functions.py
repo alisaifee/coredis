@@ -116,7 +116,7 @@ class TestReadonlyFunctions:
     @pytest.mark.parametrize("client_arguments", [{"read_from_replicas": True}])
     async def test_fcall_ro(self, client, simple_library, _s, client_arguments, mocker):
         get_connection = mocker.spy(client.connection_pool, "get_connection")
-        await client.fcall_ro("echo_key", ["a"], []) == _s("a")
+        assert await client.fcall_ro("echo_key", ["a"], []) == _s("a")
         assert get_connection.call_args[0][0].server_type == "replica"
         with pytest.raises(ResponseError):
             await client.fcall_ro("return_arg", ["a"], [2])
@@ -341,7 +341,7 @@ class TestReadonlyLibrary:
         lib = await Coredis(client)
         assert await lib.echo_key("bar") == _s("bar")
         with pytest.raises(ResponseError):
-            await lib.return_arg(1) == 10
+            await lib.return_arg(1)
 
         assert fcall.call_count == 0
         assert fcall_ro.call_count == 2

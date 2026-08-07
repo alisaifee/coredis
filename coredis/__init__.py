@@ -28,20 +28,20 @@ from coredis.pool import (
 from coredis.tokens import PureToken
 
 __all__ = [
-    "Config",
-    "Redis",
-    "RedisCluster",
     "BaseConnection",
-    "Connection",
-    "TCPConnection",
-    "UnixDomainSocketConnection",
     "BaseConnectionPool",
     "ClusterConnection",
-    "ConnectionPool",
     "ClusterConnectionPool",
+    "Config",
+    "Connection",
+    "ConnectionPool",
     "PureToken",
+    "Redis",
+    "RedisCluster",
     "Sentinel",
-    "SentinelManagedConnection",
     "SentinelConnectionPool",
+    "SentinelManagedConnection",
+    "TCPConnection",
+    "UnixDomainSocketConnection",
     "__version__",
 ]

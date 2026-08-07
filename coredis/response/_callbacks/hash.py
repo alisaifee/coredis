@@ -44,10 +44,8 @@ class HRandFieldCallback(
         if self.options.get("count"):
             if self.options.get("withvalues"):
                 return dict(
-                    (
-                        cast(tuple[AnyStr, AnyStr], tuple(v))
-                        for v in cast(list[list[StringT]], response)
-                    )
+                    cast(tuple[AnyStr, AnyStr], tuple(v))
+                    for v in cast(list[list[StringT]], response)
                 )
             return tuple(cast(list[AnyStr], response))
         return cast(AnyStr, response)

@@ -7,6 +7,7 @@ import weakref
 from typing import Any, cast, get_args, overload
 
 from deprecated.sphinx import versionadded
+from typing_extensions import Self
 
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.commands.request import CommandRequest, CommandResponseT
@@ -105,11 +106,9 @@ class Library(Generic[AnyStr]):
         Update the code of a library with :paramref:`new_code`
         """
         self.code = new_code
-        if await self.initialize(replace=True):
-            return True
-        return False
+        return bool(await self.initialize(replace=True))
 
-    async def initialize(self: LibraryT, replace: bool = False) -> LibraryT:
+    async def initialize(self, replace: bool = False) -> Self:
         from coredis.patterns.pipeline import ClusterPipeline, Pipeline
 
         self._functions.clear()
@@ -134,7 +133,7 @@ class Library(Generic[AnyStr]):
             )
         return self
 
-    def __await__(self: LibraryT) -> Generator[Any, None, LibraryT]:
+    def __await__(self) -> Generator[Any, None, Self]:
         return self.initialize().__await__()
 
     def __getitem__(self, function: str) -> Function[AnyStr] | None:

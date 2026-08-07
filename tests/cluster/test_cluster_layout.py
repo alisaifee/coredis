@@ -46,7 +46,7 @@ class TestClusterLayout:
             values = await cluster_slots(self, *args, **kwargs)
             if refresh_count == 1:
                 # change the primary host for the first slot range
-                slot_range, nodes = list(values.items())[0]
+                slot_range, nodes = next(iter(values.items()))
                 broken_slots.append(slot_range)
                 original_primaries.append(dict(nodes[0]))
                 nodes[0]["host"] = "bogus"
@@ -125,7 +125,7 @@ class TestClusterLayout:
             values = await cluster_slots(self, *args, **kwargs)
             if refresh_count == 1:
                 # change the host for the first slot range
-                slot_range, nodes = list(values.items())[0]
+                slot_range, nodes = next(iter(values.items()))
                 original_replicas.append(dict(nodes[1]))
                 nodes[1]["host"] = "bogus"
                 broken_slots.append(slot_range)

@@ -23,7 +23,7 @@ class TestCuckooFilter:
         assert info[1][_s("Bucket size")] == 3
 
         assert await client.cf.reserve("filter_custom_expansion", 4, 2, 1, 2)
-        [await client.cf.add("filter_custom_expansion", i) for i in range(0, 4)]
+        [await client.cf.add("filter_custom_expansion", i) for i in range(4)]
         info = await client.cf.info("filter_custom_expansion")
         assert info[_s("Number of filters")] == 1
         assert info[_s("Max iterations")] == 1

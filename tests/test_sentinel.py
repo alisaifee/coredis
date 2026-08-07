@@ -223,7 +223,7 @@ class TestSentinelCommand:
 
     async def test_sentinel_replicas(self, client):
         assert not any(
-            [k["is_master"] for k in (await client.sentinels[0].sentinel_replicas("mymaster"))]
+            k["is_master"] for k in (await client.sentinels[0].sentinel_replicas("mymaster"))
         )
 
     async def test_no_replicas(self, client: Sentinel, mocker):
@@ -270,6 +270,5 @@ class TestSentinelCommand:
             with primary.ensure_replication(1):
                 await primary.set("fubar", 1)
 
-            with pytest.raises(ReplicationError):
-                with primary.ensure_replication(2):
-                    await primary.set("fubar", 1)
+            with pytest.raises(ReplicationError), primary.ensure_replication(2):
+                await primary.set("fubar", 1)

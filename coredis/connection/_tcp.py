@@ -65,11 +65,10 @@ class TCPConnection(BaseConnection):
             else:
                 connection = await connect_tcp(self.location.host, self.location.port)
             sock = connection.extra(SocketAttribute.raw_socket, default=None)
-            if sock is not None:
-                if self._socket_keepalive:  # TCP_KEEPALIVE
-                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-                    for k, v in self._socket_keepalive_options.items():
-                        sock.setsockopt(socket.SOL_TCP, k, v)
+            if sock is not None and self._socket_keepalive:  # TCP_KEEPALIVE
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                for k, v in self._socket_keepalive_options.items():
+                    sock.setsockopt(socket.SOL_TCP, k, v)
             return connection
 
     def describe(self) -> str:
@@ -78,10 +77,8 @@ class TCPConnection(BaseConnection):
     def telemetry_attributes(self, provider: TelemetryProvider) -> dict[str, str | int]:
         return {
             **super().telemetry_attributes(provider),
-            **{
-                "network.peer.hostname": self.location.host,
-                "network.peer.port": self.location.port,
-                "server.address": self.location.host,
-                "server.port": self.location.port,
-            },
+            "network.peer.hostname": self.location.host,
+            "network.peer.port": self.location.port,
+            "server.address": self.location.host,
+            "server.port": self.location.port,
         }

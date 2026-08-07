@@ -49,7 +49,7 @@ Consumers are no longer awaitable. They support the
 async context manager protocol and must be used as such.
 """,
 )
-class Consumer(Generic[AnyStr], AsyncContextManagerMixin):
+class Consumer(AsyncContextManagerMixin, Generic[AnyStr]):
     state: MutableMapping[KeyT, State]
     DEFAULT_START_ID: ClassVar[bytes] = b"0-0"
 
@@ -316,7 +316,7 @@ class GroupConsumer(Consumer[AnyStr]):
                         await self.client.xgroup_create(
                             stream, self.group, PureToken.NEW_ID, mkstream=True
                         )
-                    except StreamDuplicateConsumerGroupError:  # noqa
+                    except StreamDuplicateConsumerGroupError:
                         pass
                 self._initialized_streams[stream] = True
                 self._state[stream].setdefault("identifier", ">")

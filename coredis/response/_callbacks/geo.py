@@ -8,11 +8,11 @@ from coredis.typing import AnyStr, Generic, StringT
 
 
 class GeoSearchCallback(
-    Generic[AnyStr],
     ResponseCallback[
         list[StringT | list[StringT | int | list[float]]],
         tuple[AnyStr | GeoSearchResult, ...],
     ],
+    Generic[AnyStr],
 ):
     def transform(
         self,
@@ -52,8 +52,6 @@ class GeoCoordinatesCallback(
         self, response: list[list[float] | None], **options: Any
     ) -> tuple[GeoCoordinates | None, ...]:
         return tuple(
-            map(
-                lambda ll: GeoCoordinates(float(ll[0]), float(ll[1])) if ll is not None else None,
-                response,
-            )
+            GeoCoordinates(float(ll[0]), float(ll[1])) if ll is not None else None
+            for ll in response
         )

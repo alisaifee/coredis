@@ -147,9 +147,14 @@ def mutually_inclusive_parameters(
         def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
             if not Config.optimized:
                 params = tracker.provided_parameters(tracked_params, args, kwargs)
-                if _leaders and _leaders & params != _leaders and len(params) > 0:
-                    raise MutuallyInclusiveParametersMissing(_inclusive_params, _leaders, details)
-                elif not _leaders and params and len(params) != len(_inclusive_params):
+                if (
+                    _leaders
+                    and _leaders & params != _leaders
+                    and len(params) > 0
+                    or not _leaders
+                    and params
+                    and len(params) != len(_inclusive_params)
+                ):
                     raise MutuallyInclusiveParametersMissing(_inclusive_params, _leaders, details)
             return func(*args, **kwargs)
 

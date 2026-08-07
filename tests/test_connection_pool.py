@@ -174,23 +174,25 @@ class TestBasicConnectionPoolConstruction:
             await pool.get_connection()
 
     async def test_construction_with_tcp_location(self, redis_basic_server):
-        async with coredis.ConnectionPool(location=TCPLocation(*redis_basic_server)) as pool:
-            async with pool.acquire() as connection:
-                assert isinstance(connection, TCPConnection)
+        async with (
+            coredis.ConnectionPool(location=TCPLocation(*redis_basic_server)) as pool,
+            pool.acquire() as connection,
+        ):
+            assert isinstance(connection, TCPConnection)
 
     async def test_construction_with_host_port(self, redis_basic_server):
-        async with coredis.ConnectionPool(
-            host=redis_basic_server[0], port=redis_basic_server[1]
-        ) as pool:
-            async with pool.acquire() as connection:
-                assert isinstance(connection, TCPConnection)
+        async with (
+            coredis.ConnectionPool(host=redis_basic_server[0], port=redis_basic_server[1]) as pool,
+            pool.acquire() as connection,
+        ):
+            assert isinstance(connection, TCPConnection)
 
     async def test_construction_with_uds_location(self, redis_uds_server):
-        async with coredis.ConnectionPool(
-            location=UnixDomainSocketLocation(redis_uds_server)
-        ) as pool:
-            async with pool.acquire() as connection:
-                assert isinstance(connection, UnixDomainSocketConnection)
+        async with (
+            coredis.ConnectionPool(location=UnixDomainSocketLocation(redis_uds_server)) as pool,
+            pool.acquire() as connection,
+        ):
+            assert isinstance(connection, UnixDomainSocketConnection)
 
     async def test_failed_cache_initialization(self):
         pool = ConnectionPool(
@@ -235,11 +237,13 @@ class TestClusterPoolParameters:
 
 class TestClusterConnectionPoolConstruction:
     async def test_construction_with_startup_nodes(self, redis_cluster_server):
-        async with coredis.ClusterConnectionPool(
-            startup_nodes=[TCPLocation(*redis_cluster_server)]
-        ) as pool:
-            async with pool.acquire() as connection:
-                assert isinstance(connection, ClusterConnection)
+        async with (
+            coredis.ClusterConnectionPool(
+                startup_nodes=[TCPLocation(*redis_cluster_server)]
+            ) as pool,
+            pool.acquire() as connection,
+        ):
+            assert isinstance(connection, ClusterConnection)
 
     async def test_failed_initialization(self):
         pool = ClusterConnectionPool(
@@ -282,7 +286,7 @@ class TestCluserConnectionPoolLayoutCache:
 
         async def remove_replica_for_slot_1(self, *args, **kwargs):
             values = await cluster_slots(self, *args, **kwargs)
-            slot_range, nodes = list(values.items())[0]
+            slot_range, nodes = next(iter(values.items()))
             values[slot_range] = nodes[:1]
             return values
 
@@ -314,7 +318,7 @@ class TestSharedConnectionPool:
                 connection_pool=primary.connection_pool,
             )
             assert primary.connection_pool == borrower.connection_pool
-            assert not client.connection_pool == borrower.connection_pool
+            assert client.connection_pool != borrower.connection_pool
             async with borrower:
                 await borrower.ping()
                 assert not connect_tcp.call_count
@@ -344,6 +348,7 @@ class TestSharedConnectionPool:
         await client.set("a", 1)
         assert borrower.connection_pool is client.connection_pool
         await client.get("a")
+        create_request.reset_mock()
         async with borrower:
             await borrower.get("a")
-        create_request.assert_called_once
+        create_request.assert_not_called()

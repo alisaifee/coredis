@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import time
 
 import pytest
 
@@ -434,7 +433,7 @@ class TestGeneric:
     async def test_expireat_unixtime(self, client, redis_server_time):
         expire_at = await redis_server_time(client) + datetime.timedelta(minutes=1)
         await client.set("a", "foo")
-        expire_at_seconds = int(time.mktime(expire_at.timetuple()))
+        expire_at_seconds = int(expire_at.timestamp())
         assert await client.expireat("a", expire_at_seconds)
         assert 0 < await client.ttl("a") <= 61
 
@@ -456,7 +455,9 @@ class TestGeneric:
             await client.expiretime("c")
         with pytest.raises(DataError):
             await client.expiretime("b")
-        set_time = datetime.datetime(now.year + 1, now.month, 1, 0, 0, 1, 1000)
+        set_time = datetime.datetime(
+            now.year + 1, now.month, 1, 0, 0, 1, 1000, tzinfo=datetime.timezone.utc
+        )
         await client.pexpireat("a", set_time)
         expire_time = await client.expiretime("a")
         assert set_time.replace(microsecond=0) == expire_time
@@ -500,7 +501,7 @@ class TestGeneric:
     async def test_pexpireat_unixtime(self, client, redis_server_time):
         expire_at = await redis_server_time(client) + datetime.timedelta(minutes=1)
         await client.set("a", "foo")
-        expire_at_seconds = int(time.mktime(expire_at.timetuple())) * 1000
+        expire_at_seconds = int(expire_at.timestamp() * 1000)
         assert await client.pexpireat("a", expire_at_seconds)
         assert 0 < await client.pttl("a") <= 61000
 
@@ -522,7 +523,9 @@ class TestGeneric:
             await client.expiretime("c")
         with pytest.raises(DataError):
             await client.expiretime("b")
-        set_time = datetime.datetime(now.year + 1, now.month, 1, 0, 0, 1, 1000)
+        set_time = datetime.datetime(
+            now.year + 1, now.month, 1, 0, 0, 1, 1000, tzinfo=datetime.timezone.utc
+        )
         await client.pexpireat("a", set_time)
         expire_time = await client.pexpiretime("a")
         assert set_time == expire_time

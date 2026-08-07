@@ -63,7 +63,7 @@ class TestCluster:
             with pytest.raises(MovedError):
                 await node_client.get("fubar")
             await node_client.readonly()
-            await node_client.get("fubar") == _s(1)
+            assert await node_client.get("fubar") == _s(1)
             await node_client.readwrite()
             with pytest.raises(MovedError):
                 await node_client.get("fubar")
@@ -73,11 +73,11 @@ class TestCluster:
         info = await client.cluster_info()
         assert info["cluster_state"] == "ok"
 
-        async with list(client.replicas)[0] as node_client:
+        async with next(iter(client.replicas)) as node_client:
             info = await node_client.cluster_info()
             assert info["cluster_state"] == "ok"
 
-        async with list(client.primaries)[0] as node_client:
+        async with next(iter(client.primaries)) as node_client:
             info = await node_client.cluster_info()
             assert info["cluster_state"] == "ok"
 
@@ -115,7 +115,7 @@ class TestCluster:
         assert len(links) > 0
 
     async def test_cluster_meet(self, client, _s):
-        node = list(client.primaries)[0]
+        node = next(iter(client.primaries))
         other = list(client.primaries)[1].connection_pool.location
         async with node:
             assert await node.cluster_meet(other.host, other.port)

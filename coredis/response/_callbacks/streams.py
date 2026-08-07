@@ -151,11 +151,7 @@ class StreamInfoCallback(ResponseCallback[dict[StringT, ResponseType], StreamInf
                 normalized_groups = []
                 for group in groups:
                     g = EncodingInsensitiveDict(group)
-                    consumers = g["consumers"]
-                    normalized_consumers = []
-                    for consumer in consumers:
-                        normalized_consumers.append(consumer)
-                    g["consumers"] = normalized_consumers
+                    g["consumers"] = list(g["consumers"])
                     normalized_groups.append(g)
                 res["groups"] = normalized_groups
             res.update(

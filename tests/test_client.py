@@ -86,9 +86,8 @@ class TestClient:
         with client.ensure_persistence(1, 0, 2000):
             assert await client.set("fubar", 1)
 
-        with pytest.raises(PersistenceError):
-            with client.ensure_persistence(1, 1, 2000):
-                assert await client.set("fubar", 1)
+        with pytest.raises(PersistenceError), client.ensure_persistence(1, 1, 2000):
+            assert await client.set("fubar", 1)
         assert await client.set("fubar", 1)
 
     async def test_decoding_context(self, client):
@@ -158,9 +157,8 @@ class TestClusterClient:
         with client.ensure_replication(1):
             assert await client.set("fubar", 1)
 
-        with pytest.raises(ReplicationError):
-            with client.ensure_replication(2):
-                assert await client.set("fubar", 1)
+        with pytest.raises(ReplicationError), client.ensure_replication(2):
+            assert await client.set("fubar", 1)
         assert await client.set("fubar", 1)
 
     async def test_ensure_persistence_unavailable(self, client, _s, user_client):
@@ -175,9 +173,8 @@ class TestClusterClient:
         with client.ensure_persistence(1, 1, 2000):
             assert await client.set("fubar", 1)
 
-        with pytest.raises(PersistenceError):
-            with client.ensure_persistence(1, 2, 2000):
-                assert await client.set("fubar", 1)
+        with pytest.raises(PersistenceError), client.ensure_persistence(1, 2, 2000):
+            assert await client.set("fubar", 1)
         assert await client.set("fubar", 1)
 
     async def test_decoding_context(self, client):

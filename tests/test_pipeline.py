@@ -23,7 +23,7 @@ class TestPipeline:
             ):
                 await a
             with pytest.raises(RuntimeError, match="Pipeline results are not available"):
-                pipe.results
+                _ = pipe.results
 
     async def test_empty_pipeline(self, client):
         async with client.pipeline():
@@ -57,9 +57,9 @@ class TestPipeline:
             lambda v: Decimal(v if isinstance(v, str) else v.decode("utf-8")),
         )
         async with client.pipeline() as pipe:
-            a = pipe.set("a", Serializable(Decimal(1.23)))
+            a = pipe.set("a", Serializable(Decimal("1.23")))
             b = pipe.get("a").transform(Decimal)
-        assert (True, Decimal(1.23)) == await gather(a, b)
+        assert (True, Decimal("1.23")) == await gather(a, b)
 
     async def test_pipeline_no_transaction(self, client):
         async with client.pipeline(transaction=False) as pipe:
@@ -82,10 +82,9 @@ class TestPipeline:
     async def test_pipeline_no_transaction_watch(self, client):
         await client.set("a", "0")
 
-        async with client.pipeline(transaction=False) as pipe:
-            async with pipe.watch("a"):
-                a = await client.get("a")
-                b = pipe.set("a", str(int(a) + 1))
+        async with client.pipeline(transaction=False) as pipe, pipe.watch("a"):
+            a = await client.get("a")
+            b = pipe.set("a", str(int(a) + 1))
         assert await b
 
     async def test_pipeline_no_transaction_watch_failure(self, client):
@@ -159,13 +158,12 @@ class TestPipeline:
         await client.set("a", "1")
         await client.set("b", "2")
 
-        async with client.pipeline() as pipe:
-            async with pipe.watch("a", "b"):
-                a_value = await client.get("a")
-                b_value = await client.get("b")
-                assert a_value == "1"
-                assert b_value == "2"
-                res = pipe.set("c", "3")
+        async with client.pipeline() as pipe, pipe.watch("a", "b"):
+            a_value = await client.get("a")
+            b_value = await client.get("b")
+            assert a_value == "1"
+            assert b_value == "2"
+            res = pipe.set("c", "3")
 
         assert await res
 

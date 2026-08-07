@@ -25,7 +25,7 @@ class DiscoveryService:
         self._startup_nodes: list[ClusterNodeLocation] = (
             []
             if startup_nodes is None
-            else list(ClusterNodeLocation(n.host, n.port) for n in startup_nodes if n)
+            else [ClusterNodeLocation(n.host, n.port) for n in startup_nodes if n]
         )
         self._startup_nodes_reachable = False
         self._initial_startup_nodes = list(self._startup_nodes)

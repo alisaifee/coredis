@@ -9,4 +9,4 @@ warnings.warn(
     DeprecationWarning,
     stacklevel=2,
 )
-__all__ = ["PubSub", "ClusterPubSub", "ShardedPubSub", "SubscriptionCallback"]
+__all__ = ["ClusterPubSub", "PubSub", "ShardedPubSub", "SubscriptionCallback"]

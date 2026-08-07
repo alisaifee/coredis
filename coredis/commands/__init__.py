@@ -28,7 +28,7 @@ from .script import Script
 from .types import Predicate
 
 
-class CommandMixin(Generic[AnyStr], ABC):
+class CommandMixin(ABC, Generic[AnyStr]):
     @abstractmethod
     def execute_command(
         self,
@@ -46,9 +46,9 @@ class CommandMixin(Generic[AnyStr], ABC):
 
 
 __all__ = [
+    "BitFieldOperation",
     "CommandRequest",
     "CommandResponseT",
-    "BitFieldOperation",
     "Function",
     "Library",
     "Predicate",

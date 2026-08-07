@@ -43,9 +43,7 @@ class CommandDetails:
     cluster: ClusterCommandConfig
     flags: set[CommandFlag]
     redirect_usage: RedirectUsage | None
-    arguments: dict[str, version.Version] = dataclasses.field(
-        init=False, default_factory=lambda: {}
-    )
+    arguments: dict[str, version.Version] = dataclasses.field(init=False, default_factory=dict)
 
     def __post_init__(self) -> None:
         self.arguments = {
@@ -91,7 +89,7 @@ def redis_command(
 
     COMMAND_FLAGS[command_name] = flags or set()
 
-    if not readonly and cacheable:  # noqa
+    if not readonly and cacheable:
         raise RuntimeError(f"Can't decorate non readonly command {command_name} with cache config")
     if cacheable:
         CACHEABLE_COMMANDS.add(command_name)

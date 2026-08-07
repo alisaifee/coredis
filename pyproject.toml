@@ -103,7 +103,7 @@ dev = [
   "Jinja2==3.1.5",
   "memray; implementation_name != 'pypy'",
   "mypy==2.3.0; implementation_name != 'pypy'",
-  "ruff>=0.15,<0.16",
+  "ruff>=0.16,<0.17",
   "types-deprecated",
   "ipython",
   {include-group = "test"},
@@ -243,6 +243,15 @@ exclude = ["doc/**","_version.py","coredis/_py_312_typing.py"]
 [tool.ruff.lint]
 extend-select = [
   "T20",   # flake8-print: forbid print/pprint statements
+]
+# Prefer mypy when ruff and mypy disagree on typing style.
+ignore = [
+  "PYI041",  # keep int|float for beartype (PEP 484 treats int as float statically)
+  "B008",  # intentional default construction of retry/callback/cluster configs
+  "PYI019",  # Self breaks from_url overloads (Redis[bytes] vs Redis[str])
+  "PLC0105",  # public TypeVar names (e.g. CommandResponseT) omit _co by design
+  "B009",  # setattr/getattr needed so mypy does not flag method-assign on wrappers
+  "B010",
 ]
 typing-modules = ["coredis.typing"]
 

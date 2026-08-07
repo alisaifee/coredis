@@ -210,9 +210,8 @@ class LRUCache(AbstractCache):
         key_bytes = b(key)
         composite_key = (command, make_hashable(*args))
 
-        if key_bytes not in self._storage and len(self._storage) >= self.max_keys:
-            if self._storage:
-                self._storage.popitem(last=False)
+        if key_bytes not in self._storage and len(self._storage) >= self.max_keys and self._storage:
+            self._storage.popitem(last=False)
 
         # Get or create the key's cache dict
         if key_bytes not in self._storage:
@@ -402,12 +401,16 @@ class NodeTrackingCache(TrackingCache[ConnectionT]):
 
     async def _keepalive(self) -> None:
         while True:
-            if (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds:
-                if self._connection and await self._connection.create_request(CommandName.PING) in {
+            if (
+                (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds
+                and self._connection
+                and await self._connection.create_request(CommandName.PING)
+                in {
                     b"PONG",
                     "PONG",
-                }:
-                    self._last_checkin = time.monotonic()
+                }
+            ):
+                self._last_checkin = time.monotonic()
             await sleep(max(1, self._max_idle_seconds - idle))
 
     async def _consumer(self) -> None:
@@ -436,7 +439,6 @@ class ClusterTrackingCache(TrackingCache[ClusterConnection]):
         cache: AbstractCache | None = None,
         max_idle_seconds: float = 15,
     ) -> None:
-        """ """
         super().__init__(connection_pool, cache or LRUCache())
         self.node_caches: dict[TCPLocation, NodeTrackingCache[ClusterConnection]] = {}
         self._nodes: list[coredis.client.Redis[Any]] = []

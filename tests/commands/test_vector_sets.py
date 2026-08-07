@@ -142,7 +142,7 @@ class TestVectorSets:
         assert await client.vadd("test", "element", [1, 2, 3], attributes=attributes)
         for i in range(2, 5):
             assert await client.vadd(
-                "test", f"element-{i}", [1, 2, 3], attributes={**attributes, **{"a": i}}
+                "test", f"element-{i}", [1, 2, 3], attributes={**attributes, "a": i}
             )
         assert attributes == await client.vgetattr("test", "element")
         assert await client.vsetattr("test", "element", [1, 2, 3])
@@ -189,7 +189,7 @@ class TestVectorSets:
         assert None is await client.vinfo("missing")
 
     async def test_vrandmember(self, client, sample_data, _s):
-        all_elements = {_s(k) for k in sample_data.keys()}
+        all_elements = {_s(k) for k in sample_data}
         assert await client.vrandmember("sample") in all_elements
         assert set(await client.vrandmember("sample", count=5)) & all_elements
         assert set(await client.vrandmember("sample", count=100)) == all_elements
@@ -198,7 +198,7 @@ class TestVectorSets:
 
     @pytest.mark.min_server_version("8.4")
     async def test_vrange(self, client, sample_data, _s):
-        all_elements = {_s(k) for k in sample_data.keys()}
+        all_elements = {_s(k) for k in sample_data}
         assert all_elements == set(await client.vrange("sample", "-", "+"))
         assert (_s("a1"), _s("a2")) == await client.vrange("sample", "-", "+", 2)
         assert (_s("a1"), _s("a2"), _s("a3")) == await client.vrange("sample", "[a", "(b")

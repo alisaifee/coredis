@@ -27,7 +27,7 @@ EXTEND_SCRIPT = Script(script=(Path(__file__).parent / "lua/extend.lua").read_te
 RELEASE_SCRIPT = Script(script=(Path(__file__).parent / "lua/release.lua").read_text())
 
 
-class Lock(Generic[AnyStr], AsyncContextManagerMixin):
+class Lock(AsyncContextManagerMixin, Generic[AnyStr]):
     """
     A shared, distributed Lock inspired by the
     `Distributed locks <https://redis.io/docs/latest/develop/clients/patterns/distributed-locks>`__

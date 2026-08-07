@@ -14,4 +14,4 @@ warnings.warn(
     DeprecationWarning,
     stacklevel=2,
 )
-__all__ = ["Sentinel", "SentinelManagedConnection", "SentinelConnectionPool"]
+__all__ = ["Sentinel", "SentinelConnectionPool", "SentinelManagedConnection"]

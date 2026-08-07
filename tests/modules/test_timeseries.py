@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import anyio
 import pytest
@@ -101,7 +101,7 @@ class TestTimeseries:
     async def test_add_duplicate_policy(self, client: Redis):
         # Test for duplicate policy BLOCK
         assert 1 == await client.timeseries.add("ts-add-block", 1, 5.0)
-        with pytest.raises(Exception):
+        with pytest.raises(ResponseError):
             await client.timeseries.add("ts-add-block", 1, 5.0, duplicate_policy=PureToken.BLOCK)
 
         # Test for duplicate policy LAST
@@ -257,10 +257,9 @@ class TestTimeseries:
         assert (0, 1.0) == await client.timeseries.get("ts3{a}")
 
     async def test_del_range(self, client: Redis):
-        try:
+        with pytest.raises(ResponseError) as exc_info:
             await client.timeseries.delete("test", 0, 100)
-        except Exception as e:
-            assert e.__str__() != ""
+        assert str(exc_info.value)
 
         for i in range(100):
             await client.timeseries.add("ts1", i, i % 7)
@@ -715,7 +714,7 @@ class TestTimeseries:
         await client.timeseries.createrule(
             "ts1{a}", "ts1{a}-avg", PureToken.AVG, timedelta(seconds=60)
         )
-        ref = datetime.fromtimestamp(0)
+        ref = datetime.fromtimestamp(0, tz=timezone.utc)
 
         for i in range(140):
             await client.timeseries.add("ts1{a}", ref + timedelta(seconds=i), i)

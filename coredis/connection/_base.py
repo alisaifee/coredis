@@ -71,8 +71,6 @@ class Location(ABC):
     Abstract location
     """
 
-    ...
-
     @abstractmethod
     async def check(self) -> bool:
         """
@@ -256,7 +254,7 @@ class BaseConnection(TelemetryAttributeProvider):
 
         self._connect_callbacks: list[
             (Callable[[Self], Awaitable[None]] | Callable[[Self], None])
-        ] = list()
+        ] = []
 
         # server version as reported by the server
         self.server_version: str | None = None
@@ -559,7 +557,7 @@ class BaseConnection(TelemetryAttributeProvider):
                 raise ConnectionError("Unable to toggle client tracking")
             self.tracking_client_id = client_id
             return True
-        except UnknownCommandError:  # noqa
+        except UnknownCommandError:
             raise
         except Exception:  # noqa
             return False
@@ -613,16 +611,14 @@ class BaseConnection(TelemetryAttributeProvider):
                         exc_info=True,
                     )
 
-            if self._db:
-                if await self.create_request(b"SELECT", self._db, decode=False) != b"OK":
-                    raise ConnectionError(f"Invalid Database {self._db}")
+            if self._db and await self.create_request(b"SELECT", self._db, decode=False) != b"OK":
+                raise ConnectionError(f"Invalid Database {self._db}")
 
-            if self.client_name is not None:
-                if (
-                    await self.create_request(b"CLIENT SETNAME", self.client_name, decode=False)
-                    != b"OK"
-                ):
-                    raise ConnectionError(f"Failed to set client name: {self.client_name}")
+            if self.client_name is not None and (
+                await self.create_request(b"CLIENT SETNAME", self.client_name, decode=False)
+                != b"OK"
+            ):
+                raise ConnectionError(f"Failed to set client name: {self.client_name}")
 
             if self._noevict:
                 await self.create_request(b"CLIENT NO-EVICT", b"ON")

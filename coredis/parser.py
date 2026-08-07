@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from collections.abc import Hashable
 from io import BytesIO
-from typing import cast
+from typing import ClassVar, cast
 
 from coredis.constants.resp import SYM_CRLF, SYM_TRUE, DataType
 from coredis.exceptions import (
@@ -96,7 +96,7 @@ class ListNode(RESPNode):
 
 
 class DictNode(RESPNode):
-    __slots__ = "container"
+    __slots__ = ("container",)
 
     def __init__(self, depth: int) -> None:
         self.container: dict[Hashable, ResponseType] = {}
@@ -150,9 +150,7 @@ UnpackedResponse = RESPScalar | RESPContainer
 
 
 class Parser:
-    """ """
-
-    EXCEPTION_CLASSES: dict[str, type[RedisError] | dict[str, type[RedisError]]] = {
+    EXCEPTION_CLASSES: ClassVar[dict[str, type[RedisError] | dict[str, type[RedisError]]]] = {
         "ASK": AskError,
         "BUSYGROUP": StreamDuplicateConsumerGroupError,
         "CLUSTERDOWN": ClusterDownError,
@@ -286,9 +284,8 @@ class Parser:
                         f"Protocol Error: Unknown RESP data type: {chr(marker)!r}"
                     )
             if self.current_node:
-                if self.current_node.depth > 0:
-                    if self.current_node.append(response) > 1:
-                        continue
+                if self.current_node.depth > 0 and self.current_node.append(response) > 1:
+                    continue
                 while len(self.nodes) > 1 and self.current_node.depth == 0:
                     self.nodes[-2].append(self.current_node.container)
                     self.nodes.pop()

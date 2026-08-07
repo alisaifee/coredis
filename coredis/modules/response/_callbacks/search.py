@@ -102,7 +102,7 @@ class AggregationResultCallback(
 
     @staticmethod
     def try_json(options: dict[str, Any], value: StringT) -> ResponseType:
-        if not options.get("dialect", None) == 3:
+        if options.get("dialect", None) != 3:
             return cast(ResponseType, value)
         try:
             return cast(ResponseType, json.loads(value))

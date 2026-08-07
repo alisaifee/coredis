@@ -48,7 +48,7 @@ class TestRetryPolicies:
     )
     async def test_exception(self, policy):
         def raise_zerodiv():
-            1 / 0
+            raise ZeroDivisionError
 
         call = unittest.mock.AsyncMock(side_effect=raise_zerodiv)
         failure = unittest.mock.AsyncMock()
@@ -73,7 +73,7 @@ class TestRetryPolicies:
     )
     async def test_exception_with_mapped_failure_hook(self, policy):
         def raise_zerodiv():
-            1 / 0
+            raise ZeroDivisionError
 
         call = unittest.mock.AsyncMock(side_effect=raise_zerodiv)
         failure = {ArithmeticError: unittest.mock.AsyncMock()}
@@ -176,7 +176,7 @@ class TestRetryPolicies:
     )
     async def test_exponential_backoff(self, policy, expected_delay, mocker):
         async def call():
-            1 / 0
+            raise ZeroDivisionError
 
         sleep = mocker.patch("coredis.retry.sleep")
 
@@ -205,7 +205,7 @@ class TestRetryPolicies:
     )
     async def test_retry_with_deadline(self, policy, mocker):
         def raise_zerodiv():
-            1 / 0
+            raise ZeroDivisionError
 
         call = unittest.mock.AsyncMock(side_effect=raise_zerodiv)
         sleep = mocker.spy(coredis.retry, "sleep")

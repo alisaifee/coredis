@@ -221,11 +221,11 @@ class OpenTelemetryProvider(TelemetryProvider):
             _default_attributes = self._default_attributes((), pool)
             yield Observation(
                 pool.statistics.in_use_connections,
-                {**_default_attributes, **{DB_CLIENT_CONNECTION_STATE: "used"}},
+                {**_default_attributes, DB_CLIENT_CONNECTION_STATE: "used"},
             )
             yield Observation(
                 pool.statistics.active_connections - pool.statistics.in_use_connections,
-                {**_default_attributes, **{DB_CLIENT_CONNECTION_STATE: "idle"}},
+                {**_default_attributes, DB_CLIENT_CONNECTION_STATE: "idle"},
             )
 
     def _connection_max_callback(self, _: CallbackOptions) -> Iterable[Observation]:
@@ -234,6 +234,4 @@ class OpenTelemetryProvider(TelemetryProvider):
             yield Observation(pool.max_connections, _default_attributes)
 
     def _command_span_enabled(self, commands: Sequence[CommandRequest[Any]]) -> bool:
-        if len(commands) == 1 and commands[0].name in self.disabled_commands:
-            return False
-        return True
+        return not (len(commands) == 1 and commands[0].name in self.disabled_commands)

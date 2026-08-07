@@ -237,9 +237,7 @@ class ClusterMergeMapping(ClusterMultiNodeCallback[dict[R, S]]):
     ) -> dict[R, S]:
         response: dict[R, S] = {}
         for key in set(itertools.chain(*responses)):
-            values = list(
-                response[key] for idx, response in enumerate(responses) if key in response
-            )
+            values = [response[key] for idx, response in enumerate(responses) if key in response]
             response[key] = self.value_combine(values)
         return response
 
@@ -289,9 +287,11 @@ class SimpleStringCallback(ResponseCallback[StringT | None, bool]):
         self,
         raise_on_error: type[Exception] | None = None,
         prefix_match: bool = False,
-        ok_values: set[str] = {"OK"},
+        ok_values: set[str] | None = None,
         **options: Any,
     ):
+        if ok_values is None:
+            ok_values = {"OK"}
         self.raise_on_error = raise_on_error
         self.prefix_match = prefix_match
         self.ok_values = {b(v) for v in ok_values}
@@ -392,7 +392,7 @@ class DateTimeCallback(ResponseCallback[int | float, datetime.datetime]):
         ts = float(response) if not isinstance(response, float) else response
         if self.options.get("unit") == "milliseconds":
             ts = ts / 1000.0
-        return datetime.datetime.fromtimestamp(ts)
+        return datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc)
 
 
 class DictCallback(
@@ -507,7 +507,7 @@ class OptionalListCallback(ResponseCallback[list[ResponseType], list[CR_co] | No
 class FirstValueCallback(ResponseCallback[dict[R, S], S]):
     def transform(self, response: dict[R, S], **options: Any) -> S:
         if response:
-            return list(response.values())[0]
+            return next(iter(response.values()))
         else:
             raise ValueError("Empty response")
 

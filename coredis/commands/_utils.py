@@ -47,8 +47,10 @@ def check_version(
     function_name: str,
     command_details: CommandDetails,
     deprecation_reason: str | None = None,
-    kwargs: dict[str, Any] = {},
+    kwargs: dict[str, Any] | None = None,
 ) -> None:
+    if kwargs is None:
+        kwargs = {}
     if Config.optimized or not any(
         [
             command_details.version_introduced,
@@ -102,4 +104,4 @@ def check_version(
 
 
 def redis_command_link(command: CommandName) -> str:
-    return f"`{str(command)} <https://redis.io/commands/{str(command).lower().replace(' ', '-')}>`_"
+    return f"`{command!s} <https://redis.io/commands/{str(command).lower().replace(' ', '-')}>`_"

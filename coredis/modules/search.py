@@ -993,9 +993,9 @@ class Search(ModuleGroup[AnyStr]):
             command_arguments.append(PureToken.INORDER)
         if language:
             command_arguments.extend([PrefixToken.LANGUAGE, language])
-        if expander:  # noqa
+        if expander:
             command_arguments.extend([PrefixToken.EXPANDER, expander])
-        if scorer:  # noqa
+        if scorer:
             command_arguments.extend([PrefixToken.SCORER, scorer])
         if explainscore:
             command_arguments.append(PureToken.EXPLAINSCORE)

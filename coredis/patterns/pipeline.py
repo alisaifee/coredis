@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 from anyio import AsyncContextManagerMixin
 from deprecated.sphinx import versionchanged
@@ -202,15 +202,12 @@ class NodeCommands(AsyncContextManagerMixin):
             multi_result = await self.multi_cmd
             success = multi_result in {b"OK", "OK"}
         if self.request_batch:
-            try:
-                responses = await self.request_batch
-                for command, response in zip(self.commands, responses):
-                    command.result = response
-                    command._response = PipelineResult(response)
-                    if isinstance(response, (ConnectionError, TimeoutError, RedisError)):
-                        success = False
-            except ExecAbortError:
-                raise
+            responses = await self.request_batch
+            for command, response in zip(self.commands, responses):
+                command.result = response
+                command._response = PipelineResult(response)
+                if isinstance(response, (ConnectionError, TimeoutError, RedisError)):
+                    success = False
         if self.in_transaction and self.exec_cmd:
             if success:
                 res = await self.exec_cmd
@@ -251,7 +248,7 @@ class Pipeline(Client[AnyStr]):
     If not the exception is caught and will be returned when awaiting the command that failed.
     """
 
-    QUEUED_RESPONSES = {b"QUEUED", "QUEUED"}
+    QUEUED_RESPONSES: ClassVar[set[bytes | str]] = {b"QUEUED", "QUEUED"}
 
     def __init__(
         self,
@@ -290,7 +287,7 @@ class Pipeline(Client[AnyStr]):
                 self._connection = None
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}<{repr(self._connection)}>"
+        return f"{type(self).__name__}<{self._connection!r}>"
 
     def create_request(
         self,
@@ -416,7 +413,7 @@ class Pipeline(Client[AnyStr]):
                 elif isinstance(queued_response, BaseException):
                     raise queued_response
                 else:
-                    raise Exception(
+                    raise ResponseError(
                         f"Abnormal response in pipeline for command {cmd.name!r}: {queued_response!r}"
                     )
         try:
@@ -489,7 +486,9 @@ class Pipeline(Client[AnyStr]):
         if exception:
             cmd = command.decode("latin-1")
             args = " ".join(map(str, args))
-            msg = f"Command # {number} ({cmd} {args}) of pipeline caused error: {str(exception.args[0])}"
+            msg = (
+                f"Command # {number} ({cmd} {args}) of pipeline caused error: {exception.args[0]!s}"
+            )
             exception.args = (msg,) + exception.args[1:]
 
     async def _load_scripts(self) -> None:

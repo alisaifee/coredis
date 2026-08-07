@@ -362,7 +362,7 @@ class TestGeo:
                 "barcelona",
                 member="place1",
                 radius=10,
-            ) == ("place1",)
+            )
         with pytest.raises(CommandSyntaxError):
             await client.geosearch("barcelona", member="place1", width=2, height=1)
 

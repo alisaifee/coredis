@@ -18,16 +18,18 @@ from collections.abc import (
     MutableSequence,
     MutableSet,
     Sequence,
-    Set,
     ValuesView,
 )
+from collections.abc import (
+    Set as AbstractSet,
+)
+from contextlib import AbstractAsyncContextManager as AsyncContextManager
 from functools import cached_property
 from types import GenericAlias, ModuleType, UnionType
 from typing import (
     TYPE_CHECKING,
     Any,
     AnyStr,
-    AsyncContextManager,
     ClassVar,
     Concatenate,
     Final,
@@ -418,9 +420,10 @@ class TypeAdapter:
             candidate: tuple[AdaptableType, Callable[[R], RedisValueT] | None] = (object, None)
 
             for t in self.__serializers:
-                if is_bearable(value.value, t):
-                    if not candidate[1] or is_subhint(t, candidate[0]):
-                        candidate = (t, self.__serializers[t][0])
+                if is_bearable(value.value, t) and (
+                    not candidate[1] or is_subhint(t, candidate[0])
+                ):
+                    candidate = (t, self.__serializers[t][0])
             if candidate[1]:
                 transform_function = candidate[1]
                 self.__serializer_cache[value_type] = transform_function
@@ -560,7 +563,11 @@ class SequenceNotString(Protocol[T_co]):
 
 
 Parameters = (
-    SequenceNotString[T_co] | Set[T_co] | tuple[T_co, ...] | ValuesView[T_co] | Iterator[T_co]
+    SequenceNotString[T_co]
+    | AbstractSet[T_co]
+    | tuple[T_co, ...]
+    | ValuesView[T_co]
+    | Iterator[T_co]
 )
 
 if sys.version_info >= (3, 12):
@@ -570,57 +577,56 @@ else:
 
 
 __all__ = [
-    "Serializable",
+    "RUNTIME_TYPECHECKS",
+    "TYPE_CHECKING",
     "AnyStr",
     "AsyncContextManager",
-    "AsyncIterator",
     "AsyncGenerator",
+    "AsyncIterator",
     "Awaitable",
     "Callable",
     "ClassVar",
     "CommandArgList",
     "Concatenate",
     "Coroutine",
+    "ExecutionParameters",
     "Final",
-    "Generic",
     "Generator",
+    "Generic",
     "Hashable",
     "Iterable",
     "Iterator",
     "JsonType",
     "KeyT",
     "Literal",
+    "Mapping",
     "MappingKeyT",
     "MappingStringKeyT",
-    "Mapping",
     "ModuleType",
     "MutableMapping",
-    "MutableSet",
     "MutableSequence",
+    "MutableSet",
     "NamedTuple",
     "Node",
     "NotRequired",
     "OrderedDict",
-    "Parameters",
     "ParamSpec",
+    "Parameters",
     "Protocol",
-    "ExecutionParameters",
+    "RedisValueT",
     "ResponsePrimitive",
     "ResponseType",
-    "runtime_checkable",
     "Self",
     "Sequence",
+    "Serializable",
     "StringT",
+    "TypeAdapter",
     "TypeGuard",
     "TypeIs",
-    "TypedDict",
     "TypeVar",
+    "TypedDict",
     "Unpack",
     "ValueT",
-    "RedisValueT",
     "ValuesView",
-    "TYPE_CHECKING",
-    "TypeAdapter",
-    "ValueT",
-    "RUNTIME_TYPECHECKS",
+    "runtime_checkable",
 ]

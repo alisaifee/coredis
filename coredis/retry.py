@@ -87,9 +87,8 @@ class RetryPolicy(ABC):
         last_error: BaseException | None = None
         for attempt in self.attempts():
             try:
-                if before_hook:
-                    if cb := before_hook():
-                        await cb
+                if before_hook and (cb := before_hook()):
+                    await cb
                 return await func()
             except BaseException as e:
                 if self.will_retry(e):
@@ -122,7 +121,7 @@ class RetryPolicy(ABC):
     def _exception_matches(cls, needle: BaseException, *haystack: type[BaseException]) -> bool:
         if isinstance(needle, BaseExceptionGroup):
             for exc in haystack:
-                match, unmatched = needle.split(exc)
+                match, _unmatched = needle.split(exc)
                 if match:
                     return True
         else:
@@ -265,9 +264,8 @@ class CompositeRetryPolicy(RetryPolicy):
         while True:
             try:
                 total_attempts += 1
-                if before_hook:
-                    if cb := before_hook():
-                        await cb
+                if before_hook and (cb := before_hook()):
+                    await cb
                 return await func()
             except BaseException as e:
                 retry_delays = []
@@ -295,7 +293,7 @@ class CompositeRetryPolicy(RetryPolicy):
                     logger.info(f"Retry attempt {total_attempts} due to error: {e}")
                     await sleep(max(retry_delays))
                     continue
-                raise e
+                raise
 
 
 def retryable(

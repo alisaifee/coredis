@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextvars
 from abc import abstractmethod
+from types import TracebackType
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -141,7 +142,12 @@ class BaseConnectionPool(TelemetryAttributeProvider, Generic[ConnectionT]):
                 self._counter += 1
             return self
 
-    async def __aexit__(self, *args: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self._counter -= 1
         if self._counter == 0:
             assert self._task_group
@@ -150,7 +156,7 @@ class BaseConnectionPool(TelemetryAttributeProvider, Generic[ConnectionT]):
             self._reset()
             if self._anchor_reset_token:
                 self._anchor_active.reset(self._anchor_reset_token)
-            await tg.__aexit__(*args)
+            await tg.__aexit__(exc_type, exc_val, exc_tb)
 
     @property
     def task_group(self) -> TaskGroup:

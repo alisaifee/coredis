@@ -145,7 +145,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
     @property
     def connection(self) -> BaseConnection:
         if not self._connection:
-            raise Exception("Connection not initialized correctly!")
+            raise ConnectionError("Connection not initialized correctly!")
         return self._connection
 
     @property
@@ -317,12 +317,16 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _keepalive(self) -> None:
         while True:
-            if (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds:
-                if self._connection and await self._connection.create_request(CommandName.PING) in {
+            if (
+                (idle := time.monotonic() - self._last_checkin) >= self._max_idle_seconds
+                and self._connection
+                and await self._connection.create_request(CommandName.PING)
+                in {
                     b"PONG",
                     "PONG",
-                }:
-                    self._last_checkin = time.monotonic()
+                }
+            ):
+                self._last_checkin = time.monotonic()
             await sleep(max(1, self._max_idle_seconds - idle))
 
     async def _consume_push_messages(self) -> None:
@@ -377,12 +381,14 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                 channel=target,
                 data=cast(int, response[2]),
             )
-            if message_type in SUBSCRIBE_MESSAGE_TYPES:
-                if waiters := self._subscription_waiters.get(target, []):
-                    waiters.pop(-1).set()
-            if message_type in UNSUBSCRIBE_MESSAGE_TYPES:
-                if waiters := self._unsubscription_waiters.get(target, []):
-                    waiters.pop(-1).set()
+            if message_type in SUBSCRIBE_MESSAGE_TYPES and (
+                waiters := self._subscription_waiters.get(target, [])
+            ):
+                waiters.pop(-1).set()
+            if message_type in UNSUBSCRIBE_MESSAGE_TYPES and (
+                waiters := self._unsubscription_waiters.get(target, [])
+            ):
+                waiters.pop(-1).set()
 
         elif message_type in PUBLISH_MESSAGE_TYPES:
             if message_type == PubSubMessageTypes.PMESSAGE:
@@ -400,7 +406,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
                     data=cast(StringT, response[2]),
                 )
         else:
-            raise PubSubError(f"Unknown message type {message_type_str}")  # noqa
+            raise PubSubError(f"Unknown message type {message_type_str}")
 
         # if this is an unsubscribe message, remove it from memory
         if message_type in UNSUBSCRIBE_MESSAGE_TYPES:
@@ -442,7 +448,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _ensure_subscribed(self, waiters: dict[StringT, Event]) -> None:
         with move_on_after(self._subscription_timeout) as cancel_scope:
-            for target, event in waiters.items():
+            for event in waiters.values():
                 await event.wait()
         if cancel_scope.cancelled_caught:
             raise TimeoutError(
@@ -453,7 +459,7 @@ class BasePubSub(AsyncContextManagerMixin, Generic[AnyStr, PoolT]):
 
     async def _ensure_unsubscribed(self, waiters: dict[StringT, Event]) -> bool:
         with move_on_after(self._unsubscription_timeout) as cancel_scope:
-            for _, event in waiters.items():
+            for event in waiters.values():
                 await event.wait()
         if cancel_scope.cancelled_caught:
             logger.warning(
@@ -833,9 +839,11 @@ class ShardedPubSub(BasePubSub[AnyStr, "coredis.pool.ClusterConnectionPool"]):
         while True:
             if (
                 idle := time.monotonic() - self._last_checkins[connection.location]
-            ) >= self._max_idle_seconds:
-                if await connection.create_request(CommandName.PING) in {b"PONG", "PONG"}:
-                    self._last_checkins[connection.location] = time.monotonic()
+            ) >= self._max_idle_seconds and await connection.create_request(CommandName.PING) in {
+                b"PONG",
+                "PONG",
+            }:
+                self._last_checkins[connection.location] = time.monotonic()
             await sleep(max(1, self._max_idle_seconds - idle))
 
     async def _cleanup(self) -> None:

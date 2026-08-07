@@ -31,7 +31,7 @@ class TestDiscoveryService:
             username=None,
             password="sekret",
         )
-        nodes, slots = await service.get_cluster_layout()
+        nodes, _slots = await service.get_cluster_layout()
         assert len(nodes) > 1
 
     async def test_partially_down_startup_nodes(self, redis_cluster_server, free_tcp_port_factory):
@@ -114,7 +114,7 @@ class TestDiscoveryService:
             nonlocal count
             value = await cluster_slots(self, *args, **kwargs)
             slot_range_to_corrupt = count % len(value)
-            slot_ranges = list(sorted(value.keys(), key=lambda k: k[0]))
+            slot_ranges = sorted(value.keys(), key=lambda k: k[0])
             corruptable = slot_ranges[slot_range_to_corrupt]
             slots = value.pop(corruptable)
             value[corruptable[0] - 1, corruptable[1] - 5] = slots

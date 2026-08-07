@@ -30,7 +30,7 @@ class TestPipeline:
             ):
                 await a
             with pytest.raises(RuntimeError, match="Pipeline results are not available"):
-                pipe.results
+                _ = pipe.results
 
     async def test_empty_pipeline(self, client):
         async with client.pipeline():
@@ -40,8 +40,8 @@ class TestPipeline:
         async with client.pipeline() as pipe:
             a = pipe.set("a", "a1")
             b = pipe.get("a")
-            c = pipe.zadd("z", dict(z1=1))
-            d = pipe.zadd("z", dict(z2=4))
+            c = pipe.zadd("z", {"z1": 1})
+            d = pipe.zadd("z", {"z2": 4})
             e = pipe.zincrby("z", "z1", 1)
             f = pipe.zrange("z", 0, 5, withscores=True)
         assert (
@@ -64,9 +64,9 @@ class TestPipeline:
             lambda v: Decimal(v if isinstance(v, str) else v.decode("utf-8")),
         )
         async with client.pipeline() as pipe:
-            a = pipe.set("a", Serializable(Decimal(1.23)))
+            a = pipe.set("a", Serializable(Decimal("1.23")))
             b = pipe.get("a").transform(Decimal)
-        assert (True, Decimal(1.23)) == await gather(a, b)
+        assert (True, Decimal("1.23")) == await gather(a, b)
 
     async def test_pipeline_no_transaction(self, client):
         async with client.pipeline(transaction=False) as pipe:
@@ -104,10 +104,9 @@ class TestPipeline:
         assert await res == "1"
 
     async def test_pipeline_transaction_with_watch(self, client):
-        async with client.pipeline(transaction=False) as pipe:
-            async with pipe.watch("a{fu}", "b{fu}"):
-                await client.set("d{fu}", 1)
-                res = pipe.set("a{fu}", 2)
+        async with client.pipeline(transaction=False) as pipe, pipe.watch("a{fu}", "b{fu}"):
+            await client.set("d{fu}", 1)
+            res = pipe.set("a{fu}", 2)
         assert await res
 
     async def test_pipeline_transaction_with_watch_inline_fail(self, client):
@@ -126,9 +125,8 @@ class TestPipeline:
                     raise RuntimeError("body error")
         assert client.connection_pool.statistics.in_use_connections == in_use
         # Connection must not still be watched when reused from the pool.
-        async with client.pipeline(transaction=False) as pipe:
-            async with pipe.watch("a{fu}"):
-                pipe.set("a{fu}", "ok")
+        async with client.pipeline(transaction=False) as pipe, pipe.watch("a{fu}"):
+            pipe.set("a{fu}", "ok")
         assert await client.get("a{fu}") == "ok"
 
     async def test_watch_error_releases_connection(self, client):
@@ -274,10 +272,9 @@ class TestPipeline:
         report_errors = mocker.spy(clone.connection_pool.cluster_layout, "report_errors")
         mocker.patch.object(coredis.Redis, "cluster_slots", new=move_slot)
 
-        async with clone:
-            async with clone.pipeline() as pipe:
-                a = pipe.set("a{fu}", 1)
-                b = pipe.get("a{fu}")
+        async with clone, clone.pipeline() as pipe:
+            a = pipe.set("a{fu}", 1)
+            b = pipe.get("a{fu}")
 
         assert (True, _s("1")) == await gather(a, b)
         assert report_errors.call_count == 2
@@ -288,7 +285,6 @@ class TestPipeline:
             (ClusterPipeline.bgrewriteaof, (), {}),
             (ClusterPipeline.bgsave, (), {}),
             (ClusterPipeline.keys, ("*",), {}),
-            (ClusterPipeline.flushdb, (), {}),
             (ClusterPipeline.flushdb, (), {}),
             (ClusterPipeline.flushall, (), {}),
         ],
