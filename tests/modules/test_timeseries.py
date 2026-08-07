@@ -893,6 +893,14 @@ class TestTimeseriesNRange:
                 bucketduration=10,
             )
 
+    async def test_nrange_align_empty_require_aggregation(self, client: Redis, _s):
+        with pytest.raises(MutuallyInclusiveParametersMissing):
+            await client.timeseries.nrange(["{s}ts1"], "-", "+", align=0)
+        with pytest.raises(MutuallyInclusiveParametersMissing):
+            await client.timeseries.nrange(["{s}ts1"], "-", "+", empty=True)
+        with pytest.raises(MutuallyInclusiveParametersMissing):
+            await client.timeseries.nrange(["{s}ts1"], "-", "+", buckettimestamp="-")
+
     async def test_nrevrange(self, client: Redis, _s):
         await client.timeseries.add("{s}ts1", 10, 1.0)
         await client.timeseries.add("{s}ts1", 20, 2.0)
@@ -929,6 +937,14 @@ class TestTimeseriesNRange:
             aggregators=[PureToken.MAX, PureToken.MIN],
             bucketduration=10,
         ) == [(10, [4.0, 7.0]), (0, [2.0, 5.0])]
+
+    async def test_nrevrange_align_empty_require_aggregation(self, client: Redis, _s):
+        with pytest.raises(MutuallyInclusiveParametersMissing):
+            await client.timeseries.nrevrange(["{s}ts1"], "-", "+", align=0)
+        with pytest.raises(MutuallyInclusiveParametersMissing):
+            await client.timeseries.nrevrange(["{s}ts1"], "-", "+", empty=True)
+        with pytest.raises(MutuallyInclusiveParametersMissing):
+            await client.timeseries.nrevrange(["{s}ts1"], "-", "+", buckettimestamp="-")
 
 
 @module_targets()

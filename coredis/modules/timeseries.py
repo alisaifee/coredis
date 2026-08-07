@@ -1123,6 +1123,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @mutually_inclusive_parameters("min_value", "max_value")
     @mutually_inclusive_parameters("aggregators", "bucketduration")
+    @mutually_inclusive_parameters(
+        "align", "buckettimestamp", "empty", leaders=("aggregators", "bucketduration")
+    )
     @module_command(
         CommandName.TS_NRANGE,
         group=COMMAND_GROUP,
@@ -1217,6 +1220,9 @@ class TimeSeries(ModuleGroup[AnyStr]):
 
     @mutually_inclusive_parameters("min_value", "max_value")
     @mutually_inclusive_parameters("aggregators", "bucketduration")
+    @mutually_inclusive_parameters(
+        "align", "buckettimestamp", "empty", leaders=("aggregators", "bucketduration")
+    )
     @module_command(
         CommandName.TS_NREVRANGE,
         group=COMMAND_GROUP,
