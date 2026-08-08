@@ -10232,7 +10232,7 @@ class CoreCommands(CommandMixin[AnyStr]):
         CommandName.HIMPORT_PREPARE, version_introduced="8.10.0", group=CommandGroup.HASH
     )
     def himport_prepare(
-        self, fieldset_name: KeyT, fields: Parameters[KeyT]
+        self, fieldset_name: StringT, fields: Parameters[StringT]
     ) -> CommandRequest[bool]:
         """
         Defines a session-local fieldset that maps a name to a sorted set of field names.
@@ -10251,7 +10251,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @versionadded(version="6.9.0")
     @redis_command(CommandName.HIMPORT_SET, version_introduced="8.10.0", group=CommandGroup.HASH)
     def himport_set(
-        self, key: KeyT, fieldset_name: KeyT, values: Parameters[KeyT]
+        self, key: KeyT, fieldset_name: StringT, values: Parameters[ValueT]
     ) -> CommandRequest[bool]:
         """
         Creates a fieldset-based hash from values supplied in the order matching a previously prepared fieldset.
@@ -10273,7 +10273,7 @@ class CoreCommands(CommandMixin[AnyStr]):
     @redis_command(
         CommandName.HIMPORT_DISCARD, version_introduced="8.10.0", group=CommandGroup.HASH
     )
-    def himport_discard(self, fieldset_name: KeyT) -> CommandRequest[bool]:
+    def himport_discard(self, fieldset_name: StringT) -> CommandRequest[bool]:
         """
         Removes a single session-local fieldset by name.
 
