@@ -1152,29 +1152,34 @@ class TimeSeries(ModuleGroup[AnyStr]):
         latest: bool | None = None,
     ) -> CommandRequest[list[tuple[int, list[int | float]]]]:
         """
-        Query a range across multiple time series in forward direction, returning the results pivoted by timestamp (one value column per key)
+        Query a range across multiple time series in forward direction, returning results pivoted
+        by timestamp (one value column per key).
 
-        :param key: The key name for the time series.
+        :param keys: Time series keys to query. Order matches the value columns in each row of the
+         reply.
         :param fromtimestamp: Start timestamp for the range query (integer UNIX timestamp in
-         milliseconds) or `-` to denote the timestamp of the earliest sample in the time series.
+         milliseconds) or `-` to denote the timestamp of the earliest sample among the keys.
         :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
-         milliseconds) or `+` to denote the timestamp of the latest sample in the time series.
+         milliseconds) or `+` to denote the timestamp of the latest sample among the keys.
         :param filter_by_ts: List of specific timestamps to filter samples by.
         :param min_value: Minimum value to filter samples by.
         :param max_value: Maximum value to filter samples by.
         :param count: Limits the number of returned samples.
-        :param aggregators: Aggregates samples into time buckets by the provided aggregation type.
-         Redis 8.8+ supports multiple aggregators.
-        :param bucketduration: Duration of each bucket in milliseconds.
-        :param align: Time bucket alignment control for :paramref:`aggregator`.
-        :param buckettimestamp: Timestamp of the first bucket.
-        :param empty: If True, returns an empty list instead of raising an error when no data
-         is available.
+        :param aggregators: One aggregation specification per key (single type or multi-aggregator
+         form). Must be paired with :paramref:`bucketduration` and match the length of
+         :paramref:`keys`.
+        :param bucketduration: Duration of each aggregation bucket in milliseconds.
+        :param align: Time bucket alignment control for :paramref:`aggregators`. Requires
+         aggregation.
+        :param buckettimestamp: Controls which timestamp is reported for each bucket. Requires
+         aggregation.
+        :param empty: When aggregating, report empty buckets as well. Requires aggregation.
         :param latest: Used when a time series is a compaction. When ``True``, the command also
          reports the compacted value of the latest, possibly partial, bucket, given that
          this bucket's start time falls within ``[fromtimestamp, totimestamp]``.
 
-        :return:
+        :return: Rows of ``(timestamp, values)`` where ``values`` has one entry per key in
+         :paramref:`keys` order.
 
         """
         _keys: list[Key] = [Key(k) for k in keys]
@@ -1249,29 +1254,34 @@ class TimeSeries(ModuleGroup[AnyStr]):
         latest: bool | None = None,
     ) -> CommandRequest[list[tuple[int, list[int | float]]]]:
         """
-        Query a range across multiple time series in reverse direction, returning the results pivoted by timestamp (one value column per key)
+        Query a range across multiple time series in reverse direction, returning results pivoted
+        by timestamp (one value column per key).
 
-        :param key: The key name for the time series.
+        :param keys: Time series keys to query. Order matches the value columns in each row of the
+         reply.
         :param fromtimestamp: Start timestamp for the range query (integer UNIX timestamp in
-         milliseconds) or `-` to denote the timestamp of the earliest sample in the time series.
+         milliseconds) or `-` to denote the timestamp of the earliest sample among the keys.
         :param totimestamp: End timestamp for the range query (integer UNIX timestamp in
-         milliseconds) or `+` to denote the timestamp of the latest sample in the time series.
+         milliseconds) or `+` to denote the timestamp of the latest sample among the keys.
         :param filter_by_ts: List of specific timestamps to filter samples by.
         :param min_value: Minimum value to filter samples by.
         :param max_value: Maximum value to filter samples by.
         :param count: Limits the number of returned samples.
-        :param aggregators: Aggregates samples into time buckets by the provided aggregation type.
-         Redis 8.8+ supports multiple aggregators.
-        :param bucketduration: Duration of each bucket in milliseconds.
-        :param align: Time bucket alignment control for :paramref:`aggregator`.
-        :param buckettimestamp: Timestamp of the first bucket.
-        :param empty: If True, returns an empty list instead of raising an error when no data
-         is available.
+        :param aggregators: One aggregation specification per key (single type or multi-aggregator
+         form). Must be paired with :paramref:`bucketduration` and match the length of
+         :paramref:`keys`.
+        :param bucketduration: Duration of each aggregation bucket in milliseconds.
+        :param align: Time bucket alignment control for :paramref:`aggregators`. Requires
+         aggregation.
+        :param buckettimestamp: Controls which timestamp is reported for each bucket. Requires
+         aggregation.
+        :param empty: When aggregating, report empty buckets as well. Requires aggregation.
         :param latest: Used when a time series is a compaction. When ``True``, the command also
          reports the compacted value of the latest, possibly partial, bucket, given that
          this bucket's start time falls within ``[fromtimestamp, totimestamp]``.
 
-        :return:
+        :return: Rows of ``(timestamp, values)`` where ``values`` has one entry per key in
+         :paramref:`keys` order.
 
         """
         _keys: list[Key] = [Key(k) for k in keys]
