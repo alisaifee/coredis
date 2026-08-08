@@ -22,7 +22,7 @@ from coredis.typing import (
 )
 
 from .._utils import dict_to_flat_list
-from ..commands._routing import FanoutStrategy
+from ..commands._routing import FanoutStrategy, RandomStrategy
 from ..commands._utils import normalized_milliseconds, normalized_time_milliseconds
 from ..commands._validators import (
     mutually_exclusive_parameters,
@@ -1360,6 +1360,8 @@ class TimeSeries(ModuleGroup[AnyStr]):
         module=MODULE,
         version_introduced="8.10.0",
         group=CommandGroup.TIMESERIES,
+        cluster=ClusterCommandConfig(routing_strategy=RandomStrategy()),
+        flags={CommandFlag.READONLY},
     )
     def querylabels(
         self, label: StringT | None = None, filters: Parameters[StringT] | None = None

@@ -1037,9 +1037,6 @@ class TestTimeseriesRead:
 @module_targets()
 @pytest.mark.min_module_version("timeseries", "8.10.0")
 class TestTimeseriesQueryLabels:
-    #: ``TS.QUERYLABELS`` carries no keys and reports on the whole keyspace.
-    pytestmark = pytest.mark.nocluster
-
     async def test_querylabels(self, client: Redis, _s):
         await client.timeseries.create(
             "ts1", labels={"type": "sensor", "location": "LivingRoom", "sensortype": "temp"}

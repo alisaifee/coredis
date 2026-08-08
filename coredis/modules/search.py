@@ -12,7 +12,7 @@ from ..commands._routing import FanoutStrategy, RandomStrategy
 from ..commands._utils import normalized_milliseconds, normalized_seconds
 from ..commands._validators import mutually_exclusive_parameters, mutually_inclusive_parameters
 from ..commands._wrappers import ClusterCommandConfig
-from ..commands.constants import CommandGroup, CommandName, NodeFlag
+from ..commands.constants import CommandFlag, CommandGroup, CommandName, NodeFlag
 from ..commands.request import CommandRequest
 from ..response._callbacks import (
     AnyStrCallback,
@@ -1310,6 +1310,7 @@ class Search(ModuleGroup[AnyStr]):
         module=MODULE,
         version_introduced="8.10.0",
         group=CommandGroup.SEARCH,
+        flags={CommandFlag.READONLY},
     )
     def aliaslist(self, index: KeyT) -> CommandRequest[set[AnyStr]]:
         """
