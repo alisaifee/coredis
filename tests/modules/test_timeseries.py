@@ -921,6 +921,9 @@ class TestTimeseriesNRange:
             await client.timeseries.nrange(["{s}ts1"], "-", "+", empty=True)
         with pytest.raises(MutuallyInclusiveParametersMissing):
             await client.timeseries.nrange(["{s}ts1"], "-", "+", buckettimestamp="-")
+        # empty=False is the same as omitting empty; do not demand aggregation.
+        without = client.timeseries.nrange(["{s}ts1"], "-", "+", empty=False)
+        assert PureToken.EMPTY not in without.arguments
 
     async def test_nrevrange(self, client: Redis, _s):
         await client.timeseries.add("{s}ts1", 10, 1.0)
@@ -966,6 +969,8 @@ class TestTimeseriesNRange:
             await client.timeseries.nrevrange(["{s}ts1"], "-", "+", empty=True)
         with pytest.raises(MutuallyInclusiveParametersMissing):
             await client.timeseries.nrevrange(["{s}ts1"], "-", "+", buckettimestamp="-")
+        without = client.timeseries.nrevrange(["{s}ts1"], "-", "+", empty=False)
+        assert PureToken.EMPTY not in without.arguments
 
 
 @module_targets()

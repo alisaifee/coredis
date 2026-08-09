@@ -25,6 +25,7 @@ from .._utils import dict_to_flat_list
 from ..commands._routing import FanoutStrategy, RandomStrategy
 from ..commands._utils import normalized_milliseconds, normalized_time_milliseconds
 from ..commands._validators import (
+    MutuallyInclusiveParametersMissing,
     mutually_exclusive_parameters,
     mutually_inclusive_parameters,
 )
@@ -1124,7 +1125,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @mutually_inclusive_parameters("min_value", "max_value")
     @mutually_inclusive_parameters("aggregators", "bucketduration")
     @mutually_inclusive_parameters(
-        "align", "buckettimestamp", "empty", leaders=("aggregators", "bucketduration")
+        "align", "buckettimestamp", leaders=("aggregators", "bucketduration")
     )
     @module_command(
         CommandName.TS_NRANGE,
@@ -1182,6 +1183,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
          :paramref:`keys` order.
 
         """
+        if empty and (aggregators is None or bucketduration is None):
+            raise MutuallyInclusiveParametersMissing(
+                {"empty"}, {"aggregators", "bucketduration"}, None
+            )
         _keys: list[Key] = [Key(k) for k in keys]
         command_arguments: CommandArgList = [
             len(_keys),
@@ -1226,7 +1231,7 @@ class TimeSeries(ModuleGroup[AnyStr]):
     @mutually_inclusive_parameters("min_value", "max_value")
     @mutually_inclusive_parameters("aggregators", "bucketduration")
     @mutually_inclusive_parameters(
-        "align", "buckettimestamp", "empty", leaders=("aggregators", "bucketduration")
+        "align", "buckettimestamp", leaders=("aggregators", "bucketduration")
     )
     @module_command(
         CommandName.TS_NREVRANGE,
@@ -1284,6 +1289,10 @@ class TimeSeries(ModuleGroup[AnyStr]):
          :paramref:`keys` order.
 
         """
+        if empty and (aggregators is None or bucketduration is None):
+            raise MutuallyInclusiveParametersMissing(
+                {"empty"}, {"aggregators", "bucketduration"}, None
+            )
         _keys: list[Key] = [Key(k) for k in keys]
         command_arguments: CommandArgList = [
             len(_keys),
