@@ -363,22 +363,109 @@ class TestHash:
 )
 @pytest.mark.min_server_version("8.10.0")
 class TestHashImport:
-    #: ``HIMPORT`` fieldsets are session (connection) local and ``HIMPORT PREPARE``
-    #: carries no key, so these are only meaningful against a single node.
-    pytestmark = pytest.mark.nocluster
-
-    async def test_himport_prepare_and_set(self, client, _s):
-        # A fieldset names an ordered list of hash fields for this connection.
-        assert await client.himport_prepare("fs", ["name", "email", "age"]) is True
-        # HIMPORT SET supplies only the values, positionally, in fieldset order.
-        assert await client.himport_set("u:1", "fs", ["alice", "alice@example.com", 30]) is True
+    async def test_himport_add_and_commit(self, client, _s):
+        async with client.himport("fs", ["name", "email", "age"]) as himport:
+            himport.add("u:1", ["alice", "alice@example.com", 30])
+            himport.add("u:2", ["bob", "bob@example.com", 41])
         assert await client.hgetall("u:1") == {
             _s("name"): _s("alice"),
             _s("email"): _s("alice@example.com"),
             _s("age"): _s("30"),
         }
-        # The fieldset is reusable for any number of hashes.
-        await client.himport_set("u:2", "fs", ["bob", "bob@example.com", 41])
+        assert await client.hgetall("u:2") == {
+            _s("name"): _s("bob"),
+            _s("email"): _s("bob@example.com"),
+            _s("age"): _s("41"),
+        }
+
+    async def test_himport_empty_is_noop(self, client, _s):
+        async with client.himport("fs", ["name"]):
+            pass
+        assert await client.exists(["u:1"]) == 0
+
+    async def test_himport_value_count_mismatch(self, client, _s):
+        async with client.himport("fs", ["name", "email"]) as himport:
+            with pytest.raises(ValueError, match="expected 2 values, got 1"):
+                himport.add("u:1", ["alice"])
+
+    async def test_himport_aborts_on_body_error(self, client, _s):
+        with pytest.raises(RuntimeError, match="stop"):
+            async with client.himport("fs", ["name"]) as himport:
+                himport.add("u:1", ["alice"])
+                raise RuntimeError("stop")
+        assert await client.exists(["u:1"]) == 0
+
+    async def test_himport_flush_writes_before_exit(self, client, _s):
+        async with client.himport("fs", ["name"]) as himport:
+            himport.add("u:1", ["alice"])
+            await himport.flush()
+            assert await client.hget("u:1", "name") == _s("alice")
+            himport.add("u:2", ["bob"])
+        assert await client.hget("u:2", "name") == _s("bob")
+
+    async def test_himport_flush_requires_context(self, client, _s):
+        himport = client.himport("fs", ["name"])
+        himport.add("u:1", ["alice"])
+        with pytest.raises(RuntimeError, match="context manager"):
+            await himport.flush()
+
+    async def test_himport_empty_fields(self, client):
+        with pytest.raises(ValueError, match="non-empty"):
+            client.himport("fs", [])
+
+    async def test_himport_different_slots(self, client, _s):
+        async with client.himport("fs", ["name"]) as himport:
+            himport.add("u:{a}", ["alice"])
+            himport.add("u:{b}", ["bob"])
+        assert await client.hget("u:{a}", "name") == _s("alice")
+        assert await client.hget("u:{b}", "name") == _s("bob")
+
+    async def test_himport_abort_does_not_leak_fieldset(self, client, _s):
+        with pytest.raises(RuntimeError, match="stop"):
+            async with client.himport("fs", ["name"]) as himport:
+                himport.add("u:1", ["alice"])
+                raise RuntimeError("stop")
+        async with client.himport("fs", ["name", "email"]) as himport:
+            himport.add("u:2", ["bob", "b@example.com"])
+        assert await client.hgetall("u:2") == {
+            _s("name"): _s("bob"),
+            _s("email"): _s("b@example.com"),
+        }
+        assert await client.exists(["u:1"]) == 0
+
+    async def test_himport_abort_clears_queue_for_reuse(self, client, _s):
+        himport = client.himport("fs", ["name"])
+        with pytest.raises(RuntimeError, match="stop"):
+            async with himport:
+                himport.add("u:1", ["alice"])
+                raise RuntimeError("stop")
+        async with himport:
+            himport.add("u:2", ["bob"])
+        assert await client.exists(["u:1"]) == 0
+        assert await client.hget("u:2", "name") == _s("bob")
+
+
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+)
+@pytest.mark.min_server_version("8.10.0")
+class TestHashImportRaw:
+    async def test_himport_prepare_and_set(self, client, _s):
+        async with client.pipeline(transaction=False) as pipe:
+            prepared = pipe.himport_prepare("fs", ["name", "email", "age"])
+            first = pipe.himport_set("u:1", "fs", ["alice", "alice@example.com", 30])
+            second = pipe.himport_set("u:2", "fs", ["bob", "bob@example.com", 41])
+            discarded = pipe.himport_discard("fs")
+        assert await prepared is True
+        assert await first is True
+        assert await second is True
+        assert await discarded is True
+        assert await client.hgetall("u:1") == {
+            _s("name"): _s("alice"),
+            _s("email"): _s("alice@example.com"),
+            _s("age"): _s("30"),
+        }
         assert await client.hgetall("u:2") == {
             _s("name"): _s("bob"),
             _s("email"): _s("bob@example.com"),
@@ -386,26 +473,108 @@ class TestHashImport:
         }
 
     async def test_himport_set_unknown_fieldset(self, client, _s):
-        # The fieldset must have been prepared on this connection first.
+        async with client.pipeline(raise_on_error=False, transaction=False) as pipe:
+            unknown = pipe.himport_set("u:1", "nosuchfieldset", ["alice"])
         with pytest.raises(ResponseError):
-            await client.himport_set("u:1", "nosuchfieldset", ["alice"])
+            await unknown
 
     async def test_himport_set_value_count_mismatch(self, client, _s):
-        await client.himport_prepare("fs", ["name", "email"])
+        async with client.pipeline(raise_on_error=False, transaction=False) as pipe:
+            pipe.himport_prepare("fs", ["name", "email"])
+            mismatch = pipe.himport_set("u:1", "fs", ["alice"])
         with pytest.raises(ResponseError):
-            await client.himport_set("u:1", "fs", ["alice"])
+            await mismatch
 
     async def test_himport_discard(self, client, _s):
-        await client.himport_prepare("fs", ["name", "email"])
-        assert await client.himport_discard("fs") is True
-        # Discarding an unknown fieldset reports that nothing was removed.
-        assert await client.himport_discard("fs") is False
+        async with client.pipeline(raise_on_error=False, transaction=False) as pipe:
+            pipe.himport_prepare("fs", ["name", "email"])
+            removed = pipe.himport_discard("fs")
+            missing = pipe.himport_discard("fs")
+            after = pipe.himport_set("u:1", "fs", ["alice", "a@example.com"])
+        assert await removed is True
+        assert await missing is False
         with pytest.raises(ResponseError):
-            await client.himport_set("u:1", "fs", ["alice", "a@example.com"])
+            await after
 
     async def test_himport_discardall(self, client, _s):
-        await client.himport_prepare("fs1", ["name"])
-        await client.himport_prepare("fs2", ["email"])
-        assert await client.himport_discardall() == 2
-        # ... and the connection is left with no fieldsets at all.
-        assert await client.himport_discardall() == 0
+        async with client.pipeline(transaction=False) as pipe:
+            pipe.himport_prepare("fs1", ["name"])
+            pipe.himport_prepare("fs2", ["email"])
+            first = pipe.himport_discardall()
+            second = pipe.himport_discardall()
+        assert await first == 2
+        assert await second == 0
+
+
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_cluster",
+    "redis_cluster_raw",
+    "redis_cached",
+    "redis_cluster_cached",
+    "dragonfly",
+    "valkey",
+)
+@pytest.mark.min_server_version("8.10.0")
+class TestHashImportPolicy:
+    async def test_himport_prepare_redirects(self, client):
+        with pytest.raises(NotImplementedError, match="himport|HIMPORT|standalone"):
+            await client.himport_prepare("fs", ["name"])
+
+    async def test_himport_discard_redirects(self, client):
+        with pytest.raises(NotImplementedError, match="himport|HIMPORT|standalone"):
+            await client.himport_discard("fs")
+
+    async def test_himport_discardall_redirects(self, client):
+        with pytest.raises(NotImplementedError, match="himport|HIMPORT|standalone"):
+            await client.himport_discardall()
+
+    async def test_himport_set_redirects(self, client):
+        with pytest.raises(NotImplementedError, match="himport|HIMPORT|standalone"):
+            await client.himport_set("u:1", "fs", ["alice"])
+
+
+@targets(
+    "redis_cluster",
+    "redis_cluster_raw",
+    "redis_cluster_cached",
+)
+@pytest.mark.min_server_version("8.10.0")
+class TestHashImportClusterPipelinePolicy:
+    async def test_cluster_pipeline_refuses_raw_himport(self, client):
+        async with client.pipeline(transaction=False) as pipe:
+            with pytest.raises(NotImplementedError, match="himport|HIMPORT|standalone"):
+                pipe.himport_prepare("fs", ["name"])
+            with pytest.raises(NotImplementedError, match="himport|HIMPORT|standalone"):
+                pipe.himport_set("u:1", "fs", ["alice"])
+            with pytest.raises(NotImplementedError, match="himport|HIMPORT|standalone"):
+                pipe.himport_discard("fs")
+            with pytest.raises(NotImplementedError, match="himport|HIMPORT|standalone"):
+                pipe.himport_discardall()
+
+
+@targets(
+    "redis_basic",
+    "redis_basic_raw",
+    "redis_cluster",
+    "redis_cluster_raw",
+)
+@pytest.mark.min_server_version("8.10.0")
+class TestHashImportLifecycle:
+    async def test_empty_session_is_noop_without_side_effects(self, client, _s):
+        leased_before = client.connection_pool.statistics.in_use_connections
+        async with client.himport("fs", ["name"]):
+            # Queueing only — no write, so no durable keys.
+            pass
+        assert await client.exists(["u:lifecycle"]) == 0
+        # Connection may briefly appear if another fixture holds one; require no growth
+        # from an empty himport session after exit.
+        assert client.connection_pool.statistics.in_use_connections <= leased_before
+
+    async def test_queue_then_flush_writes(self, client, _s):
+        async with client.himport("fs", ["name"]) as himport:
+            himport.add("u:lifecycle", ["alice"])
+            assert await client.exists(["u:lifecycle"]) == 0
+            await himport.flush()
+            assert await client.hget("u:lifecycle", "name") == _s("alice")

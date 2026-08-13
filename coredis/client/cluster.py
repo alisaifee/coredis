@@ -69,6 +69,7 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 if TYPE_CHECKING:
+    import coredis.patterns.himport
     import coredis.patterns.pipeline
     from coredis.patterns.lock import Lock
     from coredis.patterns.streams import Consumer, GroupConsumer, StreamParameters
@@ -1101,6 +1102,21 @@ class RedisCluster(
         from coredis.patterns.lock import Lock
 
         return Lock(self, name, timeout, sleep, blocking, blocking_timeout)
+
+    def himport(
+        self, fieldset: StringT, fields: Parameters[StringT]
+    ) -> coredis.patterns.himport.ClusterHashImport[AnyStr]:
+        """
+        Return a :class:`~coredis.patterns.himport.ClusterHashImport` for writing
+        hashes that share one field layout.
+
+        :param fieldset: fieldset name for this session
+        :param fields: field names, in order, for values passed to
+         :meth:`~coredis.patterns.himport.HashImport.add`
+        """
+        from coredis.patterns.himport import ClusterHashImport
+
+        return ClusterHashImport(self, fieldset, fields)
 
     @overload
     def xconsumer(

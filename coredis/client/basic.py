@@ -5,7 +5,7 @@ import contextvars
 import random
 import warnings
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, cast, overload
 
 from anyio import AsyncContextManagerMixin, sleep
 from deprecated.sphinx import versionadded
@@ -81,6 +81,7 @@ R = TypeVar("R")
 RedisT = TypeVar("RedisT", bound="Redis[Any]")
 
 if TYPE_CHECKING:
+    import coredis.patterns.himport
     import coredis.patterns.pipeline
     from coredis.patterns.lock import Lock
     from coredis.patterns.streams import Consumer, GroupConsumer, StreamParameters
@@ -93,6 +94,9 @@ class Client(
     SentinelCommands[AnyStr],
     Generic[AnyStr],
 ):
+    #: True when connection-local Redis commands are safe on this surface.
+    connection_scoped_commands: ClassVar[bool] = False
+
     connection_pool: BaseConnectionPool[Any]
     decode_responses: bool
     encoding: str
@@ -991,6 +995,21 @@ class Redis(Client[AnyStr]):
         finally:
             if not released:
                 pool.release(connection)
+
+    def himport(
+        self, fieldset: StringT, fields: Parameters[StringT]
+    ) -> coredis.patterns.himport.HashImport[AnyStr]:
+        """
+        Return a :class:`~coredis.patterns.himport.HashImport` for writing hashes
+        that share one field layout.
+
+        :param fieldset: fieldset name for this session
+        :param fields: field names, in order, for values passed to
+         :meth:`~coredis.patterns.himport.HashImport.add`
+        """
+        from coredis.patterns.himport import HashImport
+
+        return HashImport(self, fieldset, fields)
 
     @overload
     def decoding(
