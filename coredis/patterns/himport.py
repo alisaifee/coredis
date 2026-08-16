@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from typing import cast
+from typing import Any, cast
 
 from anyio import (
     AsyncContextManagerMixin,
     CancelScope,
     create_task_group,
-    get_cancelled_exc_class,
 )
 from deprecated.sphinx import versionadded
 from exceptiongroup import BaseExceptionGroup
@@ -26,7 +25,6 @@ from coredis.exceptions import (
     ConnectionError,
     MovedError,
     RedisError,
-    TryAgainError,
 )
 from coredis.pool import ClusterConnectionPool
 from coredis.typing import (
@@ -104,35 +102,43 @@ class HashImport(AsyncContextManagerMixin, Generic[AnyStr]):
         )
 
     async def _ensure_connection(self) -> BaseConnection:
-        if self._connection is not None:
-            if not self._connection.usable:
-                raise RuntimeError("HashImport connection is no longer usable")
-            return self._connection
-        connection = cast(BaseConnection, await self.client.connection_pool.get_connection())
-        self._connection = connection
-        self._prepared = False
-        return connection
+        if self._connection is None:
+            self._connection = cast(
+                BaseConnection, await self.client.connection_pool.get_connection()
+            )
+            self._prepared = False
+        return self._connection
 
     def _abandon_connection(self) -> None:
         connection = self._connection
-        if connection is None:
-            return
+        assert connection is not None
         connection.invalidate()
         self.client.connection_pool.release(connection)
         self._connection = None
         self._prepared = False
 
+    async def _prepare(self, connection: BaseConnection) -> None:
+        await connection.create_request(
+            CommandName.HIMPORT_PREPARE,
+            self.fieldset,
+            *self.fields,
+            decode=False,
+            disconnect_on_cancellation=True,
+        )
+
+    async def _discard(self, connection: BaseConnection) -> None:
+        await connection.create_request(
+            CommandName.HIMPORT_DISCARD,
+            self.fieldset,
+            decode=False,
+            disconnect_on_cancellation=True,
+        )
+
     async def _write(self, rows: list[_Row]) -> None:
         connection = await self._ensure_connection()
         try:
             if not self._prepared:
-                await connection.create_request(
-                    CommandName.HIMPORT_PREPARE,
-                    self.fieldset,
-                    *self.fields,
-                    decode=False,
-                    disconnect_on_cancellation=True,
-                )
+                await self._prepare(connection)
                 self._prepared = True
             batch = await connection.create_request_batch(
                 [self._set_command(key, values) for key, values in rows]
@@ -141,9 +147,6 @@ class HashImport(AsyncContextManagerMixin, Generic[AnyStr]):
                 if isinstance(result, BaseException):
                     raise result
         except _TRANSPORT_ERRORS:
-            self._abandon_connection()
-            raise
-        except get_cancelled_exc_class():
             self._abandon_connection()
             raise
 
@@ -155,19 +158,10 @@ class HashImport(AsyncContextManagerMixin, Generic[AnyStr]):
         try:
             if self._prepared and connection.usable:
                 try:
-                    await connection.create_request(
-                        CommandName.HIMPORT_DISCARD,
-                        self.fieldset,
-                        decode=False,
-                        disconnect_on_cancellation=True,
-                    )
+                    await self._discard(connection)
                 except (*_TRANSPORT_ERRORS, RedisError) as exc:
                     connection.invalidate()
                     discard_error = exc
-                except get_cancelled_exc_class() as exc:
-                    connection.invalidate()
-                    discard_error = exc
-                    raise
             elif not self._prepared and connection.usable:
                 connection.invalidate()
         finally:
@@ -197,7 +191,7 @@ class HashImport(AsyncContextManagerMixin, Generic[AnyStr]):
 
 
 @versionadded(version="6.9.0")
-class ClusterHashImport(AsyncContextManagerMixin, Generic[AnyStr]):
+class ClusterHashImport(HashImport[AnyStr]):
     """
     Write many hashes that share one field layout on a Redis Cluster.
 
@@ -212,46 +206,11 @@ class ClusterHashImport(AsyncContextManagerMixin, Generic[AnyStr]):
         fieldset: StringT,
         fields: Parameters[StringT],
     ) -> None:
-        if not (fields := tuple(fields)):
-            raise ValueError("fields must be non-empty")
+        super().__init__(cast(Any, client), fieldset, fields)
         self.client: RedisCluster[AnyStr] = client
-        self.fieldset = fieldset
-        self.fields = fields
-        self._rows: list[_Row] = []
-        self._active = False
         self._connection_pool: ClusterConnectionPool = client.connection_pool
         self._connections: dict[TCPLocation, ClusterConnection] = {}
-        self._prepared: set[TCPLocation] = set()
-
-    def add(self, key: KeyT, values: Parameters[ValueT]) -> None:
-        """
-        Queue a hash.
-
-        :param key: hash key
-        :param values: values in the same order as the field list
-        """
-        if len(values := tuple(values)) != len(self.fields):
-            raise ValueError(f"expected {len(self.fields)} values, got {len(values)}")
-        self._rows.append((key, values))
-
-    async def flush(self) -> None:
-        """Write queued rows. Safe to call more than once."""
-        if not self._active:
-            raise RuntimeError("HashImport must be used as an async context manager")
-        if not self._rows:
-            return
-        await self._write(list(self._rows))
-        self._rows.clear()
-
-    def _set_command(self, key: KeyT, values: tuple[ValueT, ...]) -> CommandRequest[ResponseType]:
-        return CommandRequest(
-            CommandName.HIMPORT_SET,
-            Key(key),
-            self.fieldset,
-            *values,
-            execution_parameters={},
-            type_adapter=self.client.type_adapter,
-        )
+        self._prepared_nodes: set[TCPLocation] = set()
 
     def _group(self, rows: list[_Row]) -> dict[ClusterNodeLocation, list[_Row]]:
         layout = self._connection_pool.cluster_layout
@@ -260,21 +219,11 @@ class ClusterHashImport(AsyncContextManagerMixin, Generic[AnyStr]):
             grouped[layout.node_for_slot(Key(key).slot, primary=True)].append((key, values))
         return grouped
 
-    def _redirect_node(self, host: str, port: int) -> ClusterNodeLocation:
-        layout = self._connection_pool.cluster_layout
-        location = TCPLocation(host, port)
-        if node := layout.node_for_location(location):
-            return node
-        return ClusterNodeLocation(host, port, server_type="primary")
-
-    def _drop_connection(self, location: TCPLocation, *, invalidate: bool = False) -> None:
-        connection = self._connections.pop(location, None)
-        self._prepared.discard(location)
-        if connection is None:
-            return
-        if invalidate:
+    def _drop_connection(self, location: TCPLocation) -> None:
+        self._prepared_nodes.discard(location)
+        if connection := self._connections.pop(location, None):
             connection.invalidate()
-        self._connection_pool.release(connection)
+            self._connection_pool.release(connection)
 
     async def _ensure_node_connection(
         self, node: ClusterNodeLocation, *, asking: bool = False
@@ -283,20 +232,14 @@ class ClusterHashImport(AsyncContextManagerMixin, Generic[AnyStr]):
         connection = self._connections.get(location)
         if connection is None or not connection.usable:
             if connection is not None:
-                self._drop_connection(location, invalidate=True)
+                self._drop_connection(location)
             connection = await self._connection_pool.get_connection(node=node)
             self._connections[location] = connection
-            self._prepared.discard(location)
+            self._prepared_nodes.discard(location)
         try:
-            if location not in self._prepared:
-                await connection.create_request(
-                    CommandName.HIMPORT_PREPARE,
-                    self.fieldset,
-                    *self.fields,
-                    decode=False,
-                    disconnect_on_cancellation=True,
-                )
-                self._prepared.add(location)
+            if location not in self._prepared_nodes:
+                await self._prepare(connection)
+                self._prepared_nodes.add(location)
             if asking:
                 await connection.create_request(
                     CommandName.ASKING,
@@ -304,48 +247,28 @@ class ClusterHashImport(AsyncContextManagerMixin, Generic[AnyStr]):
                     disconnect_on_cancellation=True,
                 )
         except _TRANSPORT_ERRORS:
-            self._drop_connection(location, invalidate=True)
-            raise
-        except get_cancelled_exc_class():
-            self._drop_connection(location, invalidate=True)
+            self._drop_connection(location)
             raise
         return connection
 
     async def _ask_set(self, error: AskError, key: KeyT, values: tuple[ValueT, ...]) -> None:
-        node = self._redirect_node(error.host, error.port)
-        location = TCPLocation(node.host, node.port)
-        try:
-            connection = await self._ensure_node_connection(node, asking=True)
-            request = self._set_command(key, values)
-            await connection.create_request(
-                request.name,
-                *request.serialized_arguments,
-                decode=False,
-                disconnect_on_cancellation=True,
-            )
-        except _TRANSPORT_ERRORS:
-            self._drop_connection(location, invalidate=True)
-            raise
-        except get_cancelled_exc_class():
-            self._drop_connection(location, invalidate=True)
-            raise
+        node = ClusterNodeLocation(error.host, error.port, server_type="primary")
+        connection = await self._ensure_node_connection(node, asking=True)
+        request = self._set_command(key, values)
+        await connection.create_request(
+            request.name,
+            *request.serialized_arguments,
+            decode=False,
+            disconnect_on_cancellation=True,
+        )
 
     async def _flush_node(self, node: ClusterNodeLocation, rows: list[_Row]) -> list[_Row]:
-        location = TCPLocation(node.host, node.port)
-        try:
-            connection = await self._ensure_node_connection(node)
-            batch = await connection.create_request_batch(
-                [self._set_command(key, values) for key, values in rows]
-            )
-        except _TRANSPORT_ERRORS:
-            self._drop_connection(location, invalidate=True)
-            return list(rows)
-        except get_cancelled_exc_class():
-            self._drop_connection(location, invalidate=True)
-            raise
-
+        connection = await self._ensure_node_connection(node)
+        batch = await connection.create_request_batch(
+            [self._set_command(key, values) for key, values in rows]
+        )
         redirects: list[_Row] = []
-        for idx, ((key, values), result) in enumerate(zip(rows, batch, strict=True)):
+        for (key, values), result in zip(rows, batch, strict=True):
             if not isinstance(result, BaseException):
                 continue
             if isinstance(result, MovedError):
@@ -353,12 +276,6 @@ class ClusterHashImport(AsyncContextManagerMixin, Generic[AnyStr]):
                 redirects.append((key, values))
             elif isinstance(result, AskError):
                 await self._ask_set(result, key, values)
-            elif isinstance(result, TryAgainError):
-                redirects.append((key, values))
-            elif isinstance(result, _TRANSPORT_ERRORS):
-                self._drop_connection(location, invalidate=True)
-                redirects.extend(rows[idx:])
-                break
             else:
                 raise result
         return redirects
@@ -377,9 +294,7 @@ class ClusterHashImport(AsyncContextManagerMixin, Generic[AnyStr]):
                 for node, node_rows in grouped.items():
                     tg.start_soon(run_node, node, node_rows)
         except BaseExceptionGroup as eg:
-            if len(eg.exceptions) == 1:
-                raise eg.exceptions[0] from None
-            raise
+            raise eg.exceptions[0] from None
 
         return [row for more in node_results.values() for row in more]
 
@@ -397,46 +312,18 @@ class ClusterHashImport(AsyncContextManagerMixin, Generic[AnyStr]):
         discard_error: BaseException | None = None
         for location, connection in list(self._connections.items()):
             try:
-                if location in self._prepared and connection.usable:
+                if location in self._prepared_nodes and connection.usable:
                     try:
-                        await connection.create_request(
-                            CommandName.HIMPORT_DISCARD,
-                            self.fieldset,
-                            decode=False,
-                            disconnect_on_cancellation=True,
-                        )
+                        await self._discard(connection)
                     except (*_TRANSPORT_ERRORS, RedisError) as exc:
                         connection.invalidate()
                         if discard_error is None:
                             discard_error = exc
-                    except get_cancelled_exc_class() as exc:
-                        connection.invalidate()
-                        if discard_error is None:
-                            discard_error = exc
-                        raise
-                elif location not in self._prepared and connection.usable:
+                elif location not in self._prepared_nodes and connection.usable:
                     connection.invalidate()
             finally:
                 self._connection_pool.release(connection)
         self._connections = {}
-        self._prepared = set()
+        self._prepared_nodes = set()
         if body_error is None and discard_error is not None:
             raise discard_error
-
-    @asynccontextmanager
-    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        self._active = True
-        body_error: BaseException | None = None
-        try:
-            yield self
-            await self.flush()
-        except BaseException as exc:
-            body_error = exc
-            raise
-        finally:
-            with CancelScope(shield=True):
-                try:
-                    await self._shutdown(body_error)
-                finally:
-                    self._active = False
-                    self._rows.clear()
