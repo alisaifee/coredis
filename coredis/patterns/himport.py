@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from typing import Any, cast
 
@@ -12,8 +13,13 @@ from anyio import (
 from deprecated.sphinx import versionadded
 from exceptiongroup import BaseExceptionGroup
 
+from coredis._utils import EncodingInsensitiveDict
 from coredis.client import Client, RedisCluster
 from coredis.cluster._node import ClusterNodeLocation
+from coredis.commands._validators import (
+    MutuallyExclusiveParametersError,
+    RequiredParameterError,
+)
 from coredis.commands.constants import CommandName
 from coredis.commands.request import CommandRequest
 from coredis.connection import TCPLocation
@@ -71,16 +77,46 @@ class HashImport(AsyncContextManagerMixin, Generic[AnyStr]):
         self._connection: BaseConnection | None = None
         self._prepared = False
 
-    def add(self, key: KeyT, values: Parameters[ValueT]) -> None:
+    def add(
+        self,
+        key: KeyT,
+        values: Parameters[ValueT] | Mapping[StringT, ValueT] | None = None,
+        **fields: ValueT,
+    ) -> None:
         """
         Queue a hash.
 
         :param key: hash key
-        :param values: values in the same order as the field list
+        :param values: values in the same order as the field list, or a mapping
+         keyed by those field names. Omit this and pass field names as keywords
+         when they are valid Python identifiers.
         """
+        if values is not None and fields:
+            raise MutuallyExclusiveParametersError({"values", "fields"}, None)
+        if values is None and not fields:
+            raise RequiredParameterError({"values", "fields"}, None)
+        if values is not None:
+            self._rows.append((key, self._values(values)))
+        else:
+            self._rows.append((key, self._values(fields)))
+
+    def _values(self, values: Parameters[ValueT] | Mapping[Any, ValueT]) -> tuple[ValueT, ...]:
+        if isinstance(values, Mapping):
+            provided = EncodingInsensitiveDict(dict(values))
+            wanted = EncodingInsensitiveDict({name: True for name in self.fields})
+            missing = [name for name in self.fields if name not in provided]
+            extra = [name for name in values if name not in wanted]
+            if missing or extra:
+                parts: list[str] = []
+                if missing:
+                    parts.append(f"missing {missing}")
+                if extra:
+                    parts.append(f"extra {extra}")
+                raise ValueError(", ".join(parts))
+            return tuple(provided[name] for name in self.fields)
         if len(values := tuple(values)) != len(self.fields):
             raise ValueError(f"expected {len(self.fields)} values, got {len(values)}")
-        self._rows.append((key, values))
+        return values
 
     async def flush(self) -> None:
         """Write queued rows. Safe to call more than once."""

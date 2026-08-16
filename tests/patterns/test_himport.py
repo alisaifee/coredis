@@ -6,6 +6,10 @@ import pytest
 
 from coredis import RedisCluster
 from coredis._utils import hash_slot
+from coredis.commands._validators import (
+    MutuallyExclusiveParametersError,
+    RequiredParameterError,
+)
 from coredis.exceptions import ClusterError, ConnectionError, ResponseError, WrongTypeError
 from coredis.typing import Key
 from tests.conftest import targets
@@ -37,6 +41,44 @@ class TestClientHashImport:
             _s("email"): _s("bob@example.com"),
             _s("age"): _s("41"),
         }
+
+    async def test_add_mapping_writes_field_values(self, client, _s):
+        async with client.himport("fs", ["email", "name"]) as himport:
+            himport.add("u:map", {"name": "alice", "email": "a@example.com"})
+            himport.add("u:map-enc", {_s("name"): "carol", _s("email"): "c@example.com"})
+        assert await client.hgetall("u:map") == {
+            _s("name"): _s("alice"),
+            _s("email"): _s("a@example.com"),
+        }
+        assert await client.hgetall("u:map-enc") == {
+            _s("name"): _s("carol"),
+            _s("email"): _s("c@example.com"),
+        }
+
+    async def test_add_keywords_writes_field_values(self, client, _s):
+        async with client.himport("fs", ["email", "name"]) as himport:
+            himport.add("u:kw", name="alice", email="a@example.com")
+        assert await client.hgetall("u:kw") == {
+            _s("name"): _s("alice"),
+            _s("email"): _s("a@example.com"),
+        }
+
+    async def test_add_mapping_rejects_missing_or_extra_fields(self, client):
+        async with client.himport("fs", ["name", "email"]) as himport:
+            with pytest.raises(ValueError, match="missing"):
+                himport.add("u:1", {"name": "alice"})
+            with pytest.raises(ValueError, match="extra"):
+                himport.add("u:1", {"name": "alice", "email": "a@example.com", "age": 1})
+
+    async def test_add_rejects_values_and_keywords_together(self, client):
+        async with client.himport("fs", ["name"]) as himport:
+            with pytest.raises(MutuallyExclusiveParametersError):
+                himport.add("u:1", ["alice"], name="alice")
+
+    async def test_add_requires_values(self, client):
+        async with client.himport("fs", ["name"]) as himport:
+            with pytest.raises(RequiredParameterError):
+                himport.add("u:1")
 
     async def test_value_count_mismatch(self, client):
         async with client.himport("fs", ["name", "email"]) as himport:

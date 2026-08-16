@@ -29,7 +29,7 @@ the destination connection, and retry the affected sets.
     async def example(client):
         async with client.himport("account", ["name", "email", "age"]) as himport:
             himport.add("user:1", ["alice", "alice@example.com", 30])
-            himport.add("user:{a}", ["carol", "carol@example.com", 28])
+            himport.add("user:{a}", {"name": "carol", "email": "carol@example.com", "age": 28})
             himport.add("user:{b}", ["dave", "dave@example.com", 33])
         assert await client.hgetall("user:1") == {
             "name": "alice",
@@ -40,6 +40,9 @@ the destination connection, and retry the affected sets.
 Use :class:`~coredis.patterns.himport.HashImport` from a :class:`~coredis.Redis`
 client and :class:`~coredis.patterns.himport.ClusterHashImport` from a
 :class:`~coredis.RedisCluster` client. Both expose :meth:`add` and :meth:`flush`.
+:meth:`~coredis.patterns.himport.HashImport.add` takes a positional value list,
+a mapping keyed by the field names, or those names as keywords
+(``himport.add("user:1", name="alice", email="...")``).
 
 Flush and abort
 ^^^^^^^^^^^^^^^
