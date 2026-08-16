@@ -168,6 +168,17 @@ class TestClientHashImport:
         assert await client.hget("u:{a}", "name") == _s("alice")
         assert await client.hget("u:{b}", "name") == _s("bob")
 
+    async def test_wrongtype_names_key(self, client, _s):
+        await client.set("u:str", "not-a-hash")
+        with pytest.raises((ResponseError, WrongTypeError), match="u:str"):
+            async with client.himport("fs", ["name"]) as himport:
+                himport.add("u:str", ["alice"])
+
+    async def test_duplicate_prepare_fields_name_fieldset(self, client):
+        with pytest.raises(ResponseError, match=r"fieldset 'fs'"):
+            async with client.himport("fs", ["name", "name"]) as himport:
+                himport.add("u:1", ["alice", "alice"])
+
     async def test_imported_hash_uses_template_encoding(self, client, _s):
         async with client.himport("fs", ["name", "email"]) as himport:
             himport.add("u:enc", ["alice", "a@example.com"])

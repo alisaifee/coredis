@@ -13,7 +13,7 @@ from anyio import (
 from deprecated.sphinx import versionadded
 from exceptiongroup import BaseExceptionGroup
 
-from coredis._utils import EncodingInsensitiveDict
+from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.client import Client, RedisCluster
 from coredis.cluster._node import ClusterNodeLocation
 from coredis.commands._validators import (
@@ -118,6 +118,24 @@ class HashImport(AsyncContextManagerMixin, Generic[AnyStr]):
             raise ValueError(f"expected {len(self.fields)} values, got {len(values)}")
         return values
 
+    def _annotate(
+        self,
+        exc: BaseException,
+        *,
+        key: KeyT | None = None,
+        node: ClusterNodeLocation | None = None,
+        fields: bool = False,
+    ) -> None:
+        parts = [f"fieldset {nativestr(self.fieldset)!r}"]
+        if fields:
+            parts.append("fields " + ",".join(nativestr(name) for name in self.fields))
+        if key is not None:
+            parts.append(f"key {nativestr(key)!r}")
+        if node is not None:
+            parts.append(f"node {node.host}:{node.port}")
+        detail = exc.args[0] if exc.args else type(exc).__name__
+        exc.args = (f"HIMPORT ({'; '.join(parts)}): {detail}", *exc.args[1:])
+
     async def flush(self) -> None:
         """Write queued rows. Safe to call more than once."""
         if not self._active:
@@ -154,13 +172,17 @@ class HashImport(AsyncContextManagerMixin, Generic[AnyStr]):
         self._prepared = False
 
     async def _prepare(self, connection: BaseConnection) -> None:
-        await connection.create_request(
-            CommandName.HIMPORT_PREPARE,
-            self.fieldset,
-            *self.fields,
-            decode=False,
-            disconnect_on_cancellation=True,
-        )
+        try:
+            await connection.create_request(
+                CommandName.HIMPORT_PREPARE,
+                self.fieldset,
+                *self.fields,
+                decode=False,
+                disconnect_on_cancellation=True,
+            )
+        except (TimeoutError, RedisError) as exc:
+            self._annotate(exc, fields=True)
+            raise
 
     async def _discard(self, connection: BaseConnection) -> None:
         await connection.create_request(
@@ -179,8 +201,9 @@ class HashImport(AsyncContextManagerMixin, Generic[AnyStr]):
             batch = await connection.create_request_batch(
                 [self._set_command(key, values) for key, values in rows]
             )
-            for result in batch:
+            for (key, _values), result in zip(rows, batch, strict=True):
                 if isinstance(result, BaseException):
+                    self._annotate(result, key=key)
                     raise result
         except _TRANSPORT_ERRORS:
             self._abandon_connection()
@@ -313,6 +336,7 @@ class ClusterHashImport(HashImport[AnyStr]):
             elif isinstance(result, AskError):
                 await self._ask_set(result, key, values)
             else:
+                self._annotate(result, key=key, node=node)
                 raise result
         return redirects
 
