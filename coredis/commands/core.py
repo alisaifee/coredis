@@ -10229,7 +10229,18 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="6.9.0")
     @redis_command(
-        CommandName.HIMPORT_PREPARE, version_introduced="8.10.0", group=CommandGroup.HASH
+        CommandName.HIMPORT_PREPARE,
+        version_introduced="8.10.0",
+        group=CommandGroup.HASH,
+        redirect_usage=RedirectUsage(
+            (
+                "HIMPORT PREPARE is local to one connection and carries no key. "
+                "Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`, or a "
+                "standalone :class:`~coredis.patterns.pipeline.Pipeline` with "
+                "transaction=False."
+            ),
+            False,
+        ),
     )
     def himport_prepare(
         self, fieldset_name: StringT, fields: Parameters[StringT]
@@ -10249,7 +10260,20 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="6.9.0")
-    @redis_command(CommandName.HIMPORT_SET, version_introduced="8.10.0", group=CommandGroup.HASH)
+    @redis_command(
+        CommandName.HIMPORT_SET,
+        version_introduced="8.10.0",
+        group=CommandGroup.HASH,
+        redirect_usage=RedirectUsage(
+            (
+                "HIMPORT SET needs a fieldset prepared on the same connection. "
+                "Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`, or a "
+                "standalone :class:`~coredis.patterns.pipeline.Pipeline` with "
+                "transaction=False."
+            ),
+            False,
+        ),
+    )
     def himport_set(
         self, key: KeyT, fieldset_name: StringT, values: Parameters[ValueT]
     ) -> CommandRequest[bool]:
@@ -10271,7 +10295,18 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="6.9.0")
     @redis_command(
-        CommandName.HIMPORT_DISCARD, version_introduced="8.10.0", group=CommandGroup.HASH
+        CommandName.HIMPORT_DISCARD,
+        version_introduced="8.10.0",
+        group=CommandGroup.HASH,
+        redirect_usage=RedirectUsage(
+            (
+                "HIMPORT DISCARD is local to one connection and carries no key. "
+                "Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`, or a "
+                "standalone :class:`~coredis.patterns.pipeline.Pipeline` with "
+                "transaction=False."
+            ),
+            False,
+        ),
     )
     def himport_discard(self, fieldset_name: StringT) -> CommandRequest[bool]:
         """
@@ -10288,7 +10323,18 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="6.9.0")
     @redis_command(
-        CommandName.HIMPORT_DISCARDALL, version_introduced="8.10.0", group=CommandGroup.HASH
+        CommandName.HIMPORT_DISCARDALL,
+        version_introduced="8.10.0",
+        group=CommandGroup.HASH,
+        redirect_usage=RedirectUsage(
+            (
+                "HIMPORT DISCARDALL is local to one connection and carries no key. "
+                "Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`, or a "
+                "standalone :class:`~coredis.patterns.pipeline.Pipeline` with "
+                "transaction=False."
+            ),
+            False,
+        ),
     )
     def himport_discardall(self) -> CommandRequest[int]:
         """

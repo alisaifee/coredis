@@ -1508,7 +1508,10 @@ HIMPORT DISCARD
 Removes a single session-local fieldset by name.
 
 - Documentation: `HIMPORT DISCARD <https://redis.io/commands/himport-discard>`_
-- Implementation: :meth:`~coredis.Redis.himport_discard`
+- Implementation: :meth:`~coredis.Redis.himport` (session discards on exit).
+  Raw :meth:`~coredis.Redis.himport_discard` only on a standalone
+  non-transactional :class:`~coredis.patterns.pipeline.Pipeline`; pooled clients
+  and cluster pipelines raise :exc:`NotImplementedError`.
 
 - New in redis: 8.10.0
 
@@ -1526,7 +1529,10 @@ HIMPORT DISCARDALL
 Removes all session-local fieldsets for the connection.
 
 - Documentation: `HIMPORT DISCARDALL <https://redis.io/commands/himport-discardall>`_
-- Implementation: :meth:`~coredis.Redis.himport_discardall`
+- Implementation: :meth:`~coredis.Redis.himport` (session owns fieldset lifecycle).
+  Raw :meth:`~coredis.Redis.himport_discardall` only on a standalone
+  non-transactional :class:`~coredis.patterns.pipeline.Pipeline`; pooled clients
+  and cluster pipelines raise :exc:`NotImplementedError`.
 
 - New in redis: 8.10.0
 
@@ -1544,7 +1550,10 @@ HIMPORT PREPARE
 Defines a session-local fieldset that maps a name to a sorted set of field names.
 
 - Documentation: `HIMPORT PREPARE <https://redis.io/commands/himport-prepare>`_
-- Implementation: :meth:`~coredis.Redis.himport_prepare`
+- Implementation: :meth:`~coredis.Redis.himport` / :meth:`~coredis.RedisCluster.himport`
+  (session prepares once per held connection). Raw :meth:`~coredis.Redis.himport_prepare` only
+  on a standalone non-transactional :class:`~coredis.patterns.pipeline.Pipeline`;
+  pooled clients and cluster pipelines raise :exc:`NotImplementedError`.
 
 - New in redis: 8.10.0
 
@@ -1562,7 +1571,11 @@ HIMPORT SET
 Creates a fieldset-based hash from values supplied in the order matching a previously prepared fieldset.
 
 - Documentation: `HIMPORT SET <https://redis.io/commands/himport-set>`_
-- Implementation: :meth:`~coredis.Redis.himport_set`
+- Implementation: :meth:`~coredis.Redis.himport` / :meth:`~coredis.RedisCluster.himport`
+  (:meth:`~coredis.patterns.himport.HashImport.add` + flush). Raw
+  :meth:`~coredis.Redis.himport_set` only on a standalone non-transactional
+  :class:`~coredis.patterns.pipeline.Pipeline`; pooled clients and cluster
+  pipelines raise :exc:`NotImplementedError`.
 
 - New in redis: 8.10.0
 

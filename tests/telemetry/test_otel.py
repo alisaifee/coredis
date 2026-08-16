@@ -214,6 +214,17 @@ GET fubar
 DEL fubar"""
         )
 
+    @pytest.mark.min_server_version("8.10.0")
+    async def test_himport(self, redis_basic, telemetry_capture):
+        async with redis_basic.himport("account", ["name"]) as himport:
+            himport.add("u:otel", ["alice"])
+            himport.add("u:otel2", ["bob"])
+        spans = [span for span in telemetry_capture.spans if span.name == "HIMPORT"]
+        assert len(spans) == 1
+        assert spans[0].attributes["db.operation.name"] == "HIMPORT"
+        assert spans[0].attributes["db.collection.name"] == "account"
+        assert spans[0].attributes["db.operation.batch.size"] == 2
+
     async def test_error(self, redis_basic, telemetry_capture):
         await redis_basic.set("fubar", 1)
         with pytest.raises(coredis.exceptions.RedisError):
