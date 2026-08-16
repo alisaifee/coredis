@@ -13,6 +13,11 @@ from anyio import (
 from deprecated.sphinx import versionadded
 from exceptiongroup import BaseExceptionGroup
 
+from coredis._telemetry import (
+    TelemetryAttributeProvider,
+    TelemetryProvider,
+    get_telemetry_provider,
+)
 from coredis._utils import EncodingInsensitiveDict, nativestr
 from coredis.client import Client, RedisCluster
 from coredis.cluster._node import ClusterNodeLocation
@@ -52,7 +57,7 @@ _Row = tuple[KeyT, tuple[ValueT, ...]]
 
 
 @versionadded(version="6.9.0")
-class HashImport(AsyncContextManagerMixin, Generic[AnyStr]):
+class HashImport(AsyncContextManagerMixin, TelemetryAttributeProvider, Generic[AnyStr]):
     """
     Write many hashes that share one field layout on a single Redis instance.
 
@@ -136,6 +141,13 @@ class HashImport(AsyncContextManagerMixin, Generic[AnyStr]):
         detail = exc.args[0] if exc.args else type(exc).__name__
         exc.args = (f"HIMPORT ({'; '.join(parts)}): {detail}", *exc.args[1:])
 
+    def telemetry_attributes(self, provider: TelemetryProvider) -> dict[str, str | int]:
+        return {
+            "db.operation.name": "HIMPORT",
+            "db.collection.name": nativestr(self.fieldset),
+            "himport.field.count": len(self.fields),
+        }
+
     async def flush(self) -> None:
         """Write queued rows. Safe to call more than once."""
         if not self._active:
@@ -193,21 +205,26 @@ class HashImport(AsyncContextManagerMixin, Generic[AnyStr]):
         )
 
     async def _write(self, rows: list[_Row]) -> None:
-        connection = await self._ensure_connection()
-        try:
-            if not self._prepared:
-                await self._prepare(connection)
-                self._prepared = True
-            batch = await connection.create_request_batch(
-                [self._set_command(key, values) for key, values in rows]
-            )
-            for (key, _values), result in zip(rows, batch, strict=True):
-                if isinstance(result, BaseException):
-                    self._annotate(result, key=key)
-                    raise result
-        except _TRANSPORT_ERRORS:
-            self._abandon_connection()
-            raise
+        sets = [self._set_command(key, values) for key, values in rows]
+        with get_telemetry_provider().start_span(
+            sets,
+            self.client.connection_pool,
+            self,
+            name="HIMPORT",
+        ):
+            connection = await self._ensure_connection()
+            try:
+                if not self._prepared:
+                    await self._prepare(connection)
+                    self._prepared = True
+                batch = await connection.create_request_batch(sets)
+                for (key, _values), result in zip(rows, batch, strict=True):
+                    if isinstance(result, BaseException):
+                        self._annotate(result, key=key)
+                        raise result
+            except _TRANSPORT_ERRORS:
+                self._abandon_connection()
+                raise
 
     async def _shutdown(self, body_error: BaseException | None) -> None:
         connection = self._connection
@@ -359,14 +376,21 @@ class ClusterHashImport(HashImport[AnyStr]):
         return [row for more in node_results.values() for row in more]
 
     async def _write(self, rows: list[_Row]) -> None:
-        pending = list(rows)
-        for _ in range(RedisCluster.MAX_RETRIES):
-            if not pending:
-                return
-            pending = await self._write_pass(pending)
+        sets = [self._set_command(key, values) for key, values in rows]
+        with get_telemetry_provider().start_span(
+            sets,
+            self._connection_pool,
+            self,
+            name="HIMPORT",
+        ):
+            pending = list(rows)
+            for _ in range(RedisCluster.MAX_RETRIES):
+                if not pending:
+                    return
+                pending = await self._write_pass(pending)
 
-        if pending:
-            raise ClusterError("Maximum HIMPORT redirect retries exhausted.")
+            if pending:
+                raise ClusterError("Maximum HIMPORT redirect retries exhausted.")
 
     async def _shutdown(self, body_error: BaseException | None) -> None:
         discard_error: BaseException | None = None

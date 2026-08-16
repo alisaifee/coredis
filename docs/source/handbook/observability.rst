@@ -74,6 +74,8 @@ When enabled, coredis emits:
 - A span for a single command execution: ``${COMMAND NAME}``
 - A single aggregate span for a pipeline: ``PIPELINE``
 - A single aggregate span for a transaction pipeline: ``MULTI``
+- A span for a hash-import flush: ``HIMPORT`` (fieldset name and
+  field count as attributes; batch size is the number of ``SET``\ s)
 
 Span attributes include the following recommended attributes:
 
@@ -82,7 +84,9 @@ Span attributes include the following recommended attributes:
 ``db.namespace``
   The database index number associated with the connection used when performing the operation
 ``db.operation.name``
-  Either the command name for a single command execution, or ``MULTI`` for transactions and ``PIPELINE`` for non transactional pipelines.
+  Either the command name for a single command execution, ``MULTI`` for
+  transactions, ``PIPELINE`` for non transactional pipelines, or
+  ``HIMPORT`` for a hash-import flush.
 
   Examples:
 
