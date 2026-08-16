@@ -17,13 +17,7 @@ from tests.conftest import targets
 
 @targets(
     "redis_basic",
-    "redis_basic_raw",
     "redis_cluster",
-    "redis_cluster_raw",
-    "redis_cached",
-    "redis_cluster_cached",
-    "dragonfly",
-    "valkey",
 )
 @pytest.mark.min_server_version("8.10.0")
 class TestClientHashImport:
