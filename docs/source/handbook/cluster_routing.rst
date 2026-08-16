@@ -241,6 +241,11 @@ Search commands
       The result is the response from the node
 
 
+Timeseries commands
+  :meth:`coredis.modules.TimeSeries.querylabels`
+      The result is the response from the node
+
+
 
 =============================================================================
 Commands routed to node(s) based on the slot id(s) in the command arguments
