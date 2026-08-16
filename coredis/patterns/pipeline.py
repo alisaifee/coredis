@@ -48,6 +48,7 @@ from coredis.typing import (
     Iterable,
     Key,
     KeyT,
+    Parameters,
     ParamSpec,
     RedisValueT,
     ResponseType,
@@ -281,10 +282,11 @@ class _PipelineClient(Client[AnyStr]):
 class Pipeline(Client[AnyStr]):
     """
     Pipeline for batching multiple commands to a Redis server.
-    Supports transactions and command stacking.
+    Supports command stacking, atomic transactions and optimistic locking.
 
     All commands executed within a pipeline are wrapped with MULTI and EXEC
-    calls when :paramref:`transaction` is ``True``.
+    calls when either :paramref:`transaction` is ``True`` or :paramref:`watches`
+    is not empty.
 
     Any command raising an exception does **not** halt the execution of
     subsequent commands in the pipeline, however the first exception encountered
@@ -299,25 +301,29 @@ class Pipeline(Client[AnyStr]):
         client: Client[AnyStr],
         transaction: bool | None,
         raise_on_error: bool = True,
+        watches: Parameters[KeyT] | None = None,
         timeout: float | None = None,
     ) -> None:
         """
         :param transaction: Whether to wrap the commands in the pipeline in a ``MULTI``, ``EXEC``
         :param raise_on_error: Whether to raise the first error encounterd in the pipeline after
          executing it
+        :param watches: The given keys will be watched for changes within this context
         :param timeout: Time in seconds to wait for the pipeline results to return
         """
+
         self._client: _PipelineClient[AnyStr] = _PipelineClient(
             client.connection_pool, client.type_adapter
         )
         self._transaction = transaction
         self._raise_on_error = raise_on_error
-        self._watching: bool = False
+        self._watches = watches
+        self._timeout = timeout
+
         self.command_stack: list[PipelineCommandRequest[Any]] = []
-        self.cache = None
         self.scripts: set[Script[AnyStr]] = set()
-        self.timeout = timeout
         self._results: tuple[Any] | None = None
+        self._complete = False
 
     @property
     def client(self) -> Client[AnyStr]:
@@ -330,10 +336,12 @@ class Pipeline(Client[AnyStr]):
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
         async with self._client:
+            await self._watch()
             try:
                 yield self
                 await self._execute()
             finally:
+                self._complete = True
                 self._unwatch()
 
     def __repr__(self) -> str:
@@ -359,36 +367,13 @@ class Pipeline(Client[AnyStr]):
         self.command_stack.append(command)
         return command
 
-    @asynccontextmanager
-    async def watch(self, *keys: KeyT) -> AsyncGenerator[None]:
-        """
-        The given keys will be watched for changes within this context and the
-        commands stacked within the context will be automatically executed when
-        the context exits. On abort, watches are cleared without executing.
-        """
-        if self.command_stack:
-            raise WatchError("Unable to add a watch after pipeline commands have been added")
-        await self._client.execute_command(
-            self._client.create_request(
-                CommandName.WATCH,
-                *[Key(key) for key in keys],
-                callback=SimpleStringCallback(),
-            )
-        )
-        self._watching = True
-        try:
-            yield
-            await self._execute()
-        finally:
-            self._unwatch()
-
     @property
     def results(self) -> tuple[Any, ...] | None:
         """
         The results of the pipeline execution which can be accessed
         after the pipeline has completed.
         """
-        if self.command_stack:
+        if not self._complete:
             raise RuntimeError("Pipeline results are not available before it completes execution")
         return self._results
 
@@ -398,24 +383,24 @@ class Pipeline(Client[AnyStr]):
     ) -> Awaitable[R]:
         raise NotImplementedError
 
-    def _unwatch(self) -> None:
-        if not self._watching:
+    async def _watch(self) -> None:
+        if not self._watches:
             return
-        try:
-            if self._client.connection and self._client.connection.usable:
-                # The response is not awaited to make this function safe for finally blocks.
-                # noreply is intentionally not used since this doesn't work for dragonfly :(
-                self._client.connection.create_request(CommandName.UNWATCH, decode=False)
-        finally:
-            self._watching = False
+        await self._client.execute_command(
+            self._client.create_request(
+                CommandName.WATCH,
+                *[Key(key) for key in self._watches],
+                callback=SimpleStringCallback(),
+            )
+        )
 
-    async def _clear(self) -> None:
-        """
-        Clear the pipeline and reset state.
-        """
-        self.command_stack.clear()
-        self.scripts.clear()
-        self._unwatch()
+    def _unwatch(self) -> None:
+        if not self._watches:
+            return
+        if self._client.connection and self._client.connection.usable:
+            # The response is not awaited to make this function safe for finally blocks.
+            # noreply is intentionally not used since this doesn't work for dragonfly :(
+            self._client.connection.create_request(CommandName.UNWATCH, decode=False)
 
     async def _execute_transaction(
         self,
@@ -423,9 +408,9 @@ class Pipeline(Client[AnyStr]):
         commands: list[PipelineCommandRequest[Any]],
     ) -> None:
 
-        multi_request = connection.create_request(CommandName.MULTI, timeout=self.timeout)
-        queued_batch = connection.create_request_batch(commands, timeout=self.timeout)
-        exec_request = connection.create_request(CommandName.EXEC, timeout=self.timeout)
+        multi_request = connection.create_request(CommandName.MULTI, timeout=self._timeout)
+        queued_batch = connection.create_request_batch(commands, timeout=self._timeout)
+        exec_request = connection.create_request(CommandName.EXEC, timeout=self._timeout)
         errors: list[tuple[int, RedisError | TimeoutError | None]] = []
         try:
             await multi_request
@@ -474,7 +459,7 @@ class Pipeline(Client[AnyStr]):
     async def _execute_pipeline(
         self, connection: BaseConnection, commands: list[PipelineCommandRequest[Any]]
     ) -> None:
-        request_batch = connection.create_request_batch(commands, timeout=self.timeout)
+        request_batch = connection.create_request_batch(commands, timeout=self._timeout)
         results: list[Any] = []
         for cmd, response in zip(commands, await request_batch):
             try:
@@ -544,30 +529,29 @@ class Pipeline(Client[AnyStr]):
         """
         if not self.command_stack:
             return None
+        transaction = self._transaction or self._watches
         connection = await self._client.use_connection()
         with get_telemetry_provider().start_span(
             self.command_stack,
             connection,
             self._client.connection_pool,
-            name="MULTI" if self._transaction else "PIPELINE",
+            name="MULTI" if transaction else "PIPELINE",
         ):
             if self.scripts:
                 await self._load_scripts()
-            if self._transaction or self._watching:
-                exec = self._execute_transaction
+            if transaction:
+                execute = self._execute_transaction
             else:
-                exec = self._execute_pipeline
+                execute = self._execute_pipeline
 
             try:
-                return await exec(connection, self.command_stack)
+                return await execute(connection, self.command_stack)
             except (ConnectionError, TimeoutError) as e:
-                if self._watching:
+                if self._watches:
                     raise WatchError(
                         "A connection error occurred while watching one or more keys"
                     ) from e
                 raise
-            finally:
-                await self._clear()
 
 
 @versionchanged(

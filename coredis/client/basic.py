@@ -1091,6 +1091,7 @@ class Redis(Client[AnyStr]):
         transaction: bool = True,
         *,
         raise_on_error: bool = True,
+        watches: Parameters[KeyT] | None = None,
         timeout: float | None = None,
     ) -> coredis.patterns.pipeline.Pipeline[AnyStr]:
         """
@@ -1098,6 +1099,7 @@ class Redis(Client[AnyStr]):
         batch execution.
 
         :param transaction: indicates whether all commands should be executed atomically.
+        :param watches: The keys to be watched for external changes during the transaction.
         :param raise_on_error: Whether to raise errors upon executing the pipeline.
          If set to `False` errors will be accumulated and retrievable from the individual
          commands that had errors.
@@ -1106,7 +1108,7 @@ class Redis(Client[AnyStr]):
         """
         from coredis.patterns.pipeline import Pipeline
 
-        return Pipeline[AnyStr](self, transaction, raise_on_error, timeout)
+        return Pipeline[AnyStr](self, transaction, raise_on_error, watches, timeout)
 
     def lock(
         self,
@@ -1159,12 +1161,14 @@ class Redis(Client[AnyStr]):
         :param watches: The keys to watch during the transaction
         :param watch_delay: Time in seconds to wait after each watch error before retrying
         """
+        if not watches:
+            raise RuntimeError("Required at least one key to watch during a transaction")
+
         msg = "Caught WatchError in transaction, retrying..."
         while True:
             with catch({WatchError: lambda _: logger.warning(msg)}):
-                async with self.pipeline(transaction=False) as pipe:
-                    async with pipe.watch(*watches):
-                        return await func(pipe)
+                async with self.pipeline(watches=watches) as pipe:
+                    return await func(pipe)
             if watch_delay:
                 await sleep(watch_delay)
 
