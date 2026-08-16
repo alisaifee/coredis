@@ -34,6 +34,11 @@ operations).
 The primary and replica instances are normal :class:`~coredis.Redis` instances with
 their connection pool bound to the Sentinel instance via :class:`~coredis.pool.SentinelConnectionPool`.
 
+A :meth:`~coredis.Redis.himport` session on that primary holds one
+connection. It does not survive failover. After
+:exc:`~coredis.exceptions.ConnectionError` or a new primary, open a new
+session with ``primary.himport(...)``.
+
 Failure Handling
 ^^^^^^^^^^^^^^^^
 When a Sentinel backed client attempts to establish a connection, it first

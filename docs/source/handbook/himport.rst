@@ -15,6 +15,13 @@ writing, prepare once per held connection, write on
 :meth:`~coredis.patterns.himport.HashImport.flush` or when the context exits,
 then discard and release. Pure queueing does not hold a pool connection.
 
+After the first write the session holds those connections until it exits:
+one pool connection on a standalone client, and one per primary that
+received a key on a cluster. Other commands on the same client need
+another free connection (a pool of size 1 will block until the session
+ends). ``HIMPORT SET`` replaces the whole hash; fields that were not
+in the fieldset are dropped.
+
 Standalone and cluster
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -43,6 +50,11 @@ client and :class:`~coredis.patterns.himport.ClusterHashImport` from a
 :meth:`~coredis.patterns.himport.HashImport.add` takes a positional value list,
 a mapping keyed by the field names, or those names as keywords
 (``himport.add("user:1", name="alice", email="...")``).
+
+A session started on a client from :meth:`coredis.Sentinel.primary_for`
+is the standalone session. It does not survive failover: the held
+socket dies with the old primary. After :exc:`~coredis.exceptions.ConnectionError`
+or a new primary, open a new ``primary.himport(...)``.
 
 Flush and abort
 ^^^^^^^^^^^^^^^
@@ -80,8 +92,9 @@ send them correctly and raises :exc:`NotImplementedError`. A
 :exc:`NotImplementedError`: prepare has no key and cannot be routed with set
 across slots.
 
-Do not wrap prepare or discard in ``MULTI``. The server rejects them inside a
-transaction.
+Redis 8.10 accepts ``HIMPORT PREPARE`` / ``SET`` / ``DISCARD`` inside
+``MULTI``. Prefer the session anyway: it owns the fieldset on one
+connection without a transaction.
 
 Standalone raw example::
 
