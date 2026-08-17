@@ -75,14 +75,13 @@ class TestPipeline:
         no_perm_client = await user_client("testuser", "on", "+@all", "-MULTI")
         async with no_perm_client:
             with pytest.raises(AuthorizationError):
-                async with no_perm_client.pipeline(transaction=False) as pipe:
-                    async with pipe.watch("fubar"):
-                        pipe.get("fubar")
+                async with no_perm_client.pipeline(transaction=False, watches=["fubar"]) as pipe:
+                    pipe.get("fubar")
 
     async def test_pipeline_no_transaction_watch(self, client):
         await client.set("a", "0")
 
-        async with client.pipeline(transaction=False) as pipe, pipe.watch("a"):
+        async with client.pipeline(transaction=False, watches=["a"]) as pipe:
             a = await client.get("a")
             b = pipe.set("a", str(int(a) + 1))
         assert await b
@@ -91,11 +90,10 @@ class TestPipeline:
         await client.set("a", "0")
 
         with pytest.raises(WatchError):
-            async with client.pipeline(transaction=False) as pipe:
-                async with pipe.watch("a"):
-                    a = await client.get("a")
-                    await client.set("a", "bad")
-                    pipe.set("a", str(int(a) + 1))
+            async with client.pipeline(transaction=False, watches=["a"]) as pipe:
+                a = await client.get("a")
+                await client.set("a", "bad")
+                pipe.set("a", str(int(a) + 1))
 
         assert await client.get("a") == "bad"
 
@@ -158,7 +156,7 @@ class TestPipeline:
         await client.set("a", "1")
         await client.set("b", "2")
 
-        async with client.pipeline() as pipe, pipe.watch("a", "b"):
+        async with client.pipeline(watches=["a", "b"]) as pipe:
             a_value = await client.get("a")
             b_value = await client.get("b")
             assert a_value == "1"
@@ -172,20 +170,21 @@ class TestPipeline:
         await client.set("b", "2")
 
         with pytest.raises(WatchError):
-            async with client.pipeline() as pipe:
-                async with pipe.watch("a", "b"):
-                    await client.set("b", "3")
-                    pipe.get("a")
+            async with client.pipeline(watches=["a", "b"]) as pipe:
+                await client.set("b", "3")
+                pipe.get("a")
 
     async def test_unwatch(self, client: Redis[str]):
         await client.set("a", "1")
         await client.set("b", "2")
 
+        async with client.pipeline(watches=["a", "b"]) as pipe:
+            r1 = pipe.get("a")
+
         async with client.pipeline() as pipe:
-            async with pipe.watch("a", "b"):
-                r1 = pipe.get("a")
             await client.set("b", "3")
             r2 = pipe.get("b")
+
         assert await r1 == "1"
         assert await r2 == "3"
 
@@ -245,7 +244,7 @@ class TestPipeline:
 
 
 @targets("redis_basic", "dragonfly", "valkey")
-class TestPipelineConnectionRelease:
+class TestPipelineConnection:
     @pytest.mark.parametrize("transaction", [False, True])
     async def test_pipeline_exit_no_exceptions(self, client: Redis[str], transaction: bool):
         await client.set("a", "0")
@@ -275,10 +274,9 @@ class TestPipelineConnectionRelease:
 
         in_use = client.connection_pool.statistics.in_use_connections
         with pytest.raises(RuntimeError, match="body error"):
-            async with client.pipeline(transaction=transaction) as pipe:
-                async with pipe.watch("a"):
-                    assert client.connection_pool.statistics.in_use_connections == in_use + 1
-                    raise RuntimeError("body error")
+            async with client.pipeline(transaction=transaction, watches=["a"]):
+                assert client.connection_pool.statistics.in_use_connections == in_use + 1
+                raise RuntimeError("body error")
 
         assert client.connection_pool.statistics.in_use_connections == in_use
 
@@ -288,11 +286,10 @@ class TestPipelineConnectionRelease:
 
         in_use = client.connection_pool.statistics.in_use_connections
         with pytest.raises(WatchError):
-            async with client.pipeline(transaction=transaction) as pipe:
-                async with pipe.watch("a"):
-                    assert client.connection_pool.statistics.in_use_connections == in_use + 1
-                    await client.set("a", "-1")
-                    pipe.set("a", "1")
+            async with client.pipeline(transaction=transaction, watches=["a"]) as pipe:
+                assert client.connection_pool.statistics.in_use_connections == in_use + 1
+                await client.set("a", "-1")
+                pipe.set("a", "1")
 
         assert client.connection_pool.statistics.in_use_connections == in_use
 
@@ -315,29 +312,41 @@ class TestPipelineConnectionRelease:
         await client.set("a", "0")
 
         with pytest.raises(RuntimeError):
-            async with client.pipeline() as pipe:
-                async with pipe.watch("a"):
-                    raise RuntimeError
+            async with client.pipeline(watches=["a"]):
+                raise RuntimeError
 
         await client.set("a", "-1")
+
         async with client.pipeline() as pipe:
             pipe.set("a", "1")
 
     async def test_commands_after_watch_form_separate_batch(self, client: Redis[str]):
         await client.set("a", "0")
+
+        async with client.pipeline(transaction=False, watches=["a"]) as pipe:
+            pipe.set("a", "1")
+
         async with client.pipeline(transaction=False) as pipe:
-            async with pipe.watch("a"):
-                pipe.set("a", "1")
             after = pipe.get("a")
+
         assert await after == "1"
 
     async def test_outer_body_error_after_successful_watch(self, client: Redis[str]):
         await client.set("a", "0")
         in_use = client.connection_pool.statistics.in_use_connections
+        async with client.pipeline(transaction=False, watches=["a"]) as pipe:
+            pipe.set("a", "1")
         with pytest.raises(RuntimeError, match="after watch"):
-            async with client.pipeline(transaction=False) as pipe:
-                async with pipe.watch("a"):
-                    pipe.set("a", "1")
+            async with client.pipeline(transaction=False):
                 raise RuntimeError("after watch")
         assert client.connection_pool.statistics.in_use_connections == in_use
         assert await client.get("a") == "1"
+
+    @pytest.mark.parametrize("client_arguments", [{"max_connections": 1}])
+    async def test_pipeline_client_cmds(self, client: Redis[str], client_arguments: dict[str, int]):
+        client.connection_pool.timeout = 1
+
+        await client.set("a", "0")
+        async with client.pipeline(transaction=False, watches=["a"]) as pipe:
+            value = await pipe.client.get("a")
+            pipe.set("a", int(value) + 1)
