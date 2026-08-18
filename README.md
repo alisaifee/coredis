@@ -13,6 +13,11 @@
 
 # coredis
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/source/_static/brand/mark-dark.png">
+  <img src="docs/source/_static/brand/mark-light.png" width="220" alt="coredis">
+</picture>
+
 Fast, async, fully-typed Redis client with support for cluster and sentinel
 
 ## Features

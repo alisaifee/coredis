@@ -28,6 +28,8 @@ colors = {
 
 html_theme = "furo"
 html_theme_options = {
+    "light_logo": "brand/mark-light.png",
+    "dark_logo": "brand/mark-dark.png",
     "light_css_variables": {
         "font-stack": "Fira Sans, sans-serif",
         "font-stack--monospace": "Fira Code, monospace",

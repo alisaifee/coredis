@@ -29,6 +29,8 @@ author = "alisaifee"
 description = "Async redis client for python"
 
 html_static_path = ["./_static"]
+html_favicon = "_static/brand/icon-32.png"
+ogp_image = "_static/brand/mark-light.png"
 html_css_files = [
     "custom.css",
     "https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;700&family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap",
