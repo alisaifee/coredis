@@ -72,6 +72,14 @@ class ParameterAvailability:
         args: tuple[object, ...],
         kwargs: Mapping[str, object],
     ) -> bool:
+        parameter = self.sig.parameters.get(name)
+        if parameter is not None and parameter.kind is inspect.Parameter.VAR_KEYWORD:
+            named = {
+                n
+                for n, p in self.sig.parameters.items()
+                if p.kind is not inspect.Parameter.VAR_KEYWORD
+            }
+            return any(key not in named for key in kwargs)
         if name in kwargs:
             value = kwargs[name]
         elif (position := self.positional_indexes.get(name)) is not None and position < len(args):

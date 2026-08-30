@@ -248,6 +248,8 @@ class Pipeline(Client[AnyStr]):
     If not the exception is caught and will be returned when awaiting the command that failed.
     """
 
+    connection_scoped_commands: ClassVar[bool] = True
+
     QUEUED_RESPONSES: ClassVar[set[bytes | str]] = {b"QUEUED", "QUEUED"}
 
     def __init__(

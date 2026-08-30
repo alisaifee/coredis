@@ -10,6 +10,7 @@ API Documentation
     pipeline
     pubsub
     streams
+    himport
     scripting
     modules
     bitfield
