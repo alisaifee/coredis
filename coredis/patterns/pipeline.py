@@ -30,7 +30,7 @@ from coredis.exceptions import (
     TryAgainError,
     WatchError,
 )
-from coredis.pool import ClusterConnectionPool
+from coredis.pool import BaseConnectionPool, ClusterConnectionPool
 from coredis.response._callbacks import (
     AnyStrCallback,
     BoolsCallback,
@@ -230,6 +230,50 @@ class NodeCommands(AsyncContextManagerMixin):
                 raise multi_result
 
 
+class _PipelineClient(Client[AnyStr]):
+    def __init__(
+        self,
+        connection_pool: BaseConnectionPool[Any],
+        type_adapter: TypeAdapter,
+    ) -> None:
+        super().__init__(
+            connection_pool=connection_pool,
+            type_adapter=type_adapter,
+        )
+        self.connection: BaseConnection | None = None
+
+    @asynccontextmanager
+    async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
+        try:
+            yield self
+        finally:
+            if self.connection:
+                self.connection_pool.release(self.connection)
+                self.connection = None
+
+    async def use_connection(self) -> BaseConnection:
+        if not self.connection:
+            self.connection = await self.connection_pool.get_connection()
+        return self.connection
+
+    async def execute_command(self, command: CommandRequest[R]) -> R:
+        """
+        Executes a command immediately, but don't auto-retry on a
+        ConnectionError if we're already WATCHing a variable. Used when
+        issuing WATCH or subsequent commands retrieving their values but before
+        MULTI is called.
+
+        :meta private:
+        """
+        connection = await self.use_connection()
+        request = connection.create_request(
+            command.name,
+            *command.serialized_arguments,
+            decode=command.execution_parameters.get("decode"),
+        )
+        return command.callback(await request)
+
+
 @versionchanged(
     version="6.0.0",
     reason="Pipelines are no longer awaitable. They support the async context manager protocol and must always be used as such",
@@ -263,8 +307,9 @@ class Pipeline(Client[AnyStr]):
          executing it
         :param timeout: Time in seconds to wait for the pipeline results to return
         """
-        self.client: Client[AnyStr] = client
-        self._connection: BaseConnection | None = None
+        self._client: _PipelineClient[AnyStr] = _PipelineClient(
+            client.connection_pool, client.type_adapter
+        )
         self._transaction = transaction
         self._raise_on_error = raise_on_error
         self._watching: bool = False
@@ -272,22 +317,27 @@ class Pipeline(Client[AnyStr]):
         self.cache = None
         self.scripts: set[Script[AnyStr]] = set()
         self.timeout = timeout
-        self.type_adapter = client.type_adapter
         self._results: tuple[Any] | None = None
+
+    @property
+    def client(self) -> Client[AnyStr]:
+        """
+        The client bound to connection used by the pipeline. It can be used
+        to issue immediate pipeline commands.
+        """
+        return self._client
 
     @asynccontextmanager
     async def __asynccontextmanager__(self) -> AsyncGenerator[Self]:
-        try:
-            yield self
-            await self._execute()
-        finally:
-            self._unwatch()
-            if self._connection:
-                self.client.connection_pool.release(self._connection)
-                self._connection = None
+        async with self._client:
+            try:
+                yield self
+                await self._execute()
+            finally:
+                self._unwatch()
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}<{self._connection!r}>"
+        return f"{type(self).__name__}<{self._client.connection!r}>"
 
     def create_request(
         self,
@@ -304,7 +354,7 @@ class Pipeline(Client[AnyStr]):
             *arguments,
             callback=callback,
             execution_parameters=execution_parameters or {},
-            type_adapter=self.type_adapter,
+            type_adapter=self._client.type_adapter,
         )
         self.command_stack.append(command)
         return command
@@ -318,10 +368,8 @@ class Pipeline(Client[AnyStr]):
         """
         if self.command_stack:
             raise WatchError("Unable to add a watch after pipeline commands have been added")
-        if not self._connection:
-            self._connection = await self.client.connection_pool.get_connection()
-        await self._immediate_execute_command(
-            self.client.create_request(
+        await self._client.execute_command(
+            self._client.create_request(
                 CommandName.WATCH,
                 *[Key(key) for key in keys],
                 callback=SimpleStringCallback(),
@@ -354,10 +402,10 @@ class Pipeline(Client[AnyStr]):
         if not self._watching:
             return
         try:
-            if self._connection and self._connection.usable:
+            if self._client.connection and self._client.connection.usable:
                 # The response is not awaited to make this function safe for finally blocks.
                 # noreply is intentionally not used since this doesn't work for dragonfly :(
-                self._connection.create_request(CommandName.UNWATCH, decode=False)
+                self._client.connection.create_request(CommandName.UNWATCH, decode=False)
         finally:
             self._watching = False
 
@@ -368,26 +416,6 @@ class Pipeline(Client[AnyStr]):
         self.command_stack.clear()
         self.scripts.clear()
         self._unwatch()
-
-    async def _immediate_execute_command(
-        self,
-        command: CommandRequest[R],
-    ) -> R:
-        """
-        Executes a command immediately, but don't auto-retry on a
-        ConnectionError if we're already WATCHing a variable. Used when
-        issuing WATCH or subsequent commands retrieving their values but before
-        MULTI is called.
-
-        :meta private:
-        """
-        assert self._connection
-        request = self._connection.create_request(
-            command.name,
-            *command.serialized_arguments,
-            decode=command.execution_parameters.get("decode"),
-        )
-        return command.callback(await request)
 
     async def _execute_transaction(
         self,
@@ -495,15 +523,15 @@ class Pipeline(Client[AnyStr]):
         # make sure all scripts that are about to be run on this pipeline exist
         scripts = list(self.scripts)
         shas = [s.sha for s in scripts]
-        exists = await self._immediate_execute_command(
-            self.client.create_request(CommandName.SCRIPT_EXISTS, *shas, callback=BoolsCallback())
+        exists = await self._client.execute_command(
+            self._client.create_request(CommandName.SCRIPT_EXISTS, *shas, callback=BoolsCallback())
         )
 
         if not all(exists):
             for s, exist in zip(scripts, exists):
                 if not exist:
-                    s.sha = await self._immediate_execute_command(
-                        self.client.create_request(
+                    s.sha = await self._client.execute_command(
+                        self._client.create_request(
                             CommandName.SCRIPT_LOAD,
                             s.script,
                             callback=AnyStrCallback[AnyStr](),
@@ -516,12 +544,11 @@ class Pipeline(Client[AnyStr]):
         """
         if not self.command_stack:
             return None
-        if not self._connection:
-            self._connection = await self.client.connection_pool.get_connection()
+        connection = await self._client.use_connection()
         with get_telemetry_provider().start_span(
             self.command_stack,
-            self._connection,
-            self.client.connection_pool,
+            connection,
+            self._client.connection_pool,
             name="MULTI" if self._transaction else "PIPELINE",
         ):
             if self.scripts:
@@ -532,7 +559,7 @@ class Pipeline(Client[AnyStr]):
                 exec = self._execute_pipeline
 
             try:
-                return await exec(self._connection, self.command_stack)
+                return await exec(connection, self.command_stack)
             except (ConnectionError, TimeoutError) as e:
                 if self._watching:
                     raise WatchError(
