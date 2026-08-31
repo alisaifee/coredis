@@ -3,6 +3,39 @@
 Changelog
 =========
 
+v6.9.0
+------
+Release Date: 2026-08-30
+
+* Feature
+
+  * Add support for Redis 8.10 commands and options, including:
+
+    * :rediscommand:`LMOVEM` / :rediscommand:`BLMOVEM`
+    * :rediscommand:`SUNIONCARD` / :rediscommand:`SDIFFCARD`
+    * :rediscommand:`BACKUP`
+    * TimeSeries :meth:`~coredis.modules.TimeSeries.nrange`,
+      :meth:`~coredis.modules.TimeSeries.nrevrange`,
+      :meth:`~coredis.modules.TimeSeries.read`, and
+      :meth:`~coredis.modules.TimeSeries.querylabels`
+    * Search :meth:`~coredis.modules.Search.aliaslist`
+    * :rediscommand:`XREAD` ``MAXCOUNT`` / ``MAXSIZE``
+    * TimeSeries multi-range ``EXCLUDEEMPTY``
+    * Add :class:`~coredis.patterns.himport.HashImport` for
+      :rediscommand:`HIMPORT` bulk hash loads via
+      :meth:`~coredis.Redis.himport` and
+      :meth:`~coredis.RedisCluster.himport`
+
+  * Add ``CLAIM`` to :meth:`~coredis.Redis.xreadgroup` and keep
+    idle and delivered fields on claimed entries
+
+* Bug Fix
+
+  * Convert timezone-aware :class:`datetime.datetime` values with
+    :meth:`datetime.datetime.timestamp` in expiry helpers
+  * Release the pipeline connection and unwatch keys when the
+    pipeline context exits with an error
+
 v6.8.0
 ------
 Release Date: 2026-07-18
