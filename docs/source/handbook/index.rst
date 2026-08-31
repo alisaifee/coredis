@@ -13,6 +13,7 @@ Handbook
     caching
     pipelines
     locks
+    himport
     retries
     noreply
     scripting
@@ -61,6 +62,7 @@ Performance
 - :ref:`handbook/connections:connection pools`
 - :ref:`handbook/caching:caching`
 - :ref:`handbook/pipelines:pipelines`
+- :ref:`handbook/himport:hash import`
 - :ref:`handbook/noreply:no reply mode`
 - :ref:`handbook/optimization:optimized mode`
 - :ref:`handbook/observability:observability`

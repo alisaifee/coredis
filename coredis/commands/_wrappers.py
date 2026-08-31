@@ -116,16 +116,19 @@ def redis_command(
         @functools.wraps(func)
         def wrapped(*args: P.args, **kwargs: P.kwargs) -> CommandRequest[R]:
             from coredis import Redis, RedisCluster
+            from coredis.client.basic import Client
 
-            is_regular_client = isinstance(args[0], (Redis, RedisCluster))
-            if redirect_usage and is_regular_client:
+            receiver = args[0]
+            assert isinstance(receiver, Client)
+            is_regular_client = isinstance(receiver, (Redis, RedisCluster))
+            if redirect_usage and not receiver.connection_scoped_commands:
                 if redirect_usage.warn:
                     warnings.warn(redirect_usage.reason, UserWarning, stacklevel=2)
                 else:
                     raise NotImplementedError(redirect_usage.reason)
-            runtime_checking = not getattr(args[0], "noreply", None) and is_regular_client
+            runtime_checking = not receiver.noreply and is_regular_client
             check_version(
-                args[0],  # type: ignore
+                receiver,
                 func.__name__,
                 command_details,
                 deprecation_reason,

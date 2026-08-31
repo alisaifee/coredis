@@ -1508,7 +1508,7 @@ HIMPORT DISCARD
 Removes a single session-local fieldset by name.
 
 - Documentation: `HIMPORT DISCARD <https://redis.io/commands/himport-discard>`_
-- Implementation: :meth:`~coredis.Redis.himport_discard`
+- .. danger:: :meth:`~coredis.Redis.himport_discard` intentionally raises an :exc:`NotImplemented` error. Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`. Those sessions own the fieldset on one connection. A standalone :class:`~coredis.patterns.pipeline.Pipeline` can send this subcommand.
 
 - New in redis: 8.10.0
 
@@ -1526,7 +1526,7 @@ HIMPORT DISCARDALL
 Removes all session-local fieldsets for the connection.
 
 - Documentation: `HIMPORT DISCARDALL <https://redis.io/commands/himport-discardall>`_
-- Implementation: :meth:`~coredis.Redis.himport_discardall`
+- .. danger:: :meth:`~coredis.Redis.himport_discardall` intentionally raises an :exc:`NotImplemented` error. Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`. Those sessions own the fieldset on one connection. A standalone :class:`~coredis.patterns.pipeline.Pipeline` can send this subcommand.
 
 - New in redis: 8.10.0
 
@@ -1544,7 +1544,7 @@ HIMPORT PREPARE
 Defines a session-local fieldset that maps a name to a sorted set of field names.
 
 - Documentation: `HIMPORT PREPARE <https://redis.io/commands/himport-prepare>`_
-- Implementation: :meth:`~coredis.Redis.himport_prepare`
+- .. danger:: :meth:`~coredis.Redis.himport_prepare` intentionally raises an :exc:`NotImplemented` error. Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`. Those sessions own the fieldset on one connection. A standalone :class:`~coredis.patterns.pipeline.Pipeline` can send this subcommand.
 
 - New in redis: 8.10.0
 
@@ -1562,7 +1562,7 @@ HIMPORT SET
 Creates a fieldset-based hash from values supplied in the order matching a previously prepared fieldset.
 
 - Documentation: `HIMPORT SET <https://redis.io/commands/himport-set>`_
-- Implementation: :meth:`~coredis.Redis.himport_set`
+- .. danger:: :meth:`~coredis.Redis.himport_set` intentionally raises an :exc:`NotImplemented` error. Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`. ``HIMPORT SET`` needs a fieldset already prepared on the same connection. A standalone :class:`~coredis.patterns.pipeline.Pipeline` can send this subcommand.
 
 - New in redis: 8.10.0
 

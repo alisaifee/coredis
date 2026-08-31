@@ -10229,13 +10229,23 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="6.9.0")
     @redis_command(
-        CommandName.HIMPORT_PREPARE, version_introduced="8.10.0", group=CommandGroup.HASH
+        CommandName.HIMPORT_PREPARE,
+        version_introduced="8.10.0",
+        group=CommandGroup.HASH,
+        redirect_usage=RedirectUsage(
+            (
+                "Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`. "
+                "Those sessions own the fieldset on one connection. "
+                "A standalone :class:`~coredis.patterns.pipeline.Pipeline` can send this subcommand."
+            ),
+            False,
+        ),
     )
     def himport_prepare(
         self, fieldset_name: StringT, fields: Parameters[StringT]
     ) -> CommandRequest[bool]:
         """
-        Defines a session-local fieldset that maps a name to a sorted set of field names.
+        Defines a session-local fieldset that maps a name to an ordered list of field names.
 
         :param fieldset_name: fieldset to define schema for
         :param fields: field names for the schema
@@ -10249,7 +10259,19 @@ class CoreCommands(CommandMixin[AnyStr]):
         )
 
     @versionadded(version="6.9.0")
-    @redis_command(CommandName.HIMPORT_SET, version_introduced="8.10.0", group=CommandGroup.HASH)
+    @redis_command(
+        CommandName.HIMPORT_SET,
+        version_introduced="8.10.0",
+        group=CommandGroup.HASH,
+        redirect_usage=RedirectUsage(
+            (
+                "Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`. "
+                "``HIMPORT SET`` needs a fieldset already prepared on the same connection. "
+                "A standalone :class:`~coredis.patterns.pipeline.Pipeline` can send this subcommand."
+            ),
+            False,
+        ),
+    )
     def himport_set(
         self, key: KeyT, fieldset_name: StringT, values: Parameters[ValueT]
     ) -> CommandRequest[bool]:
@@ -10271,7 +10293,17 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="6.9.0")
     @redis_command(
-        CommandName.HIMPORT_DISCARD, version_introduced="8.10.0", group=CommandGroup.HASH
+        CommandName.HIMPORT_DISCARD,
+        version_introduced="8.10.0",
+        group=CommandGroup.HASH,
+        redirect_usage=RedirectUsage(
+            (
+                "Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`. "
+                "Those sessions own the fieldset on one connection. "
+                "A standalone :class:`~coredis.patterns.pipeline.Pipeline` can send this subcommand."
+            ),
+            False,
+        ),
     )
     def himport_discard(self, fieldset_name: StringT) -> CommandRequest[bool]:
         """
@@ -10288,7 +10320,17 @@ class CoreCommands(CommandMixin[AnyStr]):
 
     @versionadded(version="6.9.0")
     @redis_command(
-        CommandName.HIMPORT_DISCARDALL, version_introduced="8.10.0", group=CommandGroup.HASH
+        CommandName.HIMPORT_DISCARDALL,
+        version_introduced="8.10.0",
+        group=CommandGroup.HASH,
+        redirect_usage=RedirectUsage(
+            (
+                "Use :meth:`Redis.himport` or :meth:`RedisCluster.himport`. "
+                "Those sessions own the fieldset on one connection. "
+                "A standalone :class:`~coredis.patterns.pipeline.Pipeline` can send this subcommand."
+            ),
+            False,
+        ),
     )
     def himport_discardall(self) -> CommandRequest[int]:
         """
