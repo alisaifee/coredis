@@ -4,13 +4,6 @@
 [![ci](https://github.com/alisaifee/coredis/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/alisaifee/coredis/actions?query=branch%3Amaster+workflow%3ACI)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/coredis.svg)](https://pypi.python.org/pypi/coredis/)
 
-> [!IMPORTANT]
-> To learn about breaking changes and migration steps for **version 6** please see
-> [Migrating from 5.x to 6.0](https://coredis.readthedocs.org/en/latest/handbook/migration_guide.html#migrating-from-5-x-to-6-0).
->
-> If you are looking for the **5.x** implementation, please
-> refer to the [5.x branch](https://github.com/alisaifee/coredis/tree/5.x).
-
 # coredis
 
 Fast, async, fully-typed Redis client with support for cluster and sentinel

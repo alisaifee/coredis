@@ -3,11 +3,10 @@ Response
 
 RESP
 ^^^^
-As of redis `6.0.0` clients can use the :term:`RESP3` protocol which provides support for a much
-larger set of types (which reduces the need for clients to "guess" what the type of a command's response should be).
+Redis ``6.0`` and later speak :term:`RESP3`, which provides a larger set of types
+and reduces the need for clients to guess a command's response type.
 
-**coredis** versions up to ``5.x`` provided backward compatibility for ``RESP``, however this is no
-longer supported and :term:`RESP3` is always used.
+coredis always uses :term:`RESP3`.
 
 API Responses
 ^^^^^^^^^^^^^
