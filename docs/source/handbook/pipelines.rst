@@ -64,12 +64,12 @@ could do something like this:
     async def incr(client: coredis.Redis, key: str) -> int:
         while True:
             try:
-                async with client.pipeline(transaction=False) as pipe:
-                    # put a WATCH on the key that holds our sequence value
-                    async with pipe.watch(key):
-                        current_value = await client.get(key)
-                        next_value = int(current_value) + 1
-                        pipe.set(key, next_value)
+                # put a WATCH on the key that holds our sequence value
+                async with client.pipeline(watches=[key]) as pipe:
+                    # pipe.client reuses watched connection
+                    current_value = await pipe.client.get(key)
+                    next_value = int(current_value) + 1
+                    pipe.set(key, next_value)
             except WatchError:
                 # another client must have changed the value between
                 # the time we started watching it and the pipeline"s execution.
