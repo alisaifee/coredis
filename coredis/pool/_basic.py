@@ -287,6 +287,8 @@ class ConnectionPool(BaseConnectionPool[ConnectionT]):
         self.statistics.connection_released(connection)
         if connection.usable:
             self._available_connections.put_nowait(connection)
+        else:
+            self._available_connections.append_nowait(None)
 
     def disconnect(self) -> None:
         """
