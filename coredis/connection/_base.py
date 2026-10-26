@@ -20,6 +20,7 @@ from anyio import (
     create_memory_object_stream,
     create_task_group,
     fail_after,
+    get_cancelled_exc_class,
 )
 from anyio.abc import ByteStream, TaskGroup, TaskStatus
 from anyio.lowlevel import checkpoint
@@ -394,6 +395,7 @@ class BaseConnection(TelemetryAttributeProvider):
             #  consistently uses exception groups
             self._last_error = self._last_error or error.exceptions[-1]
 
+        cancelled = False
         try:
             self.stream = await self._connect()
             self.statistics.connected()
@@ -418,6 +420,9 @@ class BaseConnection(TelemetryAttributeProvider):
                         # exception after this line and before the task is marked
                         # as started.
                         task_status.started()
+            except get_cancelled_exc_class():
+                cancelled = True
+                raise
             finally:
                 disconnect_exc = self._last_error or ConnectionError("Connection lost!")
                 self._parser.on_disconnect()
@@ -432,7 +437,7 @@ class BaseConnection(TelemetryAttributeProvider):
                     if self._last_error:
                         logger.info("Connection closed unexpectedly!", exc_info=True)
                     self._ready = False
-                else:
+                elif not cancelled:
                     # If a RedisError (raised ourselves) has resulted in an exception
                     # before a connection was completely established raise that.
                     # This is due to known handshake errors.

@@ -5,11 +5,12 @@ import socket
 import ssl
 
 import pytest
-from anyio import create_task_group, move_on_after, sleep
+from anyio import create_task_group, create_tcp_listener, move_on_after, sleep, sleep_forever
 from anyio.abc import SocketAttribute
 from anyio.streams.tls import TLSStream
 
 from coredis import TCPConnection, UnixDomainSocketConnection
+from coredis.connection import TCPLocation
 from coredis.credentials import UserPassCredentialProvider
 
 
@@ -225,3 +226,19 @@ async def test_connection_rerun(redis_basic):
     async with create_task_group() as tg:
         with pytest.raises(RuntimeError, match="cannot be reused"):
             await tg.start(conn.run)
+
+
+async def test_cancellation_during_handshake_propagates():
+    async def unresponsive(stream):
+        async with stream:
+            await sleep_forever()
+
+    listener = await create_tcp_listener(local_host="127.0.0.1")
+    port = listener.extra(SocketAttribute.local_port)
+    async with create_task_group() as tg:
+        tg.start_soon(listener.serve, unresponsive)
+        conn = TCPConnection(location=TCPLocation("127.0.0.1", port))
+        with move_on_after(0.1) as scope:
+            await tg.start(conn.run)
+        assert scope.cancelled_caught
+        tg.cancel_scope.cancel()
